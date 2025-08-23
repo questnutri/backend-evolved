@@ -1,0 +1,8 @@
+databases:
+  - name: auth-svc-postgres
+    port: 5432
+  - name: nutritionist-svc-postgres
+    port: 5433
+  - name: patient-svc-postgres
+    port: 5434
+rabbitmq: {}

@@ -1,0 +1,1 @@
+export * from './payloads/findAllFromNutritionist-payload.type';

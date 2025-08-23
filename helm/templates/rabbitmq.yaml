@@ -1,0 +1,42 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: rabbitmq
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: rabbitmq
+  template:
+    metadata:
+      labels:
+        app: rabbitmq
+    spec:
+      containers:
+        - name: rabbitmq
+          image: rabbitmq:3-management
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: {{ default 5672 .Values.rabbitmq.port }}
+            - containerPort: {{ default 15672 .Values.rabbitmq.managementPort }}
+          env:
+            - name: RABBITMQ_DEFAULT_USER
+              value: guest
+            - name: RABBITMQ_DEFAULT_PASS
+              value: guest
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: rabbitmq
+spec:
+  selector:
+    app: rabbitmq
+  ports:
+    - name: amqp
+      port: {{ default 5672 .Values.rabbitmq.port }}
+      targetPort: {{ default 5672 .Values.rabbitmq.port }}
+    - name: management
+      port: {{ default 15672 .Values.rabbitmq.managementPort }}
+      targetPort: {{ default 15672 .Values.rabbitmq.managementPort }}
+  type: LoadBalancer

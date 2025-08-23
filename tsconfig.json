@@ -1,0 +1,25 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compileOnSave": false,
+  "files": [],
+  "references": [
+    {
+      "path": "./apps/auth-svc"
+    },
+    {
+      "path": "./apps/nutritionist-svc"
+    },
+    {
+      "path": "./apps/patient-svc"
+    },
+    {
+      "path": "./apps/gateway"
+    },
+    {
+      "path": "./libs/shared"
+    },
+    {
+      "path": "./apps/admin-svc"
+    }
+  ]
+}
