@@ -5,3 +5,7 @@ export * from "./nutritionist/nutritionist.entity";
 
 export * from "./patient/patient.entity";
 export * from "./patient/patient-nutritionist.entity";
+
+export * from "./diet/diet.entity";
+export * from "./diet/meal.entity";
+export * from "./diet/food.entity";

@@ -5,3 +5,4 @@ export * from './dto';
 export * from './providers';
 export * from './utils';
 export * from './types';
+export * from './interfaces';

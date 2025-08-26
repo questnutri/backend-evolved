@@ -15,6 +15,7 @@ export class GatewayController {
             case 'auth': return process.env.AUTH_SERVICE_URL ?? 'http://localhost:3032';
             case 'nutritionist': return process.env.NUTRITIONIST_SERVICE_URL ?? 'http://localhost:3033';
             case 'patient': return process.env.PATIENT_SERVICE_URL ?? 'http://localhost:3034';
+            case 'diet': return process.env.DIET_SERVICE_URL ?? 'http://localhost:3035';
             default: return undefined;
         }
     }
