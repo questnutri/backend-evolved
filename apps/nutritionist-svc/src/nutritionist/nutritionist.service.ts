@@ -1,61 +1,52 @@
-import { ConflictException, HttpException, Inject, Injectable, InternalServerErrorException, Query } from '@nestjs/common';
-import { AUTH_SERVICE_PROXY_NAME, CreateNutritionistDto, Nutritionist, UserRole } from '@backend-evolved/shared';
+import { ConflictException, HttpException, Inject, Injectable, InternalServerErrorException, NotFoundException, UseFilters } from '@nestjs/common';
+import { AUTH_SERVICE_PROXY_NAME, CreateNutritionistDto, KeysOf, Nutritionist, ProxyMessage, ServiceContract, UserRole } from '@backend-evolved/shared';
 import { InjectRepository } from '@nestjs/typeorm';
-import { ClientProxy } from '@nestjs/microservices';
+import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { QueryFailedError, Repository } from 'typeorm';
 import { firstValueFrom } from 'rxjs';
 import { RegisterUserDto } from '@backend-evolved/shared';
 
 
 @Injectable()
-export class NutritionistService {
+export class NutritionistService implements ServiceContract<Nutritionist> {
     constructor(
         @Inject(AUTH_SERVICE_PROXY_NAME) private readonly authServiceProxy: ClientProxy,
         @InjectRepository(Nutritionist) private readonly nutritionistRepository: Repository<Nutritionist>,
     ) { }
 
-    async create(data: CreateNutritionistDto) {
-        try {
-            const payload = {
-                email: data.email,
-                password: data.password,
-                role: UserRole.NUTRITIONIST
-            };
-            const userId: string = await firstValueFrom(
-                this.authServiceProxy.send<string, RegisterUserDto>('user.creation', payload)
-            );
-            if (!userId) throw new InternalServerErrorException('Auth service did not return user id');
-            const nutritionist = this.nutritionistRepository.create({ ...data, id: userId });
-            return await this.nutritionistRepository.save(nutritionist);
-        } catch (error: any) {
-            // console.error(`Nutritionist creation error`, error);
-            await firstValueFrom(
-                this.authServiceProxy.send<boolean, string>('user.deletion', data.email)
-            );
-
-            if (error instanceof HttpException) {
-                throw error;
-            }
-            if (error instanceof QueryFailedError) {
-                throw new ConflictException(error.driverError.detail);
-            }
-            switch (error.source) {
-                case 'ConflictException':
-                    throw new ConflictException(error?.detail);
-                default:
-                    throw new InternalServerErrorException('Failed to create nutritionist: ' + (error?.detail ?? 'unknown'));
-            }
-        }
+    async findAll(query?: Partial<KeysOf<Nutritionist>>): Promise<Nutritionist[]> {
+        return await this.nutritionistRepository.find({ where: query });
     }
 
-    async findOne(where: {[key in keyof Nutritionist]?: any}) {
-        return await this.nutritionistRepository.findOneBy(where);
+    async findOne(where: { [key in keyof Nutritionist]?: any }) {
+        const foundNutritionist = await this.nutritionistRepository.findOneBy(where);
+        if (!foundNutritionist) throw new NotFoundException('Nutritionist not found');
+        return foundNutritionist;
     }
 
-    async update(nutritionistId: string, data: Partial<CreateNutritionistDto>) {
+    async createOne(data: CreateNutritionistDto) {
+        const payload = {
+            email: data.email,
+            password: data.password,
+            role: UserRole.NUTRITIONIST
+        };
+        const userCreationResult = await firstValueFrom(
+            this.authServiceProxy.send<ProxyMessage<string>, RegisterUserDto>('user.creation', payload)
+        );
+        if (userCreationResult && 'error' in userCreationResult) throw new RpcException(userCreationResult);
+
+        const userId = userCreationResult.payload;
+        if (!userId) throw new InternalServerErrorException('Auth service did not return user id');
+
+        const nutritionist = this.nutritionistRepository.create({ ...data, id: userId });
+        return await this.nutritionistRepository.save(nutritionist);
+    }
+
+    async updateOne(query: Partial<KeysOf<Nutritionist>>, data: Partial<CreateNutritionistDto>) {
         try {
-            await this.nutritionistRepository.update(nutritionistId, data);
-            return await this.nutritionistRepository.findOneBy({ id: nutritionistId });
+            const result = await this.nutritionistRepository.update(query, data);
+            if (result.affected === 0) throw new NotFoundException('Nutritionist not found');
+            return await this.nutritionistRepository.findOneBy(query);
         } catch (error: any) {
             if (error instanceof HttpException) {
                 throw error;
@@ -72,19 +63,12 @@ export class NutritionistService {
         }
     }
 
-    // findAll() {
-    //     return `This action returns all nutritionist`;
-    // }
 
-    // findOne(id: number) {
-    //     return `This action returns a #${id} nutritionist`;
-    // }
+    async deleteOne(query: Partial<KeysOf<Nutritionist>>): Promise<void> {
+        const nutritionist = await this.nutritionistRepository.findOneBy(query);
+        if (!nutritionist) throw new NotFoundException('Nutritionist not found');
+        const result = await this.nutritionistRepository.delete(nutritionist);
+        if (result.affected === 0) throw new InternalServerErrorException('Failed to delete nutritionist');
+    }
 
-    // update(id: number, updateNutritionistDto: UpdateNutritionistDto) {
-    //     return `This action updates a #${id} nutritionist`;
-    // }
-
-    // remove(id: number) {
-    //     return `This action removes a #${id} nutritionist`;
-    // }
 }

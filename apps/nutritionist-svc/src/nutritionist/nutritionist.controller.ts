@@ -1,8 +1,8 @@
-import { Controller, Get, Post, Body, Param, Inject, UseGuards, Headers } from '@nestjs/common';
+import { Controller, Get, Post, Body, Inject, UseGuards, Headers, UseFilters } from '@nestjs/common';
 import { NutritionistService } from './nutritionist.service';
-import { BodyCreatePatientDto, CreateNutritionistDto, CreatePatientDto, FindAllFromNutritionistPayload, Patient, PATIENT_SERVICE_PROXY_NAME, RoleGuard } from '@backend-evolved/shared';
+import { BodyCreatePatientDto, CreateNutritionistDto, CreatePatientDto, FindAllFromNutritionistPayload, ProxyMessage, Patient, PATIENT_SERVICE_PROXY_NAME, RoleGuard, ControllerExceptionFilter } from '@backend-evolved/shared';
 import { ApiOkResponse, ApiOperation, ApiConflictResponse, ApiBadRequestResponse, ApiBearerAuth, ApiSecurity } from '@nestjs/swagger';
-import { ClientProxy } from '@nestjs/microservices';
+import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 
 
@@ -19,8 +19,9 @@ export class NutritionistController {
     @ApiConflictResponse({ description: 'Nutritionist with given email already exists' })
     @ApiConflictResponse({ description: 'Nutritionist with given document already exists' })
     @ApiBadRequestResponse({ description: 'Invalid data' })
-    register(@Body() body: CreateNutritionistDto) {
-        return this.nutritionistService.create(body);
+    @UseFilters(ControllerExceptionFilter)
+    async register(@Body() body: CreateNutritionistDto) {
+        return await this.nutritionistService.createOne(body);
     }
 
     @Post('patients')
@@ -29,14 +30,26 @@ export class NutritionistController {
     @ApiSecurity('bearer')
     @ApiOkResponse({ description: 'Patient created successfully' })
     @UseGuards(RoleGuard(['nutritionist', 'admin']))
+    @UseFilters(ControllerExceptionFilter)
     async createPatient(
         @Headers() headers: { 'user-id': string },
         @Body() body: BodyCreatePatientDto
     ) {
-        return await firstValueFrom(
-            this.patientServiceProxy.send<Patient, CreatePatientDto>
-                ('patient.creation', { ...body, nutritionistId: headers['user-id'] })
-        );
+        try {
+            const result = await firstValueFrom(
+                this.patientServiceProxy.send<ProxyMessage<Patient>, CreatePatientDto>
+                    ('patient.creation', { ...body, nutritionistId: headers['user-id'] }));
+
+            if (result && 'error' in result) {
+                throw new RpcException(result);
+            }
+
+            return result.payload;
+
+        } catch (error) {
+            console.log(error);
+            throw error;
+        }
     }
 
     @Get('patients')
@@ -45,6 +58,7 @@ export class NutritionistController {
     @ApiSecurity('bearer')
     @ApiOkResponse({ description: 'Patients retrieved successfully' })
     @UseGuards(RoleGuard(['nutritionist', 'admin']))
+    @UseFilters(ControllerExceptionFilter)
     async getAllPatients(
         @Headers() headers: { 'user-id': string },
     ) {
@@ -60,14 +74,4 @@ export class NutritionistController {
                 )
         );
     }
-
-    // @Get()
-    // findAll() {
-    //     return this.nutritionistService.findAll();
-    // }
-
-    // @Get(':id')
-    // findOne(@Param('id') id: string) {
-    //     return this.nutritionistService.findOne(+id);
-    // }
 }

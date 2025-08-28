@@ -1,7 +1,8 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { IsOptional, IsString } from "class-validator";
-import { Meal } from "src/entities";
+import { InputType, Field } from '@nestjs/graphql';
 
+@InputType()
 export class UpdateMealDto {
     @ApiProperty({
         description: 'Meal name',
@@ -9,6 +10,7 @@ export class UpdateMealDto {
     })
     @IsOptional()
     @IsString()
+    @Field({ nullable: true })
     name?: string;
 
     @ApiProperty({
@@ -17,6 +19,7 @@ export class UpdateMealDto {
     })
     @IsOptional()
     @IsString()
+    @Field({ nullable: true })
     description?: string;
 
     @ApiProperty({
@@ -25,6 +28,7 @@ export class UpdateMealDto {
     })
     @IsOptional()
     @IsString()
+    @Field({ nullable: true })
     hour?: string;
 
     @ApiProperty({
@@ -33,5 +37,6 @@ export class UpdateMealDto {
     })
     @IsOptional()
     @IsString({ each: true })
+    @Field(() => [String], { nullable: true })
     daysOfWeek?: string[];
 }

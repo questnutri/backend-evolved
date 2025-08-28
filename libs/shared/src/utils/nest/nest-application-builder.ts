@@ -1,4 +1,4 @@
-import { DynamicModule, ForwardReference, Logger, NestApplicationOptions, Type, ValidationPipe, ValidationPipeOptions } from '@nestjs/common';
+import { DynamicModule, ExceptionFilter, ForwardReference, Logger, NestApplicationOptions, Type, ValidationPipe, ValidationPipeOptions } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { MicroserviceOptions } from '@nestjs/microservices';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
@@ -15,6 +15,7 @@ export class NestApplicationBuilder {
     private pipeOptions: ValidationPipeOptions | undefined;
     private servicePort: number = 3000;
     private serviceName: string = 'Application';
+    private exceptionFilters: ExceptionFilter[] = [];
 
 
     private constructor(module: IEntryNestModule, options?: NestApplicationOptions) {
@@ -52,7 +53,19 @@ export class NestApplicationBuilder {
         return this;
     }
 
-    async build() {
+    addExceptionFilter(filter: ExceptionFilter): NestApplicationBuilder {
+        this.exceptionFilters.push(filter);
+        return this;
+    }
+
+    async listen() {
+        const app = await this.getApp();
+        await app.listen(this.servicePort);
+        Logger.log(`🚀 ${this.serviceName} is running on: http://localhost:${this.servicePort}/`);
+        return app;
+    }
+
+    async getApp() {
         const app = await NestFactory.create(this.module, this.nestAppOptions);
 
         if (this.swaggerConfig) {
@@ -61,6 +74,13 @@ export class NestApplicationBuilder {
             const documentFactory = () => SwaggerModule.createDocument(app, swagger);
             SwaggerModule.setup(this.swaggerApiUrl, app, documentFactory());
         }
+        if (this.pipeOptions) {
+            app.useGlobalPipes(new ValidationPipe(this.pipeOptions));
+        }
+
+        // this.exceptionFilters.forEach((filter) => {
+        //     app.useGlobalFilters(filter);
+        // });
 
         if (this.rabbitMqQueue) {
             app.connectMicroservice<MicroserviceOptions>(
@@ -72,12 +92,7 @@ export class NestApplicationBuilder {
             await app.startAllMicroservices();
         }
 
-        if (this.pipeOptions) {
-            app.useGlobalPipes(new ValidationPipe(this.pipeOptions));
-        }
 
-        await app.listen(this.servicePort);
-        Logger.log(`🚀 ${this.serviceName} is running on: http://localhost:${this.servicePort}/`);
         return app;
     }
 }

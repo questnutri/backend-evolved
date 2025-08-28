@@ -1,8 +1,11 @@
-import { ApiProperty } from "@nestjs/swagger";
-import { IsEmail, IsOptional, IsString } from "class-validator";
+import { Field, InputType } from "@nestjs/graphql";
+import { ApiPropertyOptional } from "@nestjs/swagger";
+import { IsOptional, IsString } from "class-validator";
 
+@InputType()
 export class UpdateDietDto {
-    @ApiProperty({
+    @Field({ nullable: true })
+    @ApiPropertyOptional({
         description: 'Diet name',
         example: 'Bulking Diet - Week 1'
     })
@@ -10,7 +13,8 @@ export class UpdateDietDto {
     @IsString()
     name?: string;
 
-    @ApiProperty({
+    @Field({ nullable: true })
+    @ApiPropertyOptional({
         description: 'Diet description',
         example: 'A diet plan for muscle gain',
     })

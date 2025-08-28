@@ -1,30 +1,23 @@
 import { Body, Controller, Post, UseGuards, Headers, NotFoundException, Param, Put, Delete, Get } from '@nestjs/common';
 import { MealService } from './meal.service';
-import { ApiCreatedResponse, ApiNoContentResponse, ApiNotFoundResponse, ApiOkResponse, ApiOperation } from '@nestjs/swagger';
-import { CreateMealDto, Meal, RoleGuard, ControllerContract} from '@backend-evolved/shared';
+import { ApiBearerAuth, ApiSecurity, ApiCreatedResponse, ApiNoContentResponse, ApiNotFoundResponse, ApiOkResponse, ApiOperation } from '@nestjs/swagger';
+import { CreateMealDto, Meal, RoleGuard, ControllerContract, Food } from '@backend-evolved/shared';
 import { DietService } from '../diet/diet.service';
+import { FoodService } from '../food/food.service';
 
-@Controller('meal')
+@Controller('diet/:dietId/meal')
+@ApiBearerAuth('bearer')
+@ApiSecurity('bearer')
 export class MealController implements ControllerContract<Meal> {
 	constructor(
 		private readonly mealService: MealService,
-		private readonly dietService: DietService
-	) { }
-	// postOne(item: Meal): Promise<Meal> {
-	// 	throw new Error('Method not implemented.');
-	// }
-	// getAll(query: { id?: any; name?: any; diet?: any; foods?: any; daysOfWeek?: any; hour?: any; createdAt?: any; updatedAt?: any; isPatientRelated?: any; isNutritionistRelated?: any; }): Promise<Meal[]> {
-	// 	throw new Error('Method not implemented.');
-	// }
-	// getOneById(id: string): Promise<Meal | null> {
-	// 	throw new Error('Method not implemented.');
-	// }
-	// updateOneById(id: string, item: Partial<Meal>): Promise<Meal | null> {
-	// 	throw new Error('Method not implemented.');
-	// }
-	// deleteOneById(id: string): Promise<void> {
-	// 	throw new Error('Method not implemented.');
-	// }
+		private readonly dietService: DietService) { }
+
+	@Get()
+	async getMealsByDietId(@Param('dietId') dietId: string) {
+		return await this.mealService.findAll({ diet: { id: dietId } });
+	}
+
 
 	@Post()
 	@ApiOperation({
@@ -38,14 +31,15 @@ export class MealController implements ControllerContract<Meal> {
 	@ApiNotFoundResponse({ description: 'Diet not found or user does not have access to this diet.' })
 	@UseGuards(RoleGuard(['nutritionist']))
 	async postOne(
+		@Param('dietId') dietId: string,
 		@Body() createMealDto: CreateMealDto,
 		@Headers() headers: any
 	) {
-		const diet = await this.dietService.findById(createMealDto.dietId);
+		const diet = await this.dietService.findById(dietId);
 		if (!diet) throw new NotFoundException('Diet not found');
 		const isRelated = diet.nutritionistId === headers['user-id'] || diet.patientId === headers['user-id'];
 		if (!isRelated) throw new NotFoundException(`User doesn't have this diet`);
-		return await this.mealService.create(createMealDto);
+		return await this.mealService.create({ ...createMealDto, dietId });
 	}
 
 	@Get(':mealId')

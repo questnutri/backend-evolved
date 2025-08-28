@@ -1,7 +1,9 @@
+export type KeysOf<T> = {[key in keyof T]: T[key]}
+
 export interface ServiceContract<T = any> {
-    create(data: Partial<T>): Promise<T>;
-    findAll(query?: { [key in keyof T]?: any }): Promise<T[]>;
-    findById(id: string): Promise<T | null>;
-    update(id: string, data: Partial<T>): Promise<T | null>;
-    delete(id: string): Promise<void>;
+    findAll(query?: Partial<KeysOf<T>>): Promise<T[]>;
+    findOne(query?: Partial<KeysOf<T>>): Promise<T | null>;
+    createOne(data: Partial<T>): Promise<T>;
+    updateOne(query: Partial<KeysOf<T>>, data: Partial<T>): Promise<T | null>;
+    deleteOne(query: Partial<KeysOf<T>>): Promise<void>;
 }

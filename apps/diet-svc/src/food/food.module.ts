@@ -1,9 +1,20 @@
 import { Module } from '@nestjs/common';
 import { FoodService } from './food.service';
 import { FoodController } from './food.controller';
+import { MealService } from '../meal/meal.service';
+import { dbConnection } from '../database/provide-db';
+import { PATIENT_SERVICE_PROXY_NAME, provideProxyService } from '@backend-evolved/shared';
 
 @Module({
-  controllers: [FoodController],
-  providers: [FoodService],
+    imports: [
+        dbConnection()
+    ],
+    controllers: [FoodController],
+    providers: [
+        FoodService,
+        MealService,
+        provideProxyService(PATIENT_SERVICE_PROXY_NAME)
+    ],
+    exports: [FoodService, MealService],
 })
-export class FoodModule {}
+export class FoodModule { }

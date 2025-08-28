@@ -1,6 +1,6 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import { Controller, Post, Body, UseFilters } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { LoginUserDto, RefreshTokenDto, RegisterUserDto } from '@backend-evolved/shared';
+import { ProxyMessengerFilter, LoginUserDto, ProxyMessage, RefreshTokenDto, RegisterUserDto } from '@backend-evolved/shared';
 import { ApiAcceptedResponse, ApiOkResponse, ApiOperation } from '@nestjs/swagger';
 import { MessagePattern, Payload, RpcException } from '@nestjs/microservices';
 
@@ -24,18 +24,9 @@ export class AuthController {
     }
 
     @MessagePattern('user.creation')
-    async handleUserCreation(@Payload() data: RegisterUserDto) {
-        console.log('Received user.creation message with data:', data);
-        try {
-            const user = await this.authService.register(data);
-            return user.id;
-        } catch (err: any) {
-            console.log('Error in user.creation handler:', err);
-            throw new RpcException({
-                detail: err?.message ?? String(err),
-                source: err.constructor.name
-            });
-        }
+    @UseFilters(ProxyMessengerFilter)
+    async handleUserCreation(@Payload() data: RegisterUserDto): Promise<ProxyMessage<string>> {
+        return { payload: (await this.authService.register(data)).id };
     }
 
     @MessagePattern('user.deletion')

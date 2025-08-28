@@ -1,17 +1,14 @@
 import { Headers, Body, Controller, Get, Post, UseGuards, ForbiddenException, Param, NotFoundException, Put, Delete } from '@nestjs/common';
 import { DietService } from './diet.service';
-import { CreateDietDto, Diet, Meal, Nutritionist, RoleGuard } from '@backend-evolved/shared';
+import { CreateDietDto, Diet, RoleGuard } from '@backend-evolved/shared';
 import { ApiBearerAuth, ApiCreatedResponse, ApiForbiddenResponse, ApiNoContentResponse, ApiNotFoundResponse, ApiOkResponse, ApiOperation, ApiSecurity } from '@nestjs/swagger';
 import { UpdateDietDto } from '../../../../libs/shared/src/dto/diet/update-diet.dto';
-import { MealService } from '../meal/meal.service';
 
 @Controller('diet')
 @ApiBearerAuth('bearer')
 @ApiSecurity('bearer')
 export class DietController {
-	constructor(private readonly dietService: DietService,
-		private readonly mealService: MealService
-	) { }
+	constructor(private readonly dietService: DietService) { }
 
 	@Post()
 	@ApiOperation({
@@ -27,7 +24,7 @@ export class DietController {
 		@Body() createDietDto: CreateDietDto,
 		@Headers() headers: any
 	) {
-		return await this.dietService.create({ ...createDietDto, nutritionistId: headers['user-id'] });
+		return await this.dietService.createOne({ ...createDietDto, nutritionistId: headers['user-id'] });
 	}
 
 	@Get()
@@ -79,7 +76,7 @@ export class DietController {
 		@Param('dietId') dietId: string,
 		@Headers() headers: any
 	) {
-		const diet = await this.dietService.findById(dietId);
+		const diet = await this.dietService.findOne({id: dietId});
 		if (!diet) {
 			throw new NotFoundException("Diet not found");
 		}
@@ -89,38 +86,6 @@ export class DietController {
 		}
 		return diet;
 	}
-
-	@Get(':dietId/meals')
-	@ApiOperation({
-		summary: 'Retrieve all meals for a specific diet',
-		description: 'Retrieve all meals for a specific diet'
-	})
-	@ApiOkResponse({
-		description: 'The meals have been successfully retrieved.',
-		type: [Meal]
-	})
-	@ApiForbiddenResponse({
-		description: 'User not allowed to access this diet',
-	})
-	@ApiNotFoundResponse({
-		description: 'Diet not found',
-	})
-	@UseGuards(RoleGuard(['nutritionist', 'patient']))
-	async findMealsFromDiet(
-		@Param('dietId') dietId: string,
-		@Headers() headers: any
-	) {
-		const meals = await this.mealService.findAll({ diet: { id: dietId } });
-		if (!meals) {
-			throw new NotFoundException("Diet not found");
-		}
-		const isRelated = meals[0].diet.nutritionistId === headers['user-id'] || meals[0].diet.patientId === headers['user-id'];
-		if (!isRelated) {
-			throw new ForbiddenException("User not allowed to access this diet");
-		}
-		return meals;
-	}
-
 
 	@Put(':dietId')
 	@ApiOperation({
@@ -140,7 +105,7 @@ export class DietController {
 		@Body() updateDietDto: UpdateDietDto,
 		@Headers() headers: any
 	) {
-		return await this.dietService.update(dietId, updateDietDto);
+		return await this.dietService.updateOne({id: dietId}, updateDietDto);
 	}
 
 	@Delete(':dietId')
@@ -159,7 +124,7 @@ export class DietController {
 		@Param('dietId') dietId: string,
 		@Headers() headers: any
 	) {
-		return await this.dietService.delete(dietId);
+		return await this.dietService.deleteOne({id: dietId});
 	}
 
 }

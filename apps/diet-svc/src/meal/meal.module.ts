@@ -4,12 +4,20 @@ import { MealController } from './meal.controller';
 import { dbConnection } from '../database/provide-db';
 import { DietService } from '../diet/diet.service';
 import { FoodService } from '../food/food.service';
+import { PATIENT_SERVICE_PROXY_NAME, provideProxyService } from '@backend-evolved/shared';
 
 @Module({
 	imports: [
 		dbConnection()
 	],
 	controllers: [MealController],
-	providers: [MealService, DietService, FoodService],
+	providers: [
+		MealService,
+		DietService,
+		FoodService,
+		provideProxyService(PATIENT_SERVICE_PROXY_NAME)
+
+	],
+	exports: [MealService, DietService, FoodService],
 })
 export class MealModule { }

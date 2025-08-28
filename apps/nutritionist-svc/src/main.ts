@@ -1,6 +1,6 @@
 import { NutritionistModule } from './nutritionist/nutritionist.module';
 import { DocumentBuilder } from '@nestjs/swagger';
-import { NestApplicationBuilder, generateNestApplication, } from '@backend-evolved/shared';
+import { ControllerExceptionFilter, NestApplicationBuilder, RpcExceptionFilter, generateNestApplication, } from '@backend-evolved/shared';
 
 
 async function bootstrap() {
@@ -15,6 +15,7 @@ async function bootstrap() {
                 forbidNonWhitelisted: true,
                 transform: true,
             })
+            .addExceptionFilter(new ControllerExceptionFilter())
             .setSwagger(
                 new DocumentBuilder()
                     .setTitle('Nutritionist Service API')
@@ -27,6 +28,7 @@ async function bootstrap() {
                 }
             )
     );
+
 }
 
 bootstrap();

@@ -6,3 +6,5 @@ export * from './providers';
 export * from './utils';
 export * from './types';
 export * from './interfaces';
+export * from './filters';
+export * from './errors';

@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { PatientService } from './patient.service';
 import { PatientController } from './patient.controller';
 import { provideTypeOrmDbConnection, Patient, provideProxyService, AUTH_SERVICE_PROXY_NAME, PatientNutritionist } from '@backend-evolved/shared';
+import { PatientNutritionistService } from './patient-nutritionist.service';
 
 @Module({
     imports: [
@@ -13,6 +14,7 @@ import { provideTypeOrmDbConnection, Patient, provideProxyService, AUTH_SERVICE_
     controllers: [PatientController],
     providers: [
         PatientService,
+        PatientNutritionistService,
         provideProxyService(AUTH_SERVICE_PROXY_NAME)
     ],
 })

@@ -2,19 +2,19 @@
  * This is not a production server yet!
  * This is only a minimal backend to get started.
  */
-import { generateNestApplication, NestApplicationBuilder } from "@backend-evolved/shared";
+import { generateNestApplication, NestApplicationBuilder, RpcExceptionFilter } from "@backend-evolved/shared";
 import { DocumentBuilder } from '@nestjs/swagger';
 import { ServiceModule } from "./service/service.module";
 
 async function bootstrap() {
-	await generateNestApplication(
+	const app = await generateNestApplication(
 		NestApplicationBuilder.forModule(ServiceModule)
 			.setName("Diet Service")
 			.setPort(process.env.DIET_SERVICE_PORT || '3035')
 			.setQueueName(process.env.DIET_SERVICE_QUEUE || 'diet_queue')
 			.setPipe({
 				whitelist: true,
-				forbidNonWhitelisted: true,
+				forbidNonWhitelisted: false,
 				transform: true,
 			})
 			.setSwagger(
@@ -28,6 +28,7 @@ async function bootstrap() {
 					url: 'diet/docs'
 				}
 			)
+			.addExceptionFilter(new RpcExceptionFilter())
 	)
 }
 bootstrap();

@@ -54,8 +54,13 @@ export class GatewayController {
             }
         }
 
-        const targetUrl = new URL(targetBase + (Array.isArray(splat) ? '/' + splat.join('/') : '/' + splat));
-        const options: http.RequestOptions = {
+        let forwardedPath: string;
+        if (Array.isArray(splat) && splat.length > 1 && splat[1] === 'graphql') {
+            forwardedPath = '/' + splat.slice(1).join('/');
+        } else {
+            forwardedPath = Array.isArray(splat) ? '/' + splat.join('/') : '/' + splat;
+        }
+        const targetUrl = new URL(targetBase + forwardedPath); const options: http.RequestOptions = {
             protocol: targetUrl.protocol,
             hostname: targetUrl.hostname,
             port: targetUrl.port,
