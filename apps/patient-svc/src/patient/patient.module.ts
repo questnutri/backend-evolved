@@ -1,15 +1,13 @@
 import { Module } from '@nestjs/common';
 import { PatientService } from './patient.service';
 import { PatientController } from './patient.controller';
-import { provideTypeOrmDbConnection, Patient, provideProxyService, AUTH_SERVICE_PROXY_NAME, PatientNutritionist } from '@backend-evolved/shared';
+import { provideProxyService, AUTH_SERVICE_PROXY_NAME } from '@backend-evolved/shared';
 import { PatientNutritionistService } from './patient-nutritionist.service';
+import { dbConnection } from '../database/provide-db';
 
 @Module({
     imports: [
-        provideTypeOrmDbConnection(
-            process.env.PATIENT_SERVICE_DATABASE_PORT || '5434',
-            [Patient, PatientNutritionist]
-        ),
+        dbConnection()
     ],
     controllers: [PatientController],
     providers: [

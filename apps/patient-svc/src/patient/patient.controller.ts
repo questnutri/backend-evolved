@@ -17,11 +17,11 @@ export class PatientController {
         return { payload: await this.patientService.createOne(data) };
     }
 
-    @MessagePattern('patient.findAllFromNutritionist')
-    @UseFilters(ProxyMessengerFilter)
-    async findAllPatients(@Payload() data: FindAllFromNutritionistPayload) {
-        return await this.patientService.findAllFromNutritionist(data.nutritionistId);
-    }
+    // @MessagePattern('patient.findAllFromNutritionist')
+    // @UseFilters(ProxyMessengerFilter)
+    // async findAllPatients(@Payload() data: FindAllFromNutritionistPayload): Promise<ProxyMessage<Patient[]>> {
+    //     return { payload: await this.patientService.findAllFromNutritionist(data.nutritionistId) };
+    // }
 
     @MessagePattern('patient.isNutritionistRelated')
     @UseFilters(ProxyMessengerFilter)

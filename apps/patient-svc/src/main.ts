@@ -1,11 +1,11 @@
 import { NestApplicationBuilder, generateNestApplication } from '@backend-evolved/shared';
-import { PatientModule } from './patient/patient.module';
 import { DocumentBuilder } from '@nestjs/swagger';
+import { ServiceModule } from './service/service.module';
 
 async function bootstrap() {
     await generateNestApplication(
         NestApplicationBuilder
-            .forModule(PatientModule)
+            .forModule(ServiceModule)
             .setName('Patient Service')
             .setPort(process.env.PATIENT_SERVICE_PORT ?? '3034')
             .setQueueName(process.env.PATIENT_QUEUE_NAME ?? 'patient-queue')
