@@ -2,7 +2,7 @@
  * This is not a production server yet!
  * This is only a minimal backend to get started.
  */
-import { generateNestApplication, NestApplicationBuilder, RpcExceptionFilter } from "@backend-evolved/shared";
+import { generateNestApplication, NestApplicationBuilder } from "@backend-evolved/shared";
 import { DocumentBuilder } from '@nestjs/swagger';
 import { ServiceModule } from "./service/service.module";
 
@@ -28,7 +28,6 @@ async function bootstrap() {
 					url: 'diet/docs'
 				}
 			)
-			.addExceptionFilter(new RpcExceptionFilter())
 	)
 }
 bootstrap();

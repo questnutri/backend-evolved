@@ -1,15 +1,15 @@
-import { Diet, PATIENT_SERVICE_PROXY_NAME, ServiceContract } from '@backend-evolved/shared';
-import { Injectable, NotFoundException, Inject, HttpException, ConflictException, InternalServerErrorException } from '@nestjs/common';
+import { Diet, PATIENT_SERVICE_PROXY_NAME, ProxyMessage, ServiceContract } from '@backend-evolved/shared';
+import { Injectable, NotFoundException, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { QueryFailedError, Repository } from 'typeorm';
-import { ClientProxy } from '@nestjs/microservices';
+import { Repository } from 'typeorm';
+import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 
 @Injectable()
 export class DietService implements ServiceContract<Diet> {
     constructor(
         @InjectRepository(Diet) private readonly dietRepository: Repository<Diet>,
-        @Inject(PATIENT_SERVICE_PROXY_NAME) private readonly patientServiceProxy: ClientProxy,
+        @Inject(PATIENT_SERVICE_PROXY_NAME) private readonly patientProxyService: ClientProxy
     ) { }
 
     async findAll(query: { [key in keyof Diet]?: any }): Promise<Diet[]> {
@@ -21,29 +21,23 @@ export class DietService implements ServiceContract<Diet> {
     }
 
     async createOne(data: Partial<Diet>): Promise<Diet> {
-        console.log('Creating diet with data:', data);
-        try {
+        const isNutritionistRelated = await firstValueFrom(
+            this.patientProxyService.send<ProxyMessage<boolean>, { nutritionistId: string, patientId: string }>('patient.isRelatedToNutritionist', {
+                patientId: data.patientId!,
+                nutritionistId: data.nutritionistId!
+            })
+        );
+        if (isNutritionistRelated && 'error' in isNutritionistRelated) {
+            throw new RpcException(isNutritionistRelated);
+        }
+        if(isNutritionistRelated.payload) {
             const diet = this.dietRepository.create(data);
             return await this.dietRepository.save(diet);
-            throw new NotFoundException("Patient not found or not related to nutritionist");
-        } catch (error: any) {
-            console.log(error);
-            if (error instanceof HttpException) {
-                throw error;
-            }
-            if (error instanceof QueryFailedError) {
-                throw new ConflictException(error.driverError.detail);
-            }
-            switch (error.source) {
-                case 'ConflictException':
-                    throw new ConflictException(error?.detail);
-                default:
-                    throw new InternalServerErrorException('Failed to update nutritionist: ' + (error?.detail ?? 'unknown'));
-            }
         }
+        throw new NotFoundException('Patient not found or not related to the nutritionist');
     }
 
-    async updateOne(query: any, data: Partial<Diet>): Promise<Diet | null> {
+    async updateOne(query: any, data: Partial<Diet>): Promise<Diet> {
         const diet = await this.dietRepository.findOne({ where: query });
         if (!diet) {
             throw new NotFoundException('Diet not found');
@@ -53,12 +47,8 @@ export class DietService implements ServiceContract<Diet> {
     }
 
     async deleteOne(query: any): Promise<void> {
-        try {
-            const result = await this.dietRepository.delete(query);
-            if (result.affected === 0) throw new NotFoundException('Diet not found');
-        } catch (error) {
-
-        }
+        const result = await this.dietRepository.delete(query);
+        if (result.affected === 0) throw new NotFoundException('Diet not found');
     }
 
 

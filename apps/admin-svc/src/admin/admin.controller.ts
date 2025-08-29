@@ -1,7 +1,7 @@
 import { Controller, Body, Post, Inject, ConflictException, InternalServerErrorException, NotFoundException, UseGuards } from '@nestjs/common';
 import { AdminService } from './admin.service';
-import { AUTH_SERVICE_PROXY_NAME, RoleGuard } from '@backend-evolved/shared';
-import { ClientProxy } from '@nestjs/microservices';
+import { AUTH_SERVICE_PROXY_NAME, Nutritionist, ProxyMessage, RoleGuard } from '@backend-evolved/shared';
+import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 
 @Controller('admin')
@@ -15,9 +15,11 @@ export class AdminController {
     @UseGuards(RoleGuard(['admin']))
     async approveNutritionist(@Body('email') email: string) {
         try {
-            return await firstValueFrom(
-                this.authServiceProxy.send<boolean, string>('nutritionist.approval', email)
+            const result = await firstValueFrom(
+                this.authServiceProxy.send<ProxyMessage<Nutritionist>, string>('nutritionist.approval', email)
             );
+            if(result && "error" in result) throw new RpcException(result);
+            return result.payload;
         } catch (error: any) {
             switch (error.source) {
                 case 'ConflictException':

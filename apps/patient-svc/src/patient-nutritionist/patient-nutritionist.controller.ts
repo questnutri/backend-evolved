@@ -1,7 +1,7 @@
 import { Controller, UseFilters } from '@nestjs/common';
-import { MessagePattern, Payload, RpcException } from '@nestjs/microservices';
+import { MessagePattern, Payload } from '@nestjs/microservices';
 import { PatientNutritionistService } from './patient-nutritionist.service';
-import { type FindAllFromNutritionistPayload, ProxyMessage, Patient, ProxyMessengerFilter, PatientNutritionist, messageRegistry } from '@backend-evolved/shared';
+import { type FindAllFromNutritionistPayload, ProxyMessage, Patient, ProxyMessengerFilter, messageRegistry } from '@backend-evolved/shared';
 
 @Controller('patient')
 export class PatientNutritionistController {
@@ -17,7 +17,7 @@ export class PatientNutritionistController {
 
     @MessagePattern('patient.isRelatedToNutritionist')
     @UseFilters(ProxyMessengerFilter)
-    async isPatientRelated(patientId: string, nutritionistId: string): Promise<ProxyMessage<boolean>> {
-        return { payload: (await this.patientNutritionistService.findOne({ patientId, nutritionistId })) !== null };
+    async isNutritionistRelated(data: {patientId: string, nutritionistId: string}): Promise<ProxyMessage<boolean>> {
+        return { payload: (await this.patientNutritionistService.findOne(data)) !== null };
     }
 }

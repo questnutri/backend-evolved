@@ -1,6 +1,6 @@
-import { Headers, Body, Controller, Get, Post, UseGuards, ForbiddenException, Param, NotFoundException, Put, Delete } from '@nestjs/common';
+import { Headers, Body, Controller, Get, Post, UseGuards, ForbiddenException, Param, NotFoundException, Put, Delete, UseFilters } from '@nestjs/common';
 import { DietService } from './diet.service';
-import { CreateDietDto, Diet, RoleGuard } from '@backend-evolved/shared';
+import { ControllerExceptionFilter, CreateDietDto, Diet, RoleGuard } from '@backend-evolved/shared';
 import { ApiBearerAuth, ApiCreatedResponse, ApiForbiddenResponse, ApiNoContentResponse, ApiNotFoundResponse, ApiOkResponse, ApiOperation, ApiSecurity } from '@nestjs/swagger';
 import { UpdateDietDto } from '../../../../libs/shared/src/dto/diet/update-diet.dto';
 
@@ -9,23 +9,6 @@ import { UpdateDietDto } from '../../../../libs/shared/src/dto/diet/update-diet.
 @ApiSecurity('bearer')
 export class DietController {
 	constructor(private readonly dietService: DietService) { }
-
-	@Post()
-	@ApiOperation({
-		summary: 'Create a new diet',
-		description: 'Create a new diet for a given patient'
-	})
-	@ApiCreatedResponse({
-		description: 'The diet has been successfully created.',
-		type: CreateDietDto
-	})
-	@UseGuards(RoleGuard(['nutritionist']))
-	async createDiet(
-		@Body() createDietDto: CreateDietDto,
-		@Headers() headers: any
-	) {
-		return await this.dietService.createOne({ ...createDietDto, nutritionistId: headers['user-id'] });
-	}
 
 	@Get()
 	@ApiOperation({
@@ -40,11 +23,12 @@ export class DietController {
 		description: 'User not allowed to access these diets',
 	})
 	@UseGuards(RoleGuard(['nutritionist', 'patient']))
+	@UseFilters(ControllerExceptionFilter)
 	async findAll(
 		@Headers() headers: any,
 		@Body('patientId') patientId: string,
 		@Body('nutritionistId') nutritionistId: string
-	) {
+	): Promise<Diet[]> {
 		const diets = await this.dietService.findAll({ patientId, nutritionistId });
 		if (diets.length > 0) {
 			const isRelated = diets[0].nutritionistId === headers['user-id'] || diets[0].patientId === headers['user-id'];
@@ -72,11 +56,12 @@ export class DietController {
 		description: 'Diet not found',
 	})
 	@UseGuards(RoleGuard(['nutritionist', 'patient']))
+	@UseFilters(ControllerExceptionFilter)
 	async findById(
 		@Param('dietId') dietId: string,
 		@Headers() headers: any
-	) {
-		const diet = await this.dietService.findOne({id: dietId});
+	): Promise<Diet> {
+		const diet = await this.dietService.findOne({ id: dietId });
 		if (!diet) {
 			throw new NotFoundException("Diet not found");
 		}
@@ -85,6 +70,24 @@ export class DietController {
 			throw new ForbiddenException("User not allowed to access this diet");
 		}
 		return diet;
+	}
+
+	@Post()
+	@ApiOperation({
+		summary: 'Create a new diet',
+		description: 'Create a new diet for a given patient'
+	})
+	@ApiCreatedResponse({
+		description: 'The diet has been successfully created.',
+		type: CreateDietDto
+	})
+	@UseGuards(RoleGuard(['nutritionist']))
+	@UseFilters(ControllerExceptionFilter)
+	async createDiet(
+		@Body() createDietDto: CreateDietDto,
+		@Headers() headers: any
+	): Promise<Diet> {
+		return await this.dietService.createOne({ ...createDietDto, nutritionistId: headers['user-id'] });
 	}
 
 	@Put(':dietId')
@@ -100,12 +103,13 @@ export class DietController {
 		description: 'Diet not found',
 	})
 	@UseGuards(RoleGuard(['nutritionist']))
+	@UseFilters(ControllerExceptionFilter)
 	async updateDiet(
 		@Param('dietId') dietId: string,
 		@Body() updateDietDto: UpdateDietDto,
 		@Headers() headers: any
-	) {
-		return await this.dietService.updateOne({id: dietId}, updateDietDto);
+	): Promise<Diet> {
+		return await this.dietService.updateOne({ id: dietId }, updateDietDto);
 	}
 
 	@Delete(':dietId')
@@ -120,11 +124,12 @@ export class DietController {
 		description: 'Diet not found',
 	})
 	@UseGuards(RoleGuard(['nutritionist']))
+	@UseFilters(ControllerExceptionFilter)
 	async deleteDiet(
 		@Param('dietId') dietId: string,
 		@Headers() headers: any
-	) {
-		return await this.dietService.deleteOne({id: dietId});
+	): Promise<void> {
+		return await this.dietService.deleteOne({ id: dietId });
 	}
 
 }

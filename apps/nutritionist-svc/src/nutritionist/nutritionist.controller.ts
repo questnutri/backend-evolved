@@ -1,7 +1,7 @@
-import { Controller, Get, Post, Body, Inject, UseGuards, Headers, UseFilters } from '@nestjs/common';
+import { Controller, Get, Post, Body, Inject, UseGuards, Headers, UseFilters, InternalServerErrorException } from '@nestjs/common';
 import { NutritionistService } from './nutritionist.service';
-import { BodyCreatePatientDto, CreateNutritionistDto, CreatePatientDto, FindAllFromNutritionistPayload, ProxyMessage, Patient, PATIENT_SERVICE_PROXY_NAME, RoleGuard, ControllerExceptionFilter } from '@backend-evolved/shared';
-import { ApiOkResponse, ApiOperation, ApiConflictResponse, ApiBadRequestResponse, ApiBearerAuth, ApiSecurity } from '@nestjs/swagger';
+import { ErrorMapper, BodyCreatePatientDto, CreateNutritionistDto, CreatePatientDto, FindAllFromNutritionistPayload, ProxyMessage, Patient, PATIENT_SERVICE_PROXY_NAME, RoleGuard, ControllerExceptionFilter } from '@backend-evolved/shared';
+import { ApiOkResponse, ApiOperation, ApiConflictResponse, ApiBadRequestResponse, ApiBearerAuth, ApiSecurity, ApiCreatedResponse } from '@nestjs/swagger';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 
@@ -15,26 +15,31 @@ export class NutritionistController {
 
     @Post('register')
     @ApiOperation({ summary: 'Register a new nutritionist' })
-    @ApiOkResponse({ description: 'Nutritionist registered successfully' })
+    @ApiCreatedResponse({ description: 'Nutritionist registered successfully' })
     @ApiConflictResponse({ description: 'Nutritionist with given email already exists' })
     @ApiConflictResponse({ description: 'Nutritionist with given document already exists' })
     @ApiBadRequestResponse({ description: 'Invalid data' })
     @UseFilters(ControllerExceptionFilter)
     async register(@Body() body: CreateNutritionistDto) {
-        return await this.nutritionistService.createOne(body);
+        const registeredNutritionist = await this.nutritionistService.createOne(body);
+        if (registeredNutritionist) {
+            return { message: `Nutritionist created successfully`, success: true };
+        }
+        console.error(`Method nutritionist.controller.createOne has not returned a valid nutritionist and did not trigger any error while doing it. Returned value: ${registeredNutritionist}`);
+        throw new InternalServerErrorException(`Error while creating a new account.`);
     }
 
     @Post('patients')
     @ApiOperation({ summary: 'Create a new patient for logged nutritionist' })
     @ApiBearerAuth('bearer')
     @ApiSecurity('bearer')
-    @ApiOkResponse({ description: 'Patient created successfully' })
+    @ApiCreatedResponse({ description: 'Patient created successfully' })
     @UseGuards(RoleGuard(['nutritionist', 'admin']))
     @UseFilters(ControllerExceptionFilter)
     async createPatient(
         @Headers() headers: { 'user-id': string },
         @Body() body: BodyCreatePatientDto
-    ) {
+    ): Promise<Patient> {
         try {
             const result = await firstValueFrom(
                 this.patientServiceProxy.send<ProxyMessage<Patient>, CreatePatientDto>
@@ -61,7 +66,7 @@ export class NutritionistController {
     @UseFilters(ControllerExceptionFilter)
     async getAllPatients(
         @Headers() headers: { 'user-id': string },
-    ) {
+    ): Promise<Patient[]> {
         return await firstValueFrom(
             this.patientServiceProxy.send<
                 Patient[],

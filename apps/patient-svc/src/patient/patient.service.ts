@@ -1,7 +1,7 @@
 import { ConflictException, HttpException, Inject, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
-import { ClientProxy } from '@nestjs/microservices';
+import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { InjectRepository } from '@nestjs/typeorm';
-import { UserRole, RegisterUserDto, CreatePatientDto, Patient, AUTH_SERVICE_PROXY_NAME, PatientNutritionist, ServiceContract, KeysOf } from '@backend-evolved/shared';
+import { UserRole, RegisterUserDto, CreatePatientDto, Patient, AUTH_SERVICE_PROXY_NAME, PatientNutritionist, ServiceContract, KeysOf, ProxyMessage } from '@backend-evolved/shared';
 import { firstValueFrom } from 'rxjs';
 import { QueryFailedError, Repository } from 'typeorm';
 
@@ -41,9 +41,13 @@ export class PatientService implements ServiceContract<Patient> {
                 role: UserRole.PATIENT
             };
             try {
-                const userId = await firstValueFrom(
-                    this.authServiceProxy.send<string, RegisterUserDto>('user.creation', payload)
+                const userCreationResult = await firstValueFrom(
+                    this.authServiceProxy.send<ProxyMessage<string>, RegisterUserDto>('user.creation', payload)
                 );
+                if(userCreationResult && 'error' in userCreationResult) {
+                    throw new RpcException(userCreationResult);
+                }
+                const userId = userCreationResult.payload;
                 if (!userId) throw new InternalServerErrorException('Auth service did not return user id');
                 const patient = this.patientRepository.create({ ...patientData, id: userId });
                 const savedPatient = await this.patientRepository.save(patient);
@@ -71,6 +75,7 @@ export class PatientService implements ServiceContract<Patient> {
                     await this.patientNutritionistRepository.save(patientNutritionist);
                     return existingPatient;
                 } else {
+                    console.log(error);
                     throw new InternalServerErrorException('Patient not found after failed creation');
                 }
             }

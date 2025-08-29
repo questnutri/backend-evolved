@@ -10,8 +10,8 @@ export class User {
     @Column({ unique: true })
     email!: string
 
-    @Exclude()
     @Column()
+    @Exclude()
     passwordHash!: string
 
     @Column({ type: "enum", enum: UserRole,default: UserRole.NUTRITIONIST })
