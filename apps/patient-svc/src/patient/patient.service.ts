@@ -44,7 +44,7 @@ export class PatientService implements ServiceContract<Patient> {
                 const userCreationResult = await firstValueFrom(
                     this.authServiceProxy.send<ProxyMessage<string>, RegisterUserDto>('user.creation', payload)
                 );
-                if(userCreationResult && 'error' in userCreationResult) {
+                if (userCreationResult && 'error' in userCreationResult) {
                     throw new RpcException(userCreationResult);
                 }
                 const userId = userCreationResult.payload;
@@ -57,33 +57,37 @@ export class PatientService implements ServiceContract<Patient> {
                 });
                 await this.patientNutritionistRepository.save(patientNutritionist);
                 return savedPatient;
-            } catch (error) {
-                // console.log('Error during patient creation, checking if patient exists:', error);
-                const existingPatient = await this.patientRepository.findOneBy({ email: patientData.email }) || await this.patientRepository.findOneBy({ documentNumber: patientData.documentNumber });
-                if (existingPatient) {
-                    const existingRelation = await this.patientNutritionistRepository.findOneBy({
-                        patientId: existingPatient.id,
-                        nutritionistId: patientData.nutritionistId
-                    });
-                    if (existingRelation) {
-                        throw new ConflictException('Patient already registered');
+            } catch (error: any) {
+                // console.log('Error during patient creation, checking if patient exists:', error.error?.detail || error);
+                if (error?.error?.detail?.includes("An User with this email already exists")) {
+                    const existingPatient = await this.patientRepository.findOneBy({ email: patientData.email }) || await this.patientRepository.findOneBy({ documentNumber: patientData.documentNumber });
+                    if (existingPatient) {
+                        const existingRelation = await this.patientNutritionistRepository.findOneBy({
+                            patientId: existingPatient.id,
+                            nutritionistId: patientData.nutritionistId
+                        });
+                        if (existingRelation) {
+                            throw new ConflictException('Patient already registered');
+                        }
+                        const patientNutritionist = this.patientNutritionistRepository.create({
+                            patientId: existingPatient.id,
+                            nutritionistId: patientData.nutritionistId
+                        });
+                        await this.patientNutritionistRepository.save(patientNutritionist);
+                        return existingPatient;
+                    } else {
+                        console.log(error);
+                        throw new InternalServerErrorException('Patient not found after failed creation');
                     }
-                    const patientNutritionist = this.patientNutritionistRepository.create({
-                        patientId: existingPatient.id,
-                        nutritionistId: patientData.nutritionistId
-                    });
-                    await this.patientNutritionistRepository.save(patientNutritionist);
-                    return existingPatient;
-                } else {
-                    console.log(error);
-                    throw new InternalServerErrorException('Patient not found after failed creation');
                 }
+                throw error;
             }
         } catch (error: any) {
-            // console.log(`Patient error on creation: `, error);
-            await firstValueFrom(
-                this.authServiceProxy.send<boolean, string>('user.deletion', patientData.email)
-            );
+            if (!(error instanceof ConflictException)) {
+                await firstValueFrom(
+                    this.authServiceProxy.send<boolean, string>('user.deletion', patientData.email)
+                );
+            }
 
             throw error;
         }

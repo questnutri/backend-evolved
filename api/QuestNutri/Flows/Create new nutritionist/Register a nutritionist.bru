@@ -1,0 +1,27 @@
+meta {
+  name: Register a nutritionist
+  type: http
+  seq: 1
+}
+
+post {
+  url: http://{{GATEWAY_URL}}/nutritionist/register
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "name": "John Doe",
+    "email": "{{NUTRITIONIST_EMAIL}}",
+    "password": "{{NUTRITIONIST_PASSWORD}}",
+    "phone": "{{phone}}",
+    "crn": "{{crn}}",
+    "documentType": "cpf",
+    "documentNumber": "{{documentNumber}}"
+  }
+}
+
+settings {
+  encodeUrl: true
+}

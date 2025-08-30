@@ -1,0 +1,25 @@
+meta {
+  name: Approve Nutritionist
+  type: http
+  seq: 3
+}
+
+post {
+  url: http://{{GATEWAY_URL}}/admin/approve-nutritionist
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{ADMIN_ACCESS_TOKEN}}
+}
+
+body:json {
+  {
+      "email": "{{NUTRITIONIST_EMAIL}}"
+  }
+}
+
+settings {
+  encodeUrl: true
+}

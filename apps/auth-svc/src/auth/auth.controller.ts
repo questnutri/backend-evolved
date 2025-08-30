@@ -1,6 +1,6 @@
 import { Controller, Post, Body, UseFilters, Res } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { ProxyMessengerFilter, LoginUserDto, ProxyMessage, RefreshTokenDto, RegisterUserDto, ControllerExceptionFilter, LoginTokenResponse, userId, User } from '@backend-evolved/shared';
+import { ProxyMessengerFilter, LoginUserDto, ProxyMessage, RefreshTokenDto, RegisterUserDto, ControllerExceptionFilter, LoginTokenResponse, userId, User, ResetPasswordDto, ForgotPasswordDto, ResetTokenResponse, ResetTokenDto } from '@backend-evolved/shared';
 import { ApiAcceptedResponse, ApiOkResponse, ApiOperation } from '@nestjs/swagger';
 import { MessagePattern, Payload, RpcException } from '@nestjs/microservices';
 import { instanceToPlain } from 'class-transformer'
@@ -60,7 +60,7 @@ export class AuthController {
     @ApiOperation({ summary: 'Reset user password using reset token' })
     @ApiOkResponse({ description: 'Password reset and new tokens returned.' })
     @UseFilters(ControllerExceptionFilter)
-    async resetPassword(@Body() body: { resetPasswordToken: string; newPassword: string }) {
+    async resetPassword(@Body() body: ResetPasswordDto): Promise<LoginTokenResponse> {
         return await this.authService.resetPassword(body);
     }
 
@@ -68,7 +68,7 @@ export class AuthController {
     @ApiOperation({ summary: 'Request password reset token for an email' })
     @ApiOkResponse({ description: 'Returns a password reset token to be sent to the user.' })
     @UseFilters(ControllerExceptionFilter)
-    async forgotPassword(@Body() body: { email: string }) {
+    async forgotPassword(@Body() body: ForgotPasswordDto): Promise<ResetTokenDto> {
         return await this.authService.forgotPassword(body);
     }
 }

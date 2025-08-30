@@ -1,0 +1,37 @@
+vars:pre-request {
+  ADMIN_EMAIL: admin@questnutri.com
+  ADMIN_PASSWORD: questnutri
+  NUTRITIONIST_EMAIL: john.doe4@nutritionist.com
+  NUTRITIONIST_PASSWORD: strongpassword123
+  PATIENT_EMAIL: john.doe5@patient.com
+  PATIENT_DOCUMENT_NUMBER: 0003
+  PATIENT_PASSWORD: 0001
+  RESET_PASSWORD_TOKEN: 
+  RESET_PASSWORD_NEW_PASSWORD: strongpassword123
+  PATIENT_ID: b9a81e9a-68c2-4d1b-9c64-0d342f86d0d3
+  NUTRITIONIST_ID: 95de7397-21e2-4643-945c-62cf58c4d2b9
+}
+
+script:pre-request {
+  function randomPhone() {
+    const ddd = Math.floor(Math.random() * 90 + 10); 
+    const number = Math.floor(Math.random() * 90000000 + 10000000); 
+    return `+55 ${ddd} 9${number.toString().padStart(8,'0').slice(1,9)}-${number.toString().slice(-4)}`;
+  }
+  
+  function randomCRN() {
+    const x = Math.floor(Math.random() * 9) + 1; 
+    const y = Math.floor(Math.random() * 90000 + 10000); 
+    return `CRN-${x}/${y}`;
+  }
+  
+  function randomCPF() {
+    const n = () => Math.floor(Math.random() * 10);
+    return `${n()}${n()}${n()}.${n()}${n()}${n()}.${n()}${n()}${n()}-${n()}${n()}`;
+  }
+  
+  bru.setVar('phone', randomPhone());
+  bru.setVar('crn', randomCRN());
+  bru.setVar('documentNumber', randomCPF());
+  
+}

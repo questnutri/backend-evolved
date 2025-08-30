@@ -1,0 +1,17 @@
+meta {
+  name: Diet
+  seq: 6
+}
+
+auth {
+  mode: bearer
+}
+
+auth:bearer {
+  token: {{DIET_AUTH_LEVEL_ACCESS_TOKEN}}
+}
+
+vars:pre-request {
+  DIET_AUTH_LEVEL_ACCESS_TOKEN: {{PATIENT_ACCESS_TOKEN}}
+  ~DIET_AUTH_LEVEL_ACCESS_TOKEN: {{NUTRITIONIST_ACCESS_TOKEN}}
+}

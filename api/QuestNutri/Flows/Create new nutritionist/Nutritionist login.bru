@@ -1,0 +1,27 @@
+meta {
+  name: Nutritionist login
+  type: http
+  seq: 4
+}
+
+post {
+  url: http://{{GATEWAY_URL}}/auth/login
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "email": "{{NUTRITIONIST_EMAIL}}",
+    "password": "{{NUTRITIONIST_PASSWORD}}"
+  }
+}
+
+vars:pre-request {
+  email: {{nutritionist_email}}
+  password: {{nutritionist_password}}
+}
+
+settings {
+  encodeUrl: true
+}

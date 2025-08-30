@@ -29,6 +29,33 @@ export class NutritionistController {
         throw new InternalServerErrorException(`Error while creating a new account.`);
     }
 
+    @Get('patients')
+    @ApiOperation({ summary: 'Get all patients for logged nutritionist' })
+    @ApiBearerAuth('bearer')
+    @ApiSecurity('bearer')
+    @ApiOkResponse({ description: 'Patients retrieved successfully' })
+    @UseGuards(RoleGuard(['nutritionist', 'admin']))
+    @UseFilters(ControllerExceptionFilter)
+    async getAllPatients(
+        @Headers() headers: { 'user-id': string },
+    ): Promise<Patient[]> {
+        const result = await firstValueFrom(
+            this.patientServiceProxy.send<
+                ProxyMessage<Patient[]>,
+                FindAllFromNutritionistPayload
+            >
+                ('patient.findAllFromNutritionist',
+                    {
+                        nutritionistId: headers['user-id']
+                    }
+                )
+        );
+        if(result && "error" in result) {
+            throw new RpcException(result);
+        }
+        return result.payload;
+    }
+
     @Post('patients')
     @ApiOperation({ summary: 'Create a new patient for logged nutritionist' })
     @ApiBearerAuth('bearer')
@@ -57,26 +84,5 @@ export class NutritionistController {
         }
     }
 
-    @Get('patients')
-    @ApiOperation({ summary: 'Get all patients for logged nutritionist' })
-    @ApiBearerAuth('bearer')
-    @ApiSecurity('bearer')
-    @ApiOkResponse({ description: 'Patients retrieved successfully' })
-    @UseGuards(RoleGuard(['nutritionist', 'admin']))
-    @UseFilters(ControllerExceptionFilter)
-    async getAllPatients(
-        @Headers() headers: { 'user-id': string },
-    ): Promise<Patient[]> {
-        return await firstValueFrom(
-            this.patientServiceProxy.send<
-                Patient[],
-                FindAllFromNutritionistPayload
-            >
-                ('patient.findAllFromNutritionist',
-                    {
-                        nutritionistId: headers['user-id']
-                    }
-                )
-        );
-    }
+
 }

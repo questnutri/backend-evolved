@@ -1,0 +1,27 @@
+meta {
+  name: Get All Diets from Patient
+  type: http
+  seq: 3
+}
+
+get {
+  url: http://{{GATEWAY_URL}}/diet
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "patientId": "{{patientId}}",
+    "nutritionistId": "{{nutritionistId}}"
+  }
+}
+
+vars:pre-request {
+  patientId: {{PATIENT_ID}}
+  nutritionistId: {{NUTRITIONIST_ID}}
+}
+
+settings {
+  encodeUrl: true
+}

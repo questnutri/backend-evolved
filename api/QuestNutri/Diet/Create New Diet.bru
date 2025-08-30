@@ -1,0 +1,29 @@
+meta {
+  name: Create New Diet
+  type: http
+  seq: 1
+}
+
+post {
+  url: http://{{GATEWAY_URL}}/diet
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "patientId": "{{patientId}}"
+  }
+}
+
+vars:pre-request {
+  patientId: {{PATIENT_ID}}
+}
+
+vars:post-response {
+  createdDiet: res("id")
+}
+
+settings {
+  encodeUrl: true
+}

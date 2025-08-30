@@ -1,8 +1,7 @@
 import { Headers, Body, Controller, Get, Post, UseGuards, ForbiddenException, Param, NotFoundException, Put, Delete, UseFilters } from '@nestjs/common';
-import { DietService } from './diet.service';
-import { ControllerExceptionFilter, CreateDietDto, Diet, RoleGuard } from '@backend-evolved/shared';
 import { ApiBearerAuth, ApiCreatedResponse, ApiForbiddenResponse, ApiNoContentResponse, ApiNotFoundResponse, ApiOkResponse, ApiOperation, ApiSecurity } from '@nestjs/swagger';
-import { UpdateDietDto } from '../../../../libs/shared/src/dto/diet/update-diet.dto';
+import { DietService } from './diet.service';
+import { ControllerExceptionFilter, CreateDietDto, Diet, RoleGuard, UpdateDietDto } from '@backend-evolved/shared';
 
 @Controller('diet')
 @ApiBearerAuth('bearer')

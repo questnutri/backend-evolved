@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, InternalServerErrorException, NotFoundException, NotImplementedException } from "@nestjs/common";
+import { BadRequestException, ConflictException, ForbiddenException, HttpException, InternalServerErrorException, NotFoundException, NotImplementedException, UnauthorizedException } from "@nestjs/common";
 import { RpcException } from "@nestjs/microservices";
 import { QueryFailedError } from "typeorm";
 
@@ -16,15 +16,34 @@ export class ErrorMapper {
     static RpcException = RpcException
     static NotFoundException = NotFoundException
     static BadRequestException = BadRequestException
+    static UnauthorizedException = UnauthorizedException
+    static ForbiddenException = ForbiddenException
+    static HttpException = HttpException
 
     private static find(error: string) {
         return (ErrorMapper as any)[error];
     }
 
     static handle(error: unknown, captured?: CapturedError): any {
+        // console.log(`handling error:`, error);
         if(ErrorMapper.isErrorOfType(BadRequestException, error)) {
             const capturedError = captured || ErrorMapper.capture(error);
             throw new BadRequestException(capturedError.original.response.message || 'Bad request error occurred')
+        }
+        
+        if(ErrorMapper.isErrorOfType(UnauthorizedException, error)) {
+            const capturedError = captured || ErrorMapper.capture(error);
+            throw new UnauthorizedException(capturedError.original.response.message || 'Unauthorized error occurred')
+        }
+
+        if(ErrorMapper.isErrorOfType(ForbiddenException, error)) {
+            const capturedError = captured || ErrorMapper.capture(error);
+            throw new ForbiddenException(capturedError.original.response.message || 'Forbidden error occurred')
+        }
+
+        if(ErrorMapper.isErrorOfType(HttpException, error)) {
+            const capturedError = captured || ErrorMapper.capture(error);
+            throw new HttpException(capturedError.original.message, capturedError.original.status);
         }
 
         if (ErrorMapper.isErrorOfType(ConflictException, error)) {
@@ -36,6 +55,7 @@ export class ErrorMapper {
         }
 
         if (ErrorMapper.isErrorOfType(QueryFailedError, error)) {
+            // console.log("QueryFailed captured");
             const capturedError = captured || ErrorMapper.capture(error);
             const { code, detail, table, column } = capturedError.original;
             switch (code) {
@@ -88,12 +108,13 @@ export class ErrorMapper {
     }
 
     static capture(exception: any): CapturedError {
+        // console.log("Trying to capture: ", exception)
         if (exception instanceof ErrorMapper.QueryFailedError) {
             const driverError = exception.driverError;
             return {
                 error: true,
                 source: exception.constructor.name,
-                detail: driverError.detail,
+                detail: driverError?.detail,
                 original: exception
             }
         }
@@ -108,17 +129,6 @@ export class ErrorMapper {
             original: exception
         };
 
-    }
-
-    private static isRpcError(obj: unknown): obj is { source: string; detail: string } {
-        return (
-            typeof obj === "object" &&
-            obj !== null &&
-            "source" in obj &&
-            "detail" in obj &&
-            typeof (obj as any).source === "string" &&
-            typeof (obj as any).detail === "string"
-        )
     }
 
     private static isErrorOfType(clazz: any, error: any): boolean {
