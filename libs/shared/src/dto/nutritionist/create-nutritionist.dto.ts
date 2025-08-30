@@ -20,9 +20,7 @@ export class CreateNutritionistDto extends IntersectionType(LoginUserDto) {
         example: 'John Doe',
     })
     @IsString()
-    @IsNotEmpty({
-        message: 'Name must not be empty',
-    })
+    @IsNotEmpty()
     name: string;
 
     @ApiProperty({
@@ -31,9 +29,7 @@ export class CreateNutritionistDto extends IntersectionType(LoginUserDto) {
         example: '+55 11 90000-0000',
     })
     @IsString()
-    @IsNotEmpty({
-        message: 'Phone number must not be empty',
-    })
+    @IsNotEmpty()
     phone: string;
 
     @ApiProperty({
@@ -41,12 +37,8 @@ export class CreateNutritionistDto extends IntersectionType(LoginUserDto) {
         required: true,
         example: 'CRN-3/12345',
     })
-    @IsString({
-        message: 'CRN must be a string',
-    })
-    @IsNotEmpty({
-        message: 'CRN must not be empty',
-    })
+    @IsString()
+    @IsNotEmpty()
     crn: string;
 
     @ApiProperty({
@@ -56,11 +48,9 @@ export class CreateNutritionistDto extends IntersectionType(LoginUserDto) {
         example: DocumentType.CPF,
     })
     @IsEnum(DocumentType, {
-        message: `Document type must be a valid type: [${Object.values(DocumentType).join(', ')}]`,
+        message: `document type must be a valid type: [${Object.values(DocumentType).join(', ')}]`,
     })
-    @IsNotEmpty({
-        message: 'Document type must not be empty',
-    })
+    @IsNotEmpty()
     documentType: DocumentType = DocumentType.CPF;
 
     @ApiProperty({
@@ -70,8 +60,6 @@ export class CreateNutritionistDto extends IntersectionType(LoginUserDto) {
         uniqueItems: true,
     })
     @IsString()
-    @IsNotEmpty({
-        message: 'Document number must not be empty',
-    })
+    @IsNotEmpty()
     documentNumber: string;
 }

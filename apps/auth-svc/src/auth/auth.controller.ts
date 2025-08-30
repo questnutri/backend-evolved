@@ -52,17 +52,8 @@ export class AuthController {
     @MessagePattern('nutritionist.approval')
     @UseFilters(ProxyMessengerFilter)
     async handleNutritionistApproval(@Payload() email: string): Promise<ProxyMessage<Partial<User>>> {
-        console.log('Received nutritionist.approval message with data:', email);
-        try {
-            const user = await this.authService.approveNutritionist(email);
-            return { payload: instanceToPlain(user) };
-        } catch (err: any) {
-            console.log('Error in nutritionist.approval handler:', err);
-            throw new RpcException({
-                detail: err?.message ?? String(err),
-                source: err.constructor.name
-            });
-        }
+        const user = await this.authService.approveNutritionist(email);
+        return { payload: instanceToPlain(user) };
     }
 
     @Post('reset-password')

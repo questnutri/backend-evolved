@@ -1,5 +1,6 @@
 import { ArgumentsHost, Catch, ExceptionFilter } from '@nestjs/common';
 import { RpcException } from '@nestjs/microservices';
+import { ErrorMapper } from '../errors/error.mapper';
 
 @Catch()
 export class ProxyMessengerFilter implements ExceptionFilter {
@@ -9,14 +10,6 @@ export class ProxyMessengerFilter implements ExceptionFilter {
             throw exception;
         }
 
-        const detail = exception?.message ?? String(exception);
-        const source = exception?.constructor?.name ?? typeof exception;
-
-        // Re-throw as RpcException in the requested shape
-        return {
-            error: true,
-            detail,
-            source,
-        };
+        return ErrorMapper.capture(exception);
     }
 }

@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Body, Inject, UseGuards, Headers, UseFilters, InternalServerErrorException } from '@nestjs/common';
 import { NutritionistService } from './nutritionist.service';
-import { ErrorMapper, BodyCreatePatientDto, CreateNutritionistDto, CreatePatientDto, FindAllFromNutritionistPayload, ProxyMessage, Patient, PATIENT_SERVICE_PROXY_NAME, RoleGuard, ControllerExceptionFilter } from '@backend-evolved/shared';
+import { BodyCreatePatientDto, CreateNutritionistDto, CreatePatientDto, FindAllFromNutritionistPayload, ProxyMessage, Patient, PATIENT_SERVICE_PROXY_NAME, RoleGuard, ControllerExceptionFilter } from '@backend-evolved/shared';
 import { ApiOkResponse, ApiOperation, ApiConflictResponse, ApiBadRequestResponse, ApiBearerAuth, ApiSecurity, ApiCreatedResponse } from '@nestjs/swagger';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';

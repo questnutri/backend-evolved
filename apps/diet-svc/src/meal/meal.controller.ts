@@ -1,9 +1,8 @@
-import { Body, Controller, Post, UseGuards, Headers, NotFoundException, Param, Put, Delete, Get } from '@nestjs/common';
+import { Body, Controller, Post, UseGuards, Headers, NotFoundException, Param, Put, Delete, Get, UseFilters } from '@nestjs/common';
 import { MealService } from './meal.service';
 import { ApiBearerAuth, ApiSecurity, ApiCreatedResponse, ApiNoContentResponse, ApiNotFoundResponse, ApiOkResponse, ApiOperation } from '@nestjs/swagger';
-import { CreateMealDto, Meal, RoleGuard, ControllerContract, Food } from '@backend-evolved/shared';
+import { CreateMealDto, Meal, RoleGuard, ControllerContract, ControllerExceptionFilter } from '@backend-evolved/shared';
 import { DietService } from '../diet/diet.service';
-import { FoodService } from '../food/food.service';
 
 @Controller('diet/:dietId/meal')
 @ApiBearerAuth('bearer')
@@ -30,12 +29,13 @@ export class MealController implements ControllerContract<Meal> {
 	})
 	@ApiNotFoundResponse({ description: 'Diet not found or user does not have access to this diet.' })
 	@UseGuards(RoleGuard(['nutritionist']))
+	@UseFilters(ControllerExceptionFilter)
 	async postOne(
 		@Param('dietId') dietId: string,
 		@Body() createMealDto: CreateMealDto,
 		@Headers() headers: any
 	) {
-		const diet = await this.dietService.findById(dietId);
+		const diet = await this.dietService.findOne({ id: dietId });
 		if (!diet) throw new NotFoundException('Diet not found');
 		const isRelated = diet.nutritionistId === headers['user-id'] || diet.patientId === headers['user-id'];
 		if (!isRelated) throw new NotFoundException(`User doesn't have this diet`);
@@ -53,6 +53,7 @@ export class MealController implements ControllerContract<Meal> {
 	async getOneById(@Headers() headers: any, @Param('mealId') mealId: string) {
 		const meal = await this.mealService.findById(mealId);
 		if (!meal) throw new NotFoundException('Meal not found');
+		console.log(meal);
 		const isRelated = meal.diet.nutritionistId === headers['user-id'] || meal.diet.patientId === headers['user-id'];
 		if (!isRelated) throw new NotFoundException(`User doesn't have this diet`);
 		return meal;

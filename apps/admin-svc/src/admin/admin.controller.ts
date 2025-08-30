@@ -1,6 +1,6 @@
-import { Controller, Body, Post, Inject, ConflictException, InternalServerErrorException, NotFoundException, UseGuards } from '@nestjs/common';
+import { Controller, Body, Post, Inject, ConflictException, InternalServerErrorException, NotFoundException, UseGuards, UseFilters } from '@nestjs/common';
 import { AdminService } from './admin.service';
-import { AUTH_SERVICE_PROXY_NAME, Nutritionist, ProxyMessage, RoleGuard } from '@backend-evolved/shared';
+import { AUTH_SERVICE_PROXY_NAME, ControllerExceptionFilter, Nutritionist, ProxyMessage, RoleGuard } from '@backend-evolved/shared';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 
@@ -13,23 +13,12 @@ export class AdminController {
 
     @Post('approve-nutritionist')
     @UseGuards(RoleGuard(['admin']))
+    @UseFilters(ControllerExceptionFilter)
     async approveNutritionist(@Body('email') email: string) {
-        try {
-            const result = await firstValueFrom(
-                this.authServiceProxy.send<ProxyMessage<Nutritionist>, string>('nutritionist.approval', email)
-            );
-            if(result && "error" in result) throw new RpcException(result);
-            return result.payload;
-        } catch (error: any) {
-            switch (error.source) {
-                case 'ConflictException':
-                    throw new ConflictException(error?.detail);
-                case 'NotFoundException':
-                    throw new NotFoundException('Nutritionist not found for email: ' + email);
-                default:
-                    console.error('Unexpected error during patient creation:', error);
-                    throw new InternalServerErrorException('Failed to create patient: ' + (error?.detail ?? 'unknown'));
-            }
-        }
+        const result = await firstValueFrom(
+            this.authServiceProxy.send<ProxyMessage<Nutritionist>, string>('nutritionist.approval', email)
+        );
+        if (result && "error" in result) throw new RpcException(result);
+        return result.payload;
     }
 }
