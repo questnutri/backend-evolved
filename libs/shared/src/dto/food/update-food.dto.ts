@@ -1,6 +1,6 @@
 import { Field, InputType } from "@nestjs/graphql";
 import { ApiPropertyOptional } from "@nestjs/swagger";
-import { IsString } from "class-validator";
+import { IsOptional, IsString } from "class-validator";
 
 @InputType()
 export class UpdateFoodDto {
@@ -9,13 +9,15 @@ export class UpdateFoodDto {
         example: '200'
     })
     @IsString()
+    @IsOptional()
     @Field({ nullable: true })
     quantity?: string = '100';
-
+    
     @ApiPropertyOptional({
         description: 'Unit of measurement for the food quantity',
         example: 'grams'
     })
+    @IsOptional()
     @Field({ nullable: true })
     unitOfMeasure?: string = 'grams';
 }

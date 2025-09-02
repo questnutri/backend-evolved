@@ -1,0 +1,24 @@
+meta {
+  name: Create New Food
+  type: http
+  seq: 1
+}
+
+post {
+  url: http://{{GATEWAY_URL}}/diet/{{createdDiet}}/meal/{{createdMeal}}/food
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+  }
+}
+
+vars:post-response {
+  createdFood: res("id")
+}
+
+settings {
+  encodeUrl: true
+}

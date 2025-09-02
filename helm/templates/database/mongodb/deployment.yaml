@@ -1,0 +1,28 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: aliment-svc-mongodb
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: aliment-svc-mongodb
+  template:
+    metadata:
+      labels:
+        app: aliment-svc-mongodb
+    spec:
+      containers:
+        - name: aliment-svc-mongodb
+          image: mongo:latest
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: MONGO_INITDB_DATABASE
+              value: userdb
+            - name: MONGO_INITDB_ROOT_USERNAME
+              value: root
+            - name: MONGO_INITDB_ROOT_PASSWORD
+              value: root
+          ports:
+            - containerPort: 27017
+---

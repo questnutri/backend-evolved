@@ -23,6 +23,9 @@
     },
     {
       "path": "./apps/diet-svc"
+    },
+    {
+      "path": "./apps/aliment-svc"
     }
   ]
 }

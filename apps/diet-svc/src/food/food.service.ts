@@ -1,4 +1,4 @@
-import { Food, ServiceContract } from '@backend-evolved/shared';
+import { CreateFoodDto, Food, Meal, ServiceContract } from '@backend-evolved/shared';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -10,24 +10,31 @@ export class FoodService implements ServiceContract<Food> {
         private readonly foodRepository: Repository<Food>,
     ) { }
 
-    async create(data: Partial<Food>): Promise<Food> {
-        return this.foodRepository.save(data);
-    }
-
-    async findAll(query: { [key in keyof Food]?: any } = {}): Promise<Food[]> {
+    async findAll(query: { [key in keyof Food]?: any }): Promise<Food[]> {
         return this.foodRepository.find({ where: query });
     }
 
-    async findById(id: string): Promise<Food | null> {
-        return this.foodRepository.findOne({ where: { id } });
+    async findOne(query: { [key in keyof Food]?: any }): Promise<Food | null> {
+        if (!query || Object.keys(query).length === 0) return null;
+        return this.foodRepository.findOne({ where: query , relations: ['meal']});
     }
 
-    async update(id: string, item: Partial<Food>): Promise<Food | null> {
-        await this.foodRepository.update(id, item);
-        return this.foodRepository.findOne({ where: { id } });
+    async createOne(data: CreateFoodDto & { meal: Meal }): Promise<Food> {
+        const food = this.foodRepository.create(data);
+        return await this.foodRepository.save(food);
     }
 
-    async delete(id: string): Promise<void> {
-        await this.foodRepository.delete(id);
+    async updateOne(query: { [key in keyof Food]?: any }, data: Partial<Food>): Promise<Food | null> {
+        const entity = await this.foodRepository.findOne({ where: query });
+        if (!entity) return null;
+        await this.foodRepository.update(entity.id, data);
+        return this.foodRepository.findOne({ where: { id: entity.id } });
+    }
+
+    async deleteOne(query: { [key in keyof Food]?: any }): Promise<void> {
+        const entity = await this.foodRepository.findOne({ where: query });
+        if (entity) {
+            await this.foodRepository.delete(entity.id);
+        }
     }
 }

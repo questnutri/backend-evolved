@@ -9,20 +9,16 @@ export class Food {
     @Field(() => ID, { nullable: true })
     id: string;
 
-    @Column()
-    @Field()
-    name: string;
-
     @ManyToOne(() => Meal, (meal) => meal.foods)
     @Field(() => Meal)
     meal: Meal;
 
     @Column()
-    @Field()
+    @Field({ nullable: true })
     quantity: string;
 
     @Column()
-    @Field()
+    @Field({ nullable: true })
     unitOfMeasure: string;
 
     @CreateDateColumn()

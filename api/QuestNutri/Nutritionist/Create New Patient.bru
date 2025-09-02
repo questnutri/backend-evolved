@@ -24,6 +24,10 @@ script:post-response {
     bru.setVar("PATIENT_PASSWORD", res("documentNumber"));
     bru.setVar("PATIENT_ID", res("id"));
   }
+  
+  if(res.status !== 201) {
+      bru.setNextRequest(null);
+  }
 }
 
 settings {

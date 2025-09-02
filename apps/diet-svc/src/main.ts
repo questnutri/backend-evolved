@@ -7,7 +7,7 @@ import { DocumentBuilder } from '@nestjs/swagger';
 import { ServiceModule } from "./service/service.module";
 
 async function bootstrap() {
-	const app = await generateNestApplication(
+	await generateNestApplication(
 		NestApplicationBuilder.forModule(ServiceModule)
 			.setName("Diet Service")
 			.setPort(process.env.DIET_SERVICE_PORT || '3035')

@@ -1,4 +1,4 @@
-import { CreateMealDto, KeysOf, Meal, ServiceContract } from '@backend-evolved/shared';
+import { CreateMealDto, Diet, KeysOf, Meal, ServiceContract } from '@backend-evolved/shared';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -16,7 +16,7 @@ export class MealService implements ServiceContract<Meal> {
 
     async findOne(query?: Partial<KeysOf<Meal>>): Promise<Meal | null> {
         if (!query) return null;
-        return await this.mealRepository.findOne({ where: query as any });
+        return await this.mealRepository.findOne({ where: query as any, relations: ['diet'] });
     }
 
     async createOne(data: Partial<Meal>): Promise<Meal> {
@@ -37,7 +37,7 @@ export class MealService implements ServiceContract<Meal> {
         await this.mealRepository.delete(meal.id);
     }
 
-    async create(data: CreateMealDto) {
+    async create(data: CreateMealDto & {diet: Diet}) {
         const meal = this.mealRepository.create(data);
         return await this.mealRepository.save(meal);
     }

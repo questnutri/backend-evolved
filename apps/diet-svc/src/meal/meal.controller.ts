@@ -39,7 +39,7 @@ export class MealController implements ControllerContract<Meal> {
 		if (!diet) throw new NotFoundException('Diet not found');
 		const isRelated = diet.nutritionistId === headers['user-id'] || diet.patientId === headers['user-id'];
 		if (!isRelated) throw new NotFoundException(`User doesn't have this diet`);
-		return await this.mealService.create({ ...createMealDto, dietId });
+		return await this.mealService.create({ ...createMealDto, diet });
 	}
 
 	@Get(':mealId')

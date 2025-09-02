@@ -1,0 +1,15 @@
+meta {
+  name: Get All Foods from Meal
+  type: http
+  seq: 2
+}
+
+get {
+  url: http://{{GATEWAY_URL}}/diet/{{createdDiet}}/meal/{{createdMeal}}/food
+  body: none
+  auth: inherit
+}
+
+settings {
+  encodeUrl: true
+}

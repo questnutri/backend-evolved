@@ -1,15 +1,5 @@
-import { ApiProperty } from "@nestjs/swagger";
 import { UpdateFoodDto } from "./update-food.dto";
-import { IsString } from 'class-validator'
-import { Field, InputType } from "@nestjs/graphql";
+import { InputType } from "@nestjs/graphql";
 
 @InputType()
-export class CreateFoodDto extends UpdateFoodDto {
-    @ApiProperty({
-        description: 'ID of the meal the food belongs to',
-        example: '123e4567-e89b-12d3-a456-426614174000'
-    })
-    @IsString()
-    @Field({ nullable: true })
-    mealId: string;
-}
+export class CreateFoodDto extends UpdateFoodDto {}

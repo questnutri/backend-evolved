@@ -2,7 +2,6 @@ import { Column, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn, CreateDat
 import { Food } from './food.entity';
 import { Diet } from './diet.entity';
 import { ObjectType, Field, ID } from '@nestjs/graphql';
-import { IsNotEmpty } from 'class-validator';
 
 @ObjectType()
 @Entity('meals')

@@ -26,6 +26,10 @@ script:post-response {
   if(res.status === 200 && res("firstLogin")) {
     bru.setVar("RESET_PASSWORD_TOKEN" ,res("resetPassword"));
   }
+  
+  if(res.status !== 201) {
+      bru.setNextRequest(null);
+  }
 }
 
 settings {

@@ -10,6 +10,12 @@ get {
   auth: inherit
 }
 
+script:post-response {
+  if(res.status !== 200) {
+      bru.setNextRequest(null);
+  }
+}
+
 settings {
   encodeUrl: true
 }

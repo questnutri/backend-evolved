@@ -1,0 +1,15 @@
+meta {
+  name: Get Specific Food
+  type: http
+  seq: 3
+}
+
+get {
+  url: http://{{GATEWAY_URL}}/diet/{{createdDiet}}/meal/{{createdMeal}}/food/{{createdFood}}
+  body: none
+  auth: inherit
+}
+
+settings {
+  encodeUrl: true
+}

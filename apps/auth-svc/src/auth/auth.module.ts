@@ -18,7 +18,8 @@ import { JwtModule } from '@nestjs/jwt';
         }),
         provideTypeOrmDbConnection(
             process.env.AUTH_SERVICE_DATABASE_PORT || '5432',
-            [User, RefreshToken]
+            [User, RefreshToken],
+            false
         )
     ],
     controllers: [AuthController],

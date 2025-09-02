@@ -1,6 +1,6 @@
 import { BadRequestException, ConflictException, ForbiddenException, HttpException, InternalServerErrorException, NotFoundException, NotImplementedException, UnauthorizedException } from "@nestjs/common";
 import { RpcException } from "@nestjs/microservices";
-import { QueryFailedError } from "typeorm";
+import { EntityPropertyNotFoundError, QueryFailedError } from "typeorm";
 
 export interface CapturedError {
     error: true;
@@ -19,13 +19,15 @@ export class ErrorMapper {
     static UnauthorizedException = UnauthorizedException
     static ForbiddenException = ForbiddenException
     static HttpException = HttpException
+    static TypeError = TypeError
+    static EntityPropertyNotFoundError = EntityPropertyNotFoundError
 
     private static find(error: string) {
         return (ErrorMapper as any)[error];
     }
 
     static handle(error: unknown, captured?: CapturedError): any {
-        // console.log(`handling error:`, error);
+        console.log(`handling error:`, error);
         if(ErrorMapper.isErrorOfType(BadRequestException, error)) {
             const capturedError = captured || ErrorMapper.capture(error);
             throw new BadRequestException(capturedError.original.response.message || 'Bad request error occurred')
@@ -52,6 +54,11 @@ export class ErrorMapper {
 
         if (ErrorMapper.isErrorOfType(InternalServerErrorException, error)) {
             throw new InternalServerErrorException(captured?.detail || 'Internal server error occurred')
+        }
+
+        if(ErrorMapper.isErrorOfType(TypeError, error)) {
+            const capturedError = captured || ErrorMapper.capture(error);
+            throw new InternalServerErrorException(`Internal server error occurred. ${capturedError.detail}`);
         }
 
         if (ErrorMapper.isErrorOfType(QueryFailedError, error)) {
@@ -104,7 +111,7 @@ export class ErrorMapper {
             throw new Error(`Unhandled error source: ${rpcError.source}. Check log for more details.`)
         }
 
-        return error
+        throw error
     }
 
     static capture(exception: any): CapturedError {
