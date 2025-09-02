@@ -18,6 +18,7 @@ import { JwtModule } from '@nestjs/jwt';
         }),
         provideTypeOrmDbConnection(
             process.env.AUTH_SERVICE_DATABASE_PORT || '5432',
+            process.env.AUTH_SERVICE_DATABASE_HOST || 'localhost',
             [User, RefreshToken],
             false
         )

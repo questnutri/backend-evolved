@@ -8,6 +8,7 @@ import { AUTH_SERVICE_PROXY_NAME, Nutritionist, PATIENT_SERVICE_PROXY_NAME, prov
     imports: [
         provideTypeOrmDbConnection(
             process.env.NUTRITIONIST_SERVICE_DATABASE_PORT || '5433',
+            process.env.NUTRITIONIST_SERVICE_DATABASE_HOST || 'localhost',
             [Nutritionist]
         ),
     ],

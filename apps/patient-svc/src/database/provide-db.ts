@@ -2,5 +2,6 @@ import { Patient, PatientNutritionist, provideTypeOrmDbConnection } from "@backe
 
 export const dbConnection = () => provideTypeOrmDbConnection(
     process.env.PATIENT_SERVICE_DATABASE_PORT || '5434',
+    process.env.PATIENT_SERVICE_DATABASE_HOST || 'localhost',
     [Patient, PatientNutritionist],
 )

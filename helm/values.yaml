@@ -7,4 +7,15 @@ databases:
     port: 5434
   - name: diet-svc-postgres
     port: 5435
+apps:
+  - name:  auth-svc
+    replicas: 1
+    image: auth-svc:latest
+    port: 3032
+    serviceType: ClusterIP
+  - name: gateway
+    replicas: 1
+    image: gateway:latest
+    port: 8080
+    serviceType: LoadBalancer
 rabbitmq: {}
