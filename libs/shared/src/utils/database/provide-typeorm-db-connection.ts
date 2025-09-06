@@ -10,7 +10,7 @@ export const provideTypeOrmDbConnection = (databasePort: string, host: string, e
                 port: parseInt(databasePort),
                 username: process.env.DB_USER || 'root',
                 password: process.env.DB_PASS || 'root',
-                database: process.env.DB_NAME || 'userdb',
+                database: process.env.DB_NAME || 'questnutri',
                 authSource: driver === 'mongodb' ? 'admin' : undefined,
                 autoLoadEntities: true,
                 entities,

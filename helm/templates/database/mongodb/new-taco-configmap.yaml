@@ -1,0 +1,10 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: new-taco-json
+data:
+  new-taco.json: |-
+{{ .Files.Get "files/new-taco.json" | nindent 4 }}
+
+  import-taco.sh: |-
+{{ .Files.Get "files/import-taco.sh" | nindent 4 }}

@@ -1,5 +1,5 @@
 export enum AlimentSource {
     TACO = "taco",
-    HOME_MEASUREMENTS = "home_measurements",
+    HOME_MEASURE = "home_measure",
     SECRET = "secret"
 }

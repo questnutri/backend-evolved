@@ -18,11 +18,22 @@ spec:
           imagePullPolicy: IfNotPresent
           env:
             - name: MONGO_INITDB_DATABASE
-              value: userdb
+              value: questnutri
             - name: MONGO_INITDB_ROOT_USERNAME
               value: root
             - name: MONGO_INITDB_ROOT_PASSWORD
               value: root
           ports:
             - containerPort: 27017
----
+          volumeMounts:
+            - name: new-taco-json
+              mountPath: /docker-entrypoint-initdb.d/new-taco.json
+              subPath: new-taco.json
+            - name: new-taco-json
+              mountPath: /docker-entrypoint-initdb.d/import-taco.sh
+              subPath: import-taco.sh
+
+      volumes:
+        - name: new-taco-json
+          configMap:
+            name: new-taco-json

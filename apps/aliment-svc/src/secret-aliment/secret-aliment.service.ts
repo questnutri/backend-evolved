@@ -1,16 +1,15 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { TacoAliment } from '../../../../libs/shared/src/entities';
 import { Repository } from 'typeorm';
+import { SecretAliment } from '@backend-evolved/shared';
 import { AlimentBaseService } from '../aliment/aliment-base.service';
 
 @Injectable()
-export class TacoService extends AlimentBaseService {
+export class SecretAlimentService extends AlimentBaseService{
     constructor(
-        @InjectRepository(TacoAliment)
-        override repository: Repository<TacoAliment>
+        @InjectRepository(SecretAliment)
+        override repository: Repository<SecretAliment>
     ) {
         super(repository);
     }
-
 }

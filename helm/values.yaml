@@ -12,10 +12,12 @@ apps:
     replicas: 1
     image: auth-svc:latest
     port: 3032
+    servicePort: 3032
     serviceType: ClusterIP
   - name: gateway
     replicas: 1
     image: gateway:latest
-    port: 8080
+    servicePort: 8080
+    port: 8180
     serviceType: LoadBalancer
 rabbitmq: {}

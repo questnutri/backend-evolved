@@ -19,7 +19,7 @@ spec:
           imagePullPolicy: IfNotPresent
           env:
             - name: POSTGRES_DB
-              value: userdb
+              value: questnutri
             - name: POSTGRES_USER
               value: root
             - name: POSTGRES_PASSWORD

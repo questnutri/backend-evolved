@@ -11,4 +11,6 @@ export * from "./diet/meal.entity";
 export * from "./diet/food.entity";
 
 export * from "./aliment/aliment.entity";
-export * from "./aliment/taco.entity";
+export * from "./aliment/taco-aliment.entity";
+export * from "./aliment/home-measure-aliment.entity";
+export * from "./aliment/secret-aliment.entity";

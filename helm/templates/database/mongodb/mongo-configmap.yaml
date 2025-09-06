@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: mongo-seed-file
+data:
+  new-taco.json: |-
+{{ .Files.Get "files/new-taco.json" | indent 4 }}
