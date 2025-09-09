@@ -10,14 +10,31 @@ export class UpdateFoodDto {
     })
     @IsString()
     @IsOptional()
-    @Field({ nullable: true })
+    @Field(() => String, { nullable: true })
     quantity?: string = '100';
-    
+
     @ApiPropertyOptional({
         description: 'Unit of measurement for the food quantity',
         example: 'grams'
     })
     @IsOptional()
-    @Field({ nullable: true })
+    @Field(() => String, { nullable: true })
     unitOfMeasure?: string = 'grams';
+
+    @ApiPropertyOptional({
+        description: 'Aditional description for the food',
+        example: 'Cut into cubes'
+    })
+    @IsOptional()
+    @Field(() => String, { nullable: true })
+    description?: string | null = null;
+
+    @ApiPropertyOptional({
+        description: 'State of the food',
+        example: 'false'
+    })
+    @IsOptional()
+    @Field(() => Boolean)
+    isActive?: boolean;
+
 }

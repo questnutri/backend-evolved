@@ -12,12 +12,21 @@ post {
 
 body:graphql {
   query {
-    aliments(source: "") {
-      _id
+  aliments(source: "") {
+    _id
       name
       availablePortions
     }
   }
+}
+
+vars:post-response {
+  availableAliments: res("data.aliments")
+}
+
+script:post-response {
+  const aliments = res("data.aliments")
+  
 }
 
 settings {

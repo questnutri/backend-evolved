@@ -12,11 +12,20 @@ post {
 
 body:json {
   {
+    "alimentId": "{{choosedAlimentId}}"
   }
 }
 
 vars:post-response {
   createdFood: res("id")
+}
+
+script:pre-request {
+  const available = bru.getVar("availableAliments");
+  const index = Math.floor(Math.random() * available.length);
+  console.log(available[index]);
+  
+  bru.setVar("choosedAlimentId", available[index]._id);
 }
 
 settings {

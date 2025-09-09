@@ -5,6 +5,9 @@ import { dbConnection } from '../database/provide-db';
 import { GraphqlModule } from '../graphql/graphql.module';
 import { HomeMeasureController } from '../home-measure/home-measure.controller';
 import { HomeMeasureService } from '../home-measure/home-measure.service';
+import { AlimentController } from '../aliment/aliment.controller';
+import { SecretAlimentService } from '../secret-aliment/secret-aliment.service';
+import { AlimentBaseService } from '../aliment/aliment-base.service';
 
 @Module({
     imports: [
@@ -12,7 +15,7 @@ import { HomeMeasureService } from '../home-measure/home-measure.service';
         dbConnection(),
         GraphqlModule
     ],
-    controllers: [TacoController, HomeMeasureController],
-    providers: [TacoService, HomeMeasureService],
+    controllers: [TacoController, HomeMeasureController, AlimentController],
+    providers: [TacoService, HomeMeasureService, SecretAlimentService],
 })
 export class AppModule { }

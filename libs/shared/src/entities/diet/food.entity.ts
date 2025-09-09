@@ -9,17 +9,29 @@ export class Food {
     @Field(() => ID, { nullable: true })
     id: string;
 
+    @Column()
+    @Field()
+    isActive: boolean = true;
+
     @ManyToOne(() => Meal, (meal) => meal.foods)
     @Field(() => Meal)
     meal: Meal;
 
-    @Column()
+    @Column({ nullable: true })
     @Field({ nullable: true })
-    quantity: string;
+    quantity?: string;
+
+    @Column({ nullable: true })
+    @Field({ nullable: true })
+    unitOfMeasure?: string;
 
     @Column()
+    @Field()
+    alimentId?: string;
+
+    @Column({ nullable: true })
     @Field({ nullable: true })
-    unitOfMeasure: string;
+    description?: string;
 
     @CreateDateColumn()
     @Field({ nullable: true })

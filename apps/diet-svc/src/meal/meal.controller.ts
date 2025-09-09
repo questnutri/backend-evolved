@@ -10,12 +10,13 @@ import { DietService } from '../diet/diet.service';
 export class MealController implements ControllerContract<Meal> {
 	constructor(
 		private readonly mealService: MealService,
-		private readonly dietService: DietService) { }
+		private readonly dietService: DietService,
+	) { }
 
-	@Get()
-	async getMealsByDietId(@Param('dietId') dietId: string) {
-		return await this.mealService.findAll({ diet: { id: dietId } });
-	}
+	// @Get()
+	// async getMealsByDietId(@Param('dietId') dietId: string) {
+	// 	return await this.mealService.findAll({ diet: { id: dietId } });
+	// }
 
 
 	@Post()

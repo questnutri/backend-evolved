@@ -18,6 +18,10 @@ export class Meal {
     @Field(() => Diet)
     diet: Diet;
 
+    @Column()
+    @Field()
+    isActive: boolean = true;
+
     @OneToMany(() => Food, (food) => food.meal)
     @Field(() => [Food], { nullable: true })
     foods: Food[];

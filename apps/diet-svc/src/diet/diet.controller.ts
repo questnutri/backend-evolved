@@ -2,12 +2,16 @@ import { Headers, Body, Controller, Get, Post, UseGuards, ForbiddenException, Pa
 import { ApiBearerAuth, ApiCreatedResponse, ApiForbiddenResponse, ApiNoContentResponse, ApiNotFoundResponse, ApiOkResponse, ApiOperation, ApiSecurity } from '@nestjs/swagger';
 import { DietService } from './diet.service';
 import { ControllerExceptionFilter, CreateDietDto, Diet, RoleGuard, UpdateDietDto } from '@backend-evolved/shared';
+import { FoodService } from '../food/food.service';
 
 @Controller('diet')
 @ApiBearerAuth('bearer')
 @ApiSecurity('bearer')
 export class DietController {
-	constructor(private readonly dietService: DietService) { }
+	constructor(
+		private readonly dietService: DietService,
+		private readonly foodService: FoodService
+	) { }
 
 	@Get()
 	@ApiOperation({
@@ -27,11 +31,11 @@ export class DietController {
 		@Headers() headers: any,
 		@Body('patientId') patientId: string,
 		@Body('nutritionistId') nutritionistId: string
-	): Promise<Diet[]> {
+	): Promise<any[]> {
 		const diets = await this.dietService.findAll({ patientId, nutritionistId });
 		if (diets.length > 0) {
 			const isRelated = diets[0].nutritionistId === headers['user-id'] || diets[0].patientId === headers['user-id'];
-			if (isRelated) {
+			if(isRelated) {
 				return diets;
 			}
 			throw new ForbiddenException("User not allowed to access these diets");
@@ -68,6 +72,16 @@ export class DietController {
 		if (!isRelated) {
 			throw new ForbiddenException("User not allowed to access this diet");
 		}
+		return await this.fetchDietAliments(diet);
+	}
+
+	private async fetchDietAliments(diet: Diet): Promise<any> {
+		const fetchedMeals = await Promise.all((diet.meals ?? []).map(async meal => {
+			const fetchedFoods = await Promise.all((meal.foods ?? []).map(food => this.foodService.fetchAliment(food)));
+			meal.foods = fetchedFoods;
+			return meal;
+		}));
+		diet.meals = fetchedMeals;
 		return diet;
 	}
 

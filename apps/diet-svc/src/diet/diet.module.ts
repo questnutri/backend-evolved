@@ -3,7 +3,8 @@ import { DietService } from './diet.service';
 import { DietController } from './diet.controller';
 import { dbConnection } from '../database/provide-db';
 import { MealService } from '../meal/meal.service';
-import { PATIENT_SERVICE_PROXY_NAME, provideProxyService } from '@backend-evolved/shared';
+import { ALIMENT_SERVICE_PROXY_NAME, PATIENT_SERVICE_PROXY_NAME, provideProxyService } from '@backend-evolved/shared';
+import { FoodService } from '../food/food.service';
 
 @Module({
     imports: [
@@ -11,9 +12,11 @@ import { PATIENT_SERVICE_PROXY_NAME, provideProxyService } from '@backend-evolve
     ],
     controllers: [DietController],
     providers: [
+        provideProxyService(PATIENT_SERVICE_PROXY_NAME),
+        provideProxyService(ALIMENT_SERVICE_PROXY_NAME),
         DietService,
         MealService,
-        provideProxyService(PATIENT_SERVICE_PROXY_NAME)
+        FoodService,
     ],
     exports: [DietService, MealService],
 })

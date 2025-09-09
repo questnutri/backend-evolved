@@ -6,6 +6,7 @@ import { TacoService } from '../taco/taco.service';
 import { HomeMeasureService } from '../home-measure/home-measure.service';
 import { AlimentSource } from '@backend-evolved/shared';
 import { SecretAlimentService } from '../secret-aliment/secret-aliment.service';
+import { ObjectId } from 'mongodb';
 
 @Resolver(() => Aliment)
 export class AlimentResolver {
@@ -36,15 +37,18 @@ export class AlimentResolver {
     @Query(() => Aliment, { name: 'findAlimentById', nullable: true })
     async findAlimentById(@Args('id', { type: () => String }) id: string, @Args('source', { type: () => String, nullable: true }) source?: AlimentSource): Promise<Aliment | null> {
         let result: Aliment | null = null;
+        console.log(`Recevied id: `, id);
+
+        const objectId = new ObjectId(id);
 
         if (!source || source === AlimentSource.TACO) {
-            result = await this.tacoService.findManyByIds([id]).then(r => r[0] || null);
+            result = await this.tacoService.findOneById(objectId) || null;
         }
         if (!result && (!source || source === AlimentSource.HOME_MEASURE)) {
-            result = await this.homeMeasureService.findManyByIds([id]).then(r => r[0] || null);
+            result = await this.homeMeasureService.findOneById(objectId) || null;
         }
         if (!result && (!source || source === AlimentSource.SECRET)) {
-            result = await this.secretService.findManyByIds([id]).then(r => r[0] || null);
+            result = await this.secretService.findOneById(objectId) || null;
         }
 
         return result;
@@ -55,31 +59,26 @@ export class AlimentResolver {
         @Args('ids', { type: () => [String] }) ids: string[],
         @Args('source', { type: () => String, nullable: true }) source?: AlimentSource
     ): Promise<Aliment[]> {
-        console.log('[findManyAlimentById] ids:', ids, 'source:', source);
         let results: Aliment[] = [];
+        const objectIds = ids.map(id => new ObjectId(id));
 
         if (!source || source === AlimentSource.TACO) {
-            const tacos = await this.tacoService.findManyByIds(ids);
-            console.log('[findManyAlimentById] tacoService returned:', tacos.length, 'items');
+            const tacos = await this.tacoService.findManyByIds(objectIds);
             results = results.concat(tacos);
         }
         if (!source || source === AlimentSource.HOME_MEASURE) {
-            const home = await this.homeMeasureService.findManyByIds(ids);
-            console.log('[findManyAlimentById] homeMeasureService returned:', home.length, 'items');
+            const home = await this.homeMeasureService.findManyByIds(objectIds);
             results = results.concat(home);
         }
         if (!source || source === AlimentSource.SECRET) {
-            const secret = await this.secretService.findManyByIds(ids);
-            console.log('[findManyAlimentById] secretService returned:', secret.length, 'items');
+            const secret = await this.secretService.findManyByIds(objectIds);
             results = results.concat(secret);
         }
 
         if (source) {
             results = results.filter(a => a.source === source);
-            console.log('[findManyAlimentById] after filtering by source:', results.length, 'items');
         }
 
-        console.log('[findManyAlimentById] final results count:', results.length);
         return results;
     }
 

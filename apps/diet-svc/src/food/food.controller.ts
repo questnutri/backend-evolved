@@ -26,11 +26,9 @@ export class FoodController {
         }
         const isRelated = meal.diet.nutritionistId === headers['user-id'] || meal.diet.patientId === headers['user-id'];
         if (!isRelated) throw new NotFoundException(`User doesn't have this diet`);
-        const { quantity, unitOfMeasure } = createFoodDto;
-        const payload: any = { quantity, unitOfMeasure, meal };
-        return await this.foodService.createOne(payload);
+        return await this.foodService.createOne({ ...createFoodDto, meal } as any);
     }
-    
+
     @Get()
     @ApiOperation({ summary: 'Retrieve foods for a meal', description: 'Retrieve all foods for a given meal' })
     @ApiOkResponse({ description: 'The foods have been successfully retrieved.', type: [Food] })
@@ -44,7 +42,7 @@ export class FoodController {
         if (!isRelated) throw new ForbiddenException('User not allowed to access these foods');
         return await this.foodService.findAll({ meal: { id: mealId } });
     }
-    
+
     @Get(':foodId')
     @ApiOperation({ summary: 'Get a specific food by ID', description: 'Retrieve details of a specific food using its ID' })
     @ApiOkResponse({ description: 'The food has been successfully retrieved.', type: Food })
@@ -62,7 +60,7 @@ export class FoodController {
         if (!food) throw new NotFoundException('Food not found');
         return food;
     }
-    
+
     @Put(':foodId')
     @ApiOperation({ summary: 'Update a specific food', description: 'Update the details of a specific food' })
     @ApiOkResponse({ description: 'The food has been successfully updated.', type: Food })
@@ -81,7 +79,7 @@ export class FoodController {
         }
         return await this.foodService.updateOne({ id: foodId }, payload as any);
     }
-    
+
     @Delete(':foodId')
     @ApiOperation({ summary: 'Delete a specific food by ID', description: 'Remove a specific food from the meal' })
     @ApiNoContentResponse({ description: 'The food has been successfully deleted.' })
