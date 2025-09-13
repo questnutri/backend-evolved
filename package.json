@@ -2,7 +2,9 @@
   "name": "@backend-evolved/source",
   "version": "0.0.0",
   "license": "MIT",
-  "scripts": {},
+  "scripts": {
+    "start:all": "nx run-many -t serve --all"
+  },
   "private": true,
   "dependencies": {
     "@apollo/server": "^4.12.2",

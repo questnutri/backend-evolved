@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: import-databases-sh
+data:
+  import-databases.sh: |-
+{{ .Files.Get "files/import-databases.sh" | nindent 4 }}

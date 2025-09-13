@@ -8,7 +8,15 @@ export abstract class AlimentBaseService {
         protected repository: MongoRepository<any>
     ) { }
 
-    async findAll() {
+
+    async findAll(where?: { name?: string }) {
+        if (where?.name) {
+            return await this.repository.find({
+                where: {
+                    name: new RegExp(where.name, 'i')
+                }
+            });
+        }
         return await this.repository.find();
     }
 

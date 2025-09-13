@@ -29,11 +29,20 @@ spec:
             - name: new-taco-json
               mountPath: /docker-entrypoint-initdb.d/new-taco.json
               subPath: new-taco.json
-            - name: new-taco-json
-              mountPath: /docker-entrypoint-initdb.d/import-taco.sh
-              subPath: import-taco.sh
+            - name: home-measures-json
+              mountPath: /docker-entrypoint-initdb.d/home-measures.json
+              subPath: home-measures.json
+            - name: import-databases-sh
+              mountPath: /docker-entrypoint-initdb.d/import-databases.sh
+              subPath: import-databases.sh
 
       volumes:
         - name: new-taco-json
           configMap:
             name: new-taco-json
+        - name: home-measures-json
+          configMap:
+            name: home-measures-json
+        - name: import-databases-sh
+          configMap:
+            name: import-databases-sh
