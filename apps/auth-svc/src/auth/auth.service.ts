@@ -4,6 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm'
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
+import { KeyService } from '../key/key.service';
 
 
 @Injectable()
@@ -11,7 +12,8 @@ export class AuthService {
     constructor(
         @InjectRepository(User) private userRepository: Repository<User>,
         @InjectRepository(RefreshToken) private refreshRepository: Repository<RefreshToken>,
-        private jwtService: JwtService
+        private jwtService: JwtService,
+        private keyService: KeyService
     ) { }
 
     private getRefreshWindowSeconds(role: UserRole): number {
@@ -111,7 +113,8 @@ export class AuthService {
     async resetPassword(data: { resetPasswordToken: string, newPassword: string }) {
         let payload: any;
         try {
-            payload = this.jwtService.verify(data.resetPasswordToken);
+            const publicKey = this.keyService.getPublicKey();
+            payload = this.jwtService.verify(data.resetPasswordToken, { publicKey, algorithms: ['RS256'] });
         } catch (err) {
             throw new UnauthorizedException('Invalid or expired reset token');
         }

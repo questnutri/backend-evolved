@@ -1,13 +1,17 @@
-import { Controller, Post, Body, UseFilters, Res } from '@nestjs/common';
+import { Controller, Post, Body, UseFilters, Res, Get } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { ProxyMessengerFilter, LoginUserDto, ProxyMessage, RefreshTokenDto, RegisterUserDto, ControllerExceptionFilter, LoginTokenResponse, userId, User, ResetPasswordDto, ForgotPasswordDto, ResetTokenResponse, ResetTokenDto } from '@backend-evolved/shared';
 import { ApiAcceptedResponse, ApiOkResponse, ApiOperation } from '@nestjs/swagger';
 import { MessagePattern, Payload, RpcException } from '@nestjs/microservices';
 import { instanceToPlain } from 'class-transformer'
+import { KeyService } from '../key/key.service';
 
 @Controller('auth')
 export class AuthController {
-    constructor(private readonly authService: AuthService) { }
+    constructor(
+        private readonly authService: AuthService,
+        private readonly keyService: KeyService
+    ) { }
 
     @Post('login')
     @ApiOperation({ summary: 'Login an user' })
@@ -70,5 +74,11 @@ export class AuthController {
     @UseFilters(ControllerExceptionFilter)
     async forgotPassword(@Body() body: ForgotPasswordDto): Promise<ResetTokenDto> {
         return await this.authService.forgotPassword(body);
+    }
+
+    @Get('jwks.json')
+    async getJwks() {
+        const jwk = await this.keyService.getJwk();
+        return { keys: [jwk] };
     }
 }
