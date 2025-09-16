@@ -10,7 +10,7 @@ export const RoleGuard = (roles: string[]) => {
             const role: string | undefined = headers['role'];
 
             if (!role) {
-                throw new UnauthorizedException('Authorization header is missing');
+                throw new UnauthorizedException('JWT role missing or user not authenticated')
             }
 
             if (!roles.includes(role)) {

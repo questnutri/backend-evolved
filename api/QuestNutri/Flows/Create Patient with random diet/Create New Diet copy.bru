@@ -1,0 +1,33 @@
+meta {
+  name: Create New Diet copy
+  type: http
+  seq: 2
+}
+
+post {
+  url: http://{{GATEWAY_URL}}/diet
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{NUTRITIONIST_ACCESS_TOKEN}}
+}
+
+body:json {
+  {
+    "patientId": "{{patientId}}"
+  }
+}
+
+vars:pre-request {
+  patientId: {{PATIENT_ID}}
+}
+
+vars:post-response {
+  createdDiet: res("id")
+}
+
+settings {
+  encodeUrl: true
+}

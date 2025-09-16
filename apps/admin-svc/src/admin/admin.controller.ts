@@ -1,6 +1,6 @@
-import { Controller, Body, Post, Inject, ConflictException, InternalServerErrorException, NotFoundException, UseGuards, UseFilters } from '@nestjs/common';
+import { Controller, Body, Post, Inject, UseGuards, UseFilters } from '@nestjs/common';
 import { AdminService } from './admin.service';
-import { AUTH_SERVICE_PROXY_NAME, ControllerExceptionFilter, Nutritionist, ProxyMessage, RoleGuard } from '@backend-evolved/shared';
+import { AUTH_SERVICE_PROXY_NAME, ControllerExceptionFilter, JwtRoleGuard, Nutritionist, ProxyMessage } from '@backend-evolved/shared';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 
@@ -12,7 +12,7 @@ export class AdminController {
     ) { }
 
     @Post('approve-nutritionist')
-    @UseGuards(RoleGuard(['admin']))
+    @UseGuards(JwtRoleGuard(['admin']))
     @UseFilters(ControllerExceptionFilter)
     async approveNutritionist(@Body('email') email: string) {
         const result = await firstValueFrom(

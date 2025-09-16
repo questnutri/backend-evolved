@@ -8,32 +8,32 @@ import { ApiPropertyOptional } from "@nestjs/swagger";
 @InputType()
 export class CreateFoodDto {
     @ApiProperty({
-        description: 'Quantity of food',
-        example: '200'
+        description: 'Aliment unique ID',
+        example: '68c9e2b44e99ee1b27d8e3c1'
     })
     @IsString()
     @Field(() => String)
     alimentId: string;
 
     @ApiPropertyOptional({
-        description: 'Quantity of food',
-        example: '200'
+        description: 'Quantity for the related portion of that food',
+        example: '1'
     })
     @IsString()
     @IsOptional()
     @Field(() => String, { nullable: true })
-    quantity?: string = '100';
+    quantity?: string = '1';
 
     @ApiPropertyOptional({
-        description: 'Unit of measurement for the food quantity',
-        example: 'grams'
+        description: 'Reference portion of measurement for the given food quantity',
+        example: '100g'
     })
     @IsOptional()
     @Field(() => String, { nullable: true })
-    unitOfMeasure?: string = 'grams';
+    portion?: string = '100g';
 
     @ApiPropertyOptional({
-        description: 'Aditional description for the food',
+        description: 'Aditional description for this food',
         example: 'Cut into cubes'
     })
     @IsOptional()

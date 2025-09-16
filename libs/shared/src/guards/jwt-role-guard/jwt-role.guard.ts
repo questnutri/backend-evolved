@@ -1,10 +1,10 @@
-import { CanActivate, ExecutionContext, UnauthorizedException, mixin, Type } from '@nestjs/common'
+import { CanActivate, ExecutionContext, ForbiddenException, UnauthorizedException, mixin, Type } from '@nestjs/common'
 import * as jose from 'node-jose'
 import fetch from 'node-fetch'
 
-export const JwtGuard = (jwksUrl?: string): Type<CanActivate> => {
-    class JwtGuardMixin implements CanActivate {
-        public url = jwksUrl ?? process.env.AUTH_SERVICE_JWKS_URL ?? 'http://localhost:3032/auth/jwks.json'
+export const JwtRoleGuard = (allowedRoles?: string[]): Type<CanActivate> => {
+    class JwtRoleGuardMixin implements CanActivate {
+        public url = process.env.AUTH_SERVICE_JWKS_URL ?? 'http://localhost:3032/auth/jwks.json'
         public cachedKeys: jose.JWK.Key[] = []
         public cacheTime = 5 * 60 * 1000
         public lastFetch = 0
@@ -13,6 +13,7 @@ export const JwtGuard = (jwksUrl?: string): Type<CanActivate> => {
             const request = context.switchToHttp().getRequest()
             const headers = request.headers
             const authHeader = headers['authorization']
+
             if (!authHeader || !authHeader.startsWith('Bearer ')) {
                 throw new UnauthorizedException('Missing or invalid Authorization header')
             }
@@ -35,9 +36,15 @@ export const JwtGuard = (jwksUrl?: string): Type<CanActivate> => {
                     throw new UnauthorizedException('JWT expired')
                 }
 
-                // aqui injetamos apenas o role no headers
-                if (payload.role) {
+                if (payload.role && payload.sub) {
                     headers['role'] = payload.role
+                    headers['user-id'] = payload.sub
+                }
+
+                if (allowedRoles && allowedRoles.length > 0) {
+                    if (!payload.role || !allowedRoles.includes(payload.role)) {
+                        throw new ForbiddenException('You do not have permission to access this resource')
+                    }
                 }
 
                 return true
@@ -61,5 +68,5 @@ export const JwtGuard = (jwksUrl?: string): Type<CanActivate> => {
         }
     }
 
-    return mixin(JwtGuardMixin)
+    return mixin(JwtRoleGuardMixin)
 }

@@ -1,5 +1,5 @@
 meta {
-  name: Admin login
+  name: Admin Login copy
   type: http
   seq: 2
 }
@@ -7,7 +7,7 @@ meta {
 post {
   url: http://{{GATEWAY_URL}}/auth/login
   body: json
-  auth: inherit
+  auth: none
 }
 
 body:json {
@@ -18,12 +18,13 @@ body:json {
 }
 
 vars:pre-request {
-  email: admin@questnutri.com
-  password: questnutri
+  email: {{ADMIN_EMAIL}}
+  password: {{ADMIN_PASSWORD}}
 }
 
 vars:post-response {
   ADMIN_ACCESS_TOKEN: res("accessToken")
+  ADMIN_REFRESH_TOKEN: res("refreshToken")
 }
 
 settings {

@@ -1,7 +1,7 @@
 import { Body, Controller, Post, UseGuards, Headers, NotFoundException, Param, Put, Delete, Get, UseFilters } from '@nestjs/common';
 import { MealService } from './meal.service';
 import { ApiBearerAuth, ApiSecurity, ApiCreatedResponse, ApiNoContentResponse, ApiNotFoundResponse, ApiOkResponse, ApiOperation } from '@nestjs/swagger';
-import { CreateMealDto, Meal, RoleGuard, ControllerContract, ControllerExceptionFilter } from '@backend-evolved/shared';
+import { CreateMealDto, Meal, JwtRoleGuard, ControllerContract, ControllerExceptionFilter } from '@backend-evolved/shared';
 import { DietService } from '../diet/diet.service';
 
 @Controller('diet/:dietId/meal')
@@ -29,7 +29,7 @@ export class MealController implements ControllerContract<Meal> {
 		type: CreateMealDto
 	})
 	@ApiNotFoundResponse({ description: 'Diet not found or user does not have access to this diet.' })
-	@UseGuards(RoleGuard(['nutritionist']))
+	@UseGuards(JwtRoleGuard(['nutritionist']))
 	@UseFilters(ControllerExceptionFilter)
 	async postOne(
 		@Param('dietId') dietId: string,
@@ -50,7 +50,7 @@ export class MealController implements ControllerContract<Meal> {
 	})
 	@ApiOkResponse({ description: 'The meal has been successfully retrieved.', type: Meal })
 	@ApiNotFoundResponse({ description: 'Meal not found or user does not have access to this meal.' })
-	@UseGuards(RoleGuard(['nutritionist', 'patient']))
+	@UseGuards(JwtRoleGuard(['nutritionist', 'patient']))
 	async getOneById(@Headers() headers: any, @Param('mealId') mealId: string) {
 		const meal = await this.mealService.findById(mealId);
 		if (!meal) throw new NotFoundException('Meal not found');
@@ -68,7 +68,7 @@ export class MealController implements ControllerContract<Meal> {
 	})
 	@ApiOkResponse({ description: 'The meal has been successfully updated.', type: Meal })
 	@ApiNotFoundResponse({ description: 'Meal not found or user does not have access to this meal.' })
-	@UseGuards(RoleGuard(['nutritionist']))
+	@UseGuards(JwtRoleGuard(['nutritionist']))
 	async updateOneById(@Param('mealId') mealId: string, @Body() updateMealDto: Partial<CreateMealDto>, @Headers() headers: any) {
 		const meal = await this.mealService.findById(mealId);
 		if (!meal) throw new NotFoundException('Meal not found');
@@ -86,7 +86,7 @@ export class MealController implements ControllerContract<Meal> {
 		description: 'The meal has been successfully deleted.'
 	})
 	@ApiNotFoundResponse({ description: 'Meal not found or user does not have access to this meal.' })
-	@UseGuards(RoleGuard(['nutritionist']))
+	@UseGuards(JwtRoleGuard(['nutritionist']))
 	async deleteOneById(@Param('mealId') mealId: string, @Headers() headers: any) {
 		const meal = await this.mealService.findById(mealId);
 		if (!meal) throw new NotFoundException('Meal not found');

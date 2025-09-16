@@ -21,7 +21,7 @@ export abstract class AlimentBaseService {
     }
 
     async findOneById(id: ObjectId) {
-        const result = await this.repository.findOne({where: {_id: id as unknown as any}});
+        const result = await this.repository.findOne({ where: { _id: id as unknown as any } });
         return result;
     }
 
@@ -31,17 +31,9 @@ export abstract class AlimentBaseService {
 
     async findManyByIds(ids: ObjectId[]): Promise<Aliment[]> {
         if (!ids.length) return [];
-        const found = [];
-        for (const id of ids) {
-            const searchResult = await this.repository.find({ where: { _id: id } });
-            if (searchResult) found.push(...searchResult);
-        }
-        return found;
-    }
-
-    async create(createTacoDto: any) {
-        const taco = this.repository.create(createTacoDto);
-        return await this.repository.save(taco);
+        return await this.repository.find({
+            where: { _id: { $in: ids as any } }
+        });
     }
 
 }

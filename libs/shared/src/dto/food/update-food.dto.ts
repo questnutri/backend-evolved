@@ -5,21 +5,21 @@ import { IsOptional, IsString } from "class-validator";
 @InputType()
 export class UpdateFoodDto {
     @ApiPropertyOptional({
-        description: 'Quantity of food',
-        example: '200'
+        description: 'Quantity for the related portion of that food',
+        example: '1'
     })
     @IsString()
     @IsOptional()
     @Field(() => String, { nullable: true })
-    quantity?: string = '100';
+    quantity?: string;
 
     @ApiPropertyOptional({
         description: 'Unit of measurement for the food quantity',
-        example: 'grams'
+        example: '100g'
     })
     @IsOptional()
     @Field(() => String, { nullable: true })
-    unitOfMeasure?: string = 'grams';
+    portion?: string;
 
     @ApiPropertyOptional({
         description: 'Aditional description for the food',
@@ -27,7 +27,7 @@ export class UpdateFoodDto {
     })
     @IsOptional()
     @Field(() => String, { nullable: true })
-    description?: string | null = null;
+    description?: string | null;
 
     @ApiPropertyOptional({
         description: 'State of the food',

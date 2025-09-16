@@ -1,0 +1,37 @@
+meta {
+  name: Create New Food copy
+  type: http
+  seq: 5
+}
+
+post {
+  url: http://{{GATEWAY_URL}}/diet/{{createdDiet}}/meal/{{createdMeal}}/food
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{NUTRITIONIST_ACCESS_TOKEN}}
+}
+
+body:json {
+  {
+    "alimentId": "{{choosedAlimentId}}"
+  }
+}
+
+vars:post-response {
+  createdFood: res("id")
+}
+
+script:pre-request {
+  const available = bru.getVar("availableAliments");
+  const index = Math.floor(Math.random() * available.length);
+  console.log(available[index]);
+  
+  bru.setVar("choosedAlimentId", available[index]._id);
+}
+
+settings {
+  encodeUrl: true
+}

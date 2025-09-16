@@ -1,13 +1,17 @@
 meta {
-  name: Search Aliments
+  name: Search Aliments copy
   type: graphql
-  seq: 1
+  seq: 4
 }
 
 post {
   url: http://{{GATEWAY_URL}}/aliment/graphql
   body: graphql
-  auth: inherit
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{NUTRITIONIST_ACCESS_TOKEN}}
 }
 
 body:graphql {

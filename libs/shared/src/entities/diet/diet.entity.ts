@@ -39,4 +39,12 @@ export class Diet {
     @UpdateDateColumn()
     @Field({ nullable: true })
     updatedAt: Date;
+
+    @Column({ type: 'timestamp', nullable: true })
+    @Field(() => Date, { nullable: true })
+    startDate: Date;
+
+    @Column({ type: 'timestamp', nullable: true })
+    @Field(() => Date, { nullable: true })
+    endDate: Date | null;
 }

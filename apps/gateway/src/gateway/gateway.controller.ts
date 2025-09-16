@@ -38,22 +38,22 @@ export class GatewayController {
 
         let decoded: any = null;
 
-        if (authHeader) {
-            try {
-                decoded = jwt.verify(
-                    authHeader?.replace('Bearer ', '') || '',
-                    process.env.JWT_SECRET as string
-                ) as jwt.JwtPayload;
-            } catch (error: any) {
-                if (error instanceof jwt.TokenExpiredError) {
-                    throw new BadRequestException('Token expired');
-                } else if (error instanceof jwt.JsonWebTokenError) {
-                    console.log(`Access failed due an invalid token`);
-                    console.log(error);
-                    throw new BadRequestException('Invalid token');
-                }
-            }
-        }
+        // if (authHeader) {
+        //     try {
+        //         decoded = jwt.verify(
+        //             authHeader?.replace('Bearer ', '') || '',
+        //             process.env.JWT_SECRET as string
+        //         ) as jwt.JwtPayload;
+        //     } catch (error: any) {
+        //         if (error instanceof jwt.TokenExpiredError) {
+        //             throw new BadRequestException('Token expired');
+        //         } else if (error instanceof jwt.JsonWebTokenError) {
+        //             console.log(`Access failed due an invalid token`);
+        //             console.log(error);
+        //             throw new BadRequestException('Invalid token');
+        //         }
+        //     }
+        // }
 
         let forwardedPath: string;
         if (Array.isArray(splat) && splat.length > 1 && splat[1] === 'graphql') {

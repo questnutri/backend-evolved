@@ -1,5 +1,5 @@
 meta {
-  name: Register a nutritionist
+  name: Register New Nutritionist copy
   type: http
   seq: 1
 }
@@ -7,18 +7,24 @@ meta {
 post {
   url: http://{{GATEWAY_URL}}/nutritionist/register
   body: json
-  auth: inherit
+  auth: none
 }
 
 body:json {
   {
-    "name": "John Doe",
+    "name": "{{$randomFullName}}",
     "email": "{{NUTRITIONIST_EMAIL}}",
     "password": "{{NUTRITIONIST_PASSWORD}}",
     "phone": "{{phone}}",
     "crn": "{{crn}}",
     "documentType": "cpf",
     "documentNumber": "{{documentNumber}}"
+  }
+}
+
+script:post-response {
+  if(res.status !== 201) {
+      bru.setNextRequest(null);
   }
 }
 

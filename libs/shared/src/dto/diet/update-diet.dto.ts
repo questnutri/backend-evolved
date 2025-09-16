@@ -22,4 +22,22 @@ export class UpdateDietDto {
     @IsString()
     description?: string;
 
+    @Field({ nullable: true })
+    @ApiPropertyOptional({
+        description: 'Date that this date will start to be efective. If not provided, startDate will be equal to request\'s date.',
+        example: '2025-09-17T01:44:54.245Z',
+    })
+    @IsString()
+    @IsOptional()
+    startDate: Date;
+
+    @Field({ nullable: true })
+    @ApiPropertyOptional({
+        description: 'Date of expire of this diet. If not provided endDate will be null and this diet will not expire.',
+        example: '2025-09-19T01:44:54.245Z',
+    })
+    @IsString()
+    @IsOptional()
+    endDate: Date;
+
 }

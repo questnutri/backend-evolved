@@ -1,0 +1,31 @@
+meta {
+  name: Create New Meal copy
+  type: http
+  seq: 3
+}
+
+post {
+  url: http://{{GATEWAY_URL}}/diet/{{createdDiet}}/meal
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{NUTRITIONIST_ACCESS_TOKEN}}
+}
+
+body:json {
+  {
+    "name": "Breakfast",
+    "hour": "12:00",
+    "daysOfWeek": ["Monday"]
+  }
+}
+
+vars:post-response {
+  createdMeal: res("id")
+}
+
+settings {
+  encodeUrl: true
+}

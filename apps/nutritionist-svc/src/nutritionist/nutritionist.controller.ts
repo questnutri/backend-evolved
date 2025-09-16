@@ -1,6 +1,6 @@
 import { Controller, Get, Post, Body, Inject, UseGuards, Headers, UseFilters, InternalServerErrorException } from '@nestjs/common';
 import { NutritionistService } from './nutritionist.service';
-import { BodyCreatePatientDto, CreateNutritionistDto, CreatePatientDto, FindAllFromNutritionistPayload, ProxyMessage, Patient, PATIENT_SERVICE_PROXY_NAME, RoleGuard, ControllerExceptionFilter } from '@backend-evolved/shared';
+import { BodyCreatePatientDto, CreateNutritionistDto, CreatePatientDto, FindAllFromNutritionistPayload, ProxyMessage, Patient, PATIENT_SERVICE_PROXY_NAME, JwtRoleGuard, ControllerExceptionFilter } from '@backend-evolved/shared';
 import { ApiOkResponse, ApiOperation, ApiConflictResponse, ApiBadRequestResponse, ApiBearerAuth, ApiSecurity, ApiCreatedResponse } from '@nestjs/swagger';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
@@ -34,7 +34,7 @@ export class NutritionistController {
     @ApiBearerAuth('bearer')
     @ApiSecurity('bearer')
     @ApiOkResponse({ description: 'Patients retrieved successfully' })
-    @UseGuards(RoleGuard(['nutritionist', 'admin']))
+    @UseGuards(JwtRoleGuard(['nutritionist', 'admin']))
     @UseFilters(ControllerExceptionFilter)
     async getAllPatients(
         @Headers() headers: { 'user-id': string },
@@ -61,7 +61,7 @@ export class NutritionistController {
     @ApiBearerAuth('bearer')
     @ApiSecurity('bearer')
     @ApiCreatedResponse({ description: 'Patient created successfully' })
-    @UseGuards(RoleGuard(['nutritionist', 'admin']))
+    @UseGuards(JwtRoleGuard(['nutritionist', 'admin']))
     @UseFilters(ControllerExceptionFilter)
     async createPatient(
         @Headers() headers: { 'user-id': string },

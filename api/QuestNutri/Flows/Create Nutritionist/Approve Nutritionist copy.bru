@@ -1,5 +1,5 @@
 meta {
-  name: Approve Nutritionist
+  name: Approve Nutritionist copy
   type: http
   seq: 3
 }
@@ -17,6 +17,12 @@ auth:bearer {
 body:json {
   {
       "email": "{{NUTRITIONIST_EMAIL}}"
+  }
+}
+
+script:post-response {
+  if(res.status === 201) {
+    bru.setVar("NUTRITIONIST_ID",res("id"));
   }
 }
 

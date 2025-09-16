@@ -23,7 +23,7 @@ export class Food {
 
     @Column({ nullable: true })
     @Field({ nullable: true })
-    unitOfMeasure?: string;
+    portion?: string;
 
     @Column()
     @Field()

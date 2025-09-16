@@ -1,0 +1,25 @@
+meta {
+  name: Search Aliments By Id
+  type: graphql
+  seq: 2
+}
+
+post {
+  url: http://{{GATEWAY_URL}}/aliment/graphql
+  body: graphql
+  auth: inherit
+}
+
+body:graphql {
+  query {
+  findManyAlimentById(ids:["68c9ecfabecd298a63552f34", "68c9ecfae8db839f1523168e"]) {
+        _id
+        source
+        name
+    }
+  }
+}
+
+settings {
+  encodeUrl: true
+}
