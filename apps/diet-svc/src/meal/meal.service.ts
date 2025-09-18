@@ -20,8 +20,23 @@ export class MealService implements ServiceContract<Meal> {
     }
 
     async createOne(data: Partial<Meal>): Promise<Meal> {
+        if(data.repeatDays && data.repeatDays.length === 0) {
+            data.repeatDays = [1];
+        }
+        if(!data.hour) {
+            data.hour = '00:00';
+        }
         const meal = this.mealRepository.create(data);
-        return await this.mealRepository.save(meal);
+        const saved = await this.mealRepository.save(meal);
+        // reload with diet relation
+        const reloaded = await this.mealRepository.findOne({ where: { id: saved.id }, relations: ['diet'] });
+        if (reloaded && reloaded.diet) {
+            // remove nested meals to avoid large circular payloads
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-ignore
+            delete reloaded.diet.meals;
+        }
+        return reloaded as Meal;
     }
 
     async updateOne(query: Partial<KeysOf<Meal>>, data: Partial<Meal>): Promise<Meal | null> {
@@ -38,8 +53,22 @@ export class MealService implements ServiceContract<Meal> {
     }
 
     async create(data: CreateMealDto & {diet: Diet}) {
+        if (!data.repeatDays || data.repeatDays.length === 0) {
+            data.repeatDays = [1];
+        }
+        if (data.hour === undefined || data.hour === null || data.hour === '') {
+            data.hour = '00:00';
+        }
+
         const meal = this.mealRepository.create(data);
-        return await this.mealRepository.save(meal);
+        const saved = await this.mealRepository.save(meal);
+        const reloaded = await this.mealRepository.findOne({ where: { id: saved.id }, relations: ['diet'] });
+        if (reloaded && reloaded.diet) {
+            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+            // @ts-ignore
+            delete reloaded.diet.meals;
+        }
+        return reloaded as Meal;
     }
 
     async findById(id: string) {
@@ -55,5 +84,27 @@ export class MealService implements ServiceContract<Meal> {
         const foundMeal = await this.findById(id);
         if (!foundMeal) throw new NotFoundException('Meal not found');
         await this.mealRepository.delete(id);
+    }
+
+    // Method for meal record service to get meal information with patient validation
+    async getMealInfo(mealId: string, patientId?: string): Promise<{ dietId: string, nutritionistId: string } | null> {
+        const meal = await this.mealRepository.findOne({ 
+            where: { id: mealId }, 
+            relations: ['diet'] 
+        });
+        
+        if (!meal || !meal.diet) {
+            return null;
+        }
+
+        // If patientId is provided, validate that the patient is assigned to this diet
+        if (patientId && meal.diet.patientId !== patientId) {
+            return null; // Patient is not assigned to this diet
+        }
+
+        return {
+            dietId: meal.diet.id,
+            nutritionistId: meal.diet.nutritionistId
+        };
     }
 }

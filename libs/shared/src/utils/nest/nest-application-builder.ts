@@ -16,6 +16,7 @@ export class NestApplicationBuilder {
     private servicePort: number = 3000;
     private serviceName: string = 'Application';
     private exceptionFilters: ExceptionFilter[] = [];
+    private globalPrefix: string | undefined;
 
 
     private constructor(module: IEntryNestModule, options?: NestApplicationOptions) {
@@ -34,6 +35,11 @@ export class NestApplicationBuilder {
 
     setPort(port: string): NestApplicationBuilder {
         this.servicePort = Number(port);
+        return this;
+    }
+
+    setGlobalPrefix(prefix: string): NestApplicationBuilder {
+        this.globalPrefix = prefix;
         return this;
     }
 
@@ -61,12 +67,17 @@ export class NestApplicationBuilder {
     async listen() {
         const app = await this.getApp();
         await app.listen(this.servicePort);
-        Logger.log(`🚀 ${this.serviceName} is running on: http://localhost:${this.servicePort}/`);
+        const prefixPath = this.globalPrefix ? `/${this.globalPrefix}` : '';
+        Logger.log(`🚀 ${this.serviceName} is running on: http://localhost:${this.servicePort}${prefixPath}`);
         return app;
     }
 
     async getApp() {
         const app = await NestFactory.create(this.module, this.nestAppOptions);
+
+        if (this.globalPrefix) {
+            app.setGlobalPrefix(this.globalPrefix);
+        }
 
         if (this.swaggerConfig) {
             const swagger = this.swaggerConfig.build();

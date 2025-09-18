@@ -1,0 +1,37 @@
+meta {
+  name: Patient Login copy 2
+  type: http
+  seq: 3
+}
+
+post {
+  url: http://{{GATEWAY_URL}}/auth/login
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "email": "{{email}}",
+    "password": "{{password}}"
+  }
+}
+
+vars:pre-request {
+  email: {{PATIENT_EMAIL}}
+  password: {{PATIENT_PASSWORD}}
+}
+
+script:post-response {
+  if(res.status === 200 && res("firstLogin")) {
+    bru.setVar("RESET_PASSWORD_TOKEN" ,res("resetPassword"));
+  }
+  
+  if(res.status !== 201) {
+      bru.setNextRequest(null);
+  }
+}
+
+settings {
+  encodeUrl: true
+}

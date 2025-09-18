@@ -1,6 +1,12 @@
 import { Field, InputType } from "@nestjs/graphql";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { IsOptional, IsString } from "class-validator";
+import { DietDayInterpretationMode } from "../../enums/diet-day-interpretation.enum";
+import { registerEnumType } from "@nestjs/graphql";
+
+registerEnumType(DietDayInterpretationMode, {
+    name: "DietDayInterpretationMode",
+});
 
 @InputType()
 export class CreateDietDto {
@@ -48,5 +54,13 @@ export class CreateDietDto {
     @IsString()
     @IsOptional()
     endDate: Date;
+
+    @Field(() => DietDayInterpretationMode, { nullable: true })
+    @ApiPropertyOptional({
+        description: 'Diet day interpretation mode. Default is WEEK',
+        example: 'WEEK',
+    })
+    @IsOptional()
+    dayInterpretationMode: DietDayInterpretationMode;
 
 }

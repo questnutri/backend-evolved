@@ -27,7 +27,7 @@ script:post-response {
     bru.setVar("RESET_PASSWORD_TOKEN" ,res("resetPassword"));
   }
   
-  if(res.status !== 201) {
+  if(res.status !== 200) {
       bru.setNextRequest(null);
   }
 }

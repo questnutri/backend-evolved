@@ -1,0 +1,19 @@
+meta {
+  name: Get meal record
+  type: http
+  seq: 2
+}
+
+get {
+  url: http://{{GATEWAY_URL}}/record/meal
+  body: none
+  auth: inherit
+}
+
+params:query {
+  ~date: 2025-09-17
+}
+
+settings {
+  encodeUrl: true
+}

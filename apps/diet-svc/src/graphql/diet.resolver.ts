@@ -8,11 +8,11 @@ import { CreateDietDto, Diet, UpdateDietDto } from '@backend-evolved/shared';
 export class DietResolver {
 	constructor(private readonly dietService: DietService) { }
 
-	@Mutation(() => Diet)
-	@UseGuards(GqlRoleGuard(['nutritionist']))
-	async createDiet(@Args('input') input: CreateDietDto, @Context() ctx: any) {
-		return await this.dietService.createOne({ ...input, nutritionistId: ctx.req.headers['user-id'] });
-	}
+	// @Mutation(() => Diet)
+	// @UseGuards(GqlRoleGuard(['nutritionist']))
+	// async createDiet(@Args('input') input: CreateDietDto, @Context() ctx: any) {
+	// 	return await this.dietService.createOne({ ...input, nutritionistId: ctx.req.headers['user-id'] });
+	// }
 
 	@Query(() => [Diet])
 	@UseGuards(GqlRoleGuard(['nutritionist', 'patient']))
@@ -36,16 +36,16 @@ export class DietResolver {
 		return diet;
 	}
 
-	@Mutation(() => Diet)
-	@UseGuards(GqlRoleGuard(['nutritionist']))
-	async updateDiet(@Args('dietId') dietId: string, @Args('input') input: UpdateDietDto) {
-		return await this.dietService.updateOne({ id: dietId }, input as any);
-	}
+	// @Mutation(() => Diet)
+	// @UseGuards(GqlRoleGuard(['nutritionist']))
+	// async updateDiet(@Args('dietId') dietId: string, @Args('input') input: UpdateDietDto) {
+	// 	return await this.dietService.updateOne({ id: dietId }, input as any);
+	// }
 
-	@Mutation(() => Boolean)
-	@UseGuards(GqlRoleGuard(['nutritionist']))
-	async deleteDiet(@Args('dietId') dietId: string) {
-		await this.dietService.deleteOne({ id: dietId });
-		return true;
-	}
+	// @Mutation(() => Boolean)
+	// @UseGuards(GqlRoleGuard(['nutritionist']))
+	// async deleteDiet(@Args('dietId') dietId: string) {
+	// 	await this.dietService.deleteOne({ id: dietId });
+	// 	return true;
+	// }
 }

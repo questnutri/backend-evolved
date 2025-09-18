@@ -14,3 +14,5 @@ export * from "./aliment/aliment.entity";
 export * from "./aliment/taco-aliment.entity";
 export * from "./aliment/home-measure-aliment.entity";
 export * from "./aliment/secret-aliment.entity";
+
+export * from "./record/meal-record.entity";

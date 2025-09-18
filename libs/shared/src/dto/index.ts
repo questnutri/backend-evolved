@@ -14,5 +14,8 @@ export * from './meal/update-meal.dto'
 export * from './food/create-food.dto';
 export * from './food/update-food.dto';
 
+export * from './record/create-meal-record.dto';
+export * from './record/update-meal-record.dto';
+
 
 export * from './response';

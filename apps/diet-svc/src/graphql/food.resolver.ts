@@ -9,18 +9,18 @@ import { CreateFoodDto, Food, UpdateFoodDto } from '@backend-evolved/shared';
 export class FoodResolver {
 	constructor(private readonly foodService: FoodService, private readonly mealService: MealService) { }
 
-	@Mutation(() => Food)
-	@UseGuards(GqlRoleGuard(['nutritionist']))
-	async createFood(@Args('mealId') mealId: string, @Args('input') input: CreateFoodDto, @Context() ctx: any) {
-		const usedMealId = mealId || (input as any).meal?.id;
-		const meal = await this.mealService.findById(usedMealId);
-		if (!meal) throw new Error('Meal not found');
-		const isRelated = meal.diet.nutritionistId === ctx.req.headers['user-id'] || meal.diet.patientId === ctx.req.headers['user-id'];
-		if (!isRelated) throw new Error("User doesn't have this diet");
-		const { quantity, unitOfMeasure } = input;
-		const payload: any = { quantity, unitOfMeasure, meal: { id: usedMealId } };
-		return await this.foodService.create(payload);
-	}
+	// @Mutation(() => Food)
+	// @UseGuards(GqlRoleGuard(['nutritionist']))
+	// async createFood(@Args('mealId') mealId: string, @Args('input') input: CreateFoodDto, @Context() ctx: any) {
+	// 	const usedMealId = mealId || (input as any).meal?.id;
+	// 	const meal = await this.mealService.findById(usedMealId);
+	// 	if (!meal) throw new Error('Meal not found');
+	// 	const isRelated = meal.diet.nutritionistId === ctx.req.headers['user-id'] || meal.diet.patientId === ctx.req.headers['user-id'];
+	// 	if (!isRelated) throw new Error("User doesn't have this diet");
+	// 	const { quantity, unitOfMeasure } = input;
+	// 	const payload: any = { quantity, unitOfMeasure, meal: { id: usedMealId } };
+	// 	return await this.foodService.create(payload);
+	// }
 
 	@Query(() => [Food])
 	@UseGuards(GqlRoleGuard(['nutritionist', 'patient']))

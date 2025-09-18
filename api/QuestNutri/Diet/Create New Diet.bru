@@ -20,8 +20,14 @@ vars:pre-request {
   patientId: {{PATIENT_ID}}
 }
 
-vars:post-response {
-  createdDiet: res("id")
+script:post-response {
+  if(res.status === 201 && res("id")) {
+    bru.setVar("createdDiet" ,res("id"));
+  }
+  
+  if(res.status !== 201) {
+      bru.setNextRequest(null);
+  }
 }
 
 settings {

@@ -23,6 +23,11 @@ export const provideProxyService = (serviceName: string) => {
                 PROXY_NAMES.ALIMENT_SERVICE_PROXY_NAME,
                 process.env.ALIMENT_QUEUE_NAME || 'aliment_queue'
             );
+        case PROXY_NAMES.DIET_SERVICE_PROXY_NAME:
+            return generateProxyServiceProvider(
+                PROXY_NAMES.DIET_SERVICE_PROXY_NAME,
+                process.env.DIET_QUEUE_NAME || 'diet_queue'
+            );
         default:
             throw new Error(`No proxy service provider found for service: ${serviceName}`);
     }

@@ -26,9 +26,9 @@ export class Meal {
     @Field(() => [Food], { nullable: true })
     foods: Food[];
 
-    @Column("text", { array: true })
-    @Field(() => [String])
-    daysOfWeek: string[];
+    @Column("int", { array: true })
+    @Field(() => [Number], { nullable: true })
+    repeatDays: number[];
 
     @Column()
     @Field({ nullable: true })

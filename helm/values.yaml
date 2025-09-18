@@ -7,6 +7,8 @@ databases:
     port: 5434
   - name: diet-svc-postgres
     port: 5435
+  - name: record-svc-postgres
+    port: 5437
 apps:
   - name:  auth-svc
     replicas: 1
@@ -20,4 +22,10 @@ apps:
     servicePort: 8080
     port: 8180
     serviceType: LoadBalancer
+  - name: record-svc
+    replicas: 1
+    image: record-svc:latest
+    port: 3037
+    servicePort: 3037
+    serviceType: ClusterIP
 rabbitmq: {}

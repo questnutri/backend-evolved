@@ -28,6 +28,16 @@ script:pre-request {
   bru.setVar("choosedAlimentId", available[index]._id);
 }
 
+script:post-response {
+  if(res.status === 201 && res("id")) {
+    bru.setVar("createdFood" ,res("id"));
+  }
+  
+  if(res.status !== 201) {
+      bru.setNextRequest(null);
+  }
+}
+
 settings {
   encodeUrl: true
 }

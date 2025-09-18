@@ -16,14 +16,18 @@ auth:bearer {
 
 body:json {
   {
-    "name": "Breakfast",
-    "hour": "12:00",
-    "daysOfWeek": ["Monday"]
+    "name": "Breakfast"
   }
 }
 
-vars:post-response {
-  createdMeal: res("id")
+script:post-response {
+  if(res.status === 201 && res("id")) {
+    bru.setVar("createdMeal" ,res("id"));
+  }
+  
+  if(res.status !== 201) {
+      bru.setNextRequest(null);
+  }
 }
 
 settings {

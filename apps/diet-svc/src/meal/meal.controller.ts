@@ -1,7 +1,8 @@
 import { Body, Controller, Post, UseGuards, Headers, NotFoundException, Param, Put, Delete, Get, UseFilters } from '@nestjs/common';
+import { MessagePattern, Payload } from '@nestjs/microservices';
 import { MealService } from './meal.service';
 import { ApiBearerAuth, ApiSecurity, ApiCreatedResponse, ApiNoContentResponse, ApiNotFoundResponse, ApiOkResponse, ApiOperation } from '@nestjs/swagger';
-import { CreateMealDto, Meal, JwtRoleGuard, ControllerContract, ControllerExceptionFilter } from '@backend-evolved/shared';
+import { CreateMealDto, Meal, JwtRoleGuard, ControllerContract, ControllerExceptionFilter, ProxyMessengerFilter } from '@backend-evolved/shared';
 import { DietService } from '../diet/diet.service';
 
 @Controller('diet/:dietId/meal')
@@ -93,6 +94,13 @@ export class MealController implements ControllerContract<Meal> {
 		const isRelated = meal.diet.nutritionistId === headers['user-id'] || meal.diet.patientId === headers['user-id'];
 		if (!isRelated) throw new NotFoundException(`User doesn't have this diet`);
 		return await this.mealService.delete(mealId);
+	}
+
+	@MessagePattern('meal.getInfo')
+	@UseFilters(ProxyMessengerFilter)
+	async getMealInfo(@Payload() data: { mealId: string, patientId?: string }) {
+		const mealInfo = await this.mealService.getMealInfo(data.mealId, data.patientId);
+		return { payload: mealInfo };
 	}
 
 }

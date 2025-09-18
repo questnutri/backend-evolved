@@ -2,6 +2,7 @@ import { Column, Entity, OneToMany, PrimaryGeneratedColumn, CreateDateColumn, Up
 import { Exclude } from 'class-transformer';
 import { Meal } from './meal.entity';
 import { ObjectType, Field, ID } from '@nestjs/graphql';
+import { DietDayInterpretationMode } from '../../enums/diet-day-interpretation.enum';
 
 @ObjectType()
 @Entity('diets')
@@ -27,6 +28,14 @@ export class Diet {
     @Column()
     @Exclude()
     nutritionistId: string;
+
+    @Column({
+        type: 'enum',
+        enum: DietDayInterpretationMode,
+        default: DietDayInterpretationMode.WEEK
+    })
+    @Field(() => DietDayInterpretationMode)
+    dayInterpretationMode: DietDayInterpretationMode; 
 
     @OneToMany(() => Meal, (meal) => meal.diet)
     @Field(() => [Meal], { nullable: true })

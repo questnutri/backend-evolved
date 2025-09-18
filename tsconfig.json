@@ -27,5 +27,8 @@
     {
       "path": "./apps/aliment-svc"
     },
+    {
+      "path": "./apps/record-svc"
+    }
   ]
 }

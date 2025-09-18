@@ -17,6 +17,7 @@ export class GatewayController {
             case 'patient': return process.env.PATIENT_SERVICE_URL ?? 'http://localhost:3034';
             case 'diet': return process.env.DIET_SERVICE_URL ?? 'http://localhost:3035';
             case 'aliment': return process.env.ALIMENT_SERVICE_URL ?? 'http://localhost:3036';
+            case 'record': return process.env.RECORD_SERVICE_URL ?? 'http://localhost:3037';
             default: return undefined;
         }
     }
@@ -31,6 +32,8 @@ export class GatewayController {
         const choosedService = splat.at(0);
         const targetBase = this.getTarget(choosedService);
         console.log(`Proxying request for ${req.path} to ${targetBase}`);
+        console.log(`Original URL: ${req.url}`);
+        console.log(`Splat array:`, splat);
         if (!targetBase) {
             console.log(`No service found for ${choosedService}`);
             return res.status(502).json({ error: 'No target service configured for this path' });
@@ -59,9 +62,14 @@ export class GatewayController {
         if (Array.isArray(splat) && splat.length > 1 && splat[1] === 'graphql') {
             forwardedPath = '/' + splat.slice(1).join('/');
         } else {
+            // Keep the full path including service name
             forwardedPath = Array.isArray(splat) ? '/' + splat.join('/') : '/' + splat;
         }
-        const targetUrl = new URL(targetBase + forwardedPath); const options: http.RequestOptions = {
+        
+        // Preserve the original query string
+        const queryString = req.url?.includes('?') ? req.url.substring(req.url.indexOf('?')) : '';
+        const targetUrl = new URL(targetBase + forwardedPath + queryString);
+        console.log(`Final forwarded URL: ${targetUrl.href}`); const options: http.RequestOptions = {
             protocol: targetUrl.protocol,
             hostname: targetUrl.hostname,
             port: targetUrl.port,
