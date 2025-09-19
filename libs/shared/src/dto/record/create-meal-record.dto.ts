@@ -1,6 +1,6 @@
 import { Field, InputType } from "@nestjs/graphql";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsBoolean, IsString, IsOptional, IsDateString, IsNumber } from "class-validator";
+import { IsBoolean, IsString, IsOptional, IsDateString } from "class-validator";
 
 @InputType()
 export class CreateMealRecordDto {
@@ -48,15 +48,6 @@ export class CreateMealRecordDto {
     })
     @IsDateString()
     mealRelativeDate: Date;
-
-    @Field()
-    @ApiProperty({
-        description: 'The day number in the diet plan when this meal should be repeated (0 = Sunday, 1 = Monday, etc.)',
-        example: 1,
-        required: true
-    })
-    @IsNumber()
-    mealRepeatDay: number;
 }
 
 // New simplified DTO for patient meal record creation
@@ -70,15 +61,6 @@ export class CreatePatientMealRecordDto {
     })
     @IsDateString()
     mealRelativeDate: Date;
-
-    @Field()
-    @ApiProperty({
-        description: 'The day number in the diet plan when this meal should be repeated (0 = Sunday, 1 = Monday, etc.)',
-        example: 1,
-        required: true
-    })
-    @IsNumber()
-    mealRepeatDay: number;
 
     @Field({ nullable: true })
     @ApiPropertyOptional({

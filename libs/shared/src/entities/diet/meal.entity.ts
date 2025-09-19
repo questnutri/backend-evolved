@@ -1,45 +1,35 @@
 import { Column, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { Food } from './food.entity';
 import { Diet } from './diet.entity';
-import { ObjectType, Field, ID } from '@nestjs/graphql';
+import type { RepeatConfiguration } from '../../types/repeat-configuration';
 
-@ObjectType()
 @Entity('meals')
 export class Meal {
     @PrimaryGeneratedColumn('uuid')
-    @Field(() => ID, { nullable: true })
     id: string;
 
     @Column()
-    @Field()
     name: string;
 
     @ManyToOne(() => Diet, (diet) => diet.meals)
-    @Field(() => Diet)
     diet: Diet;
 
     @Column()
-    @Field()
     isActive: boolean = true;
 
     @OneToMany(() => Food, (food) => food.meal)
-    @Field(() => [Food], { nullable: true })
     foods: Food[];
 
-    @Column("int", { array: true })
-    @Field(() => [Number], { nullable: true })
-    repeatDays: number[];
+    @Column("jsonb")
+    repeatConfiguration: RepeatConfiguration;
 
     @Column()
-    @Field({ nullable: true })
     hour?: string;
 
     @CreateDateColumn()
-    @Field({ nullable: true })
     createdAt: Date;
 
     @UpdateDateColumn()
-    @Field({ nullable: true })
     updatedAt: Date;
 
     isPatientRelated(patientId: string): boolean {

@@ -158,8 +158,6 @@ export class MealRecordController {
             mealId,
             patientId,
             createPatientMealRecordDto.mealRelativeDate,
-            createPatientMealRecordDto.mealRepeatDay,
-            createPatientMealRecordDto.isCompleted || false
         );
     }
 

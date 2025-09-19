@@ -1,4 +1,4 @@
-import { CreateMealDto, Diet, KeysOf, Meal, ServiceContract } from '@backend-evolved/shared';
+import { CreateMealDto, Diet, KeysOf, Meal, ServiceContract, RepeatType, RepeatConfiguration } from '@backend-evolved/shared';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -20,23 +20,45 @@ export class MealService implements ServiceContract<Meal> {
     }
 
     async createOne(data: Partial<Meal>): Promise<Meal> {
-        if(data.repeatDays && data.repeatDays.length === 0) {
-            data.repeatDays = [1];
+        if (!data.repeatConfiguration) {
+            const defaultConfig: RepeatConfiguration = {
+                type: RepeatType.ONCE,
+                startDate: this.normalizeToStartOfDay(new Date()),
+            };
+            data.repeatConfiguration = defaultConfig;
+        } else {
+            data.repeatConfiguration = {
+                type: data.repeatConfiguration.type,
+                interval: data.repeatConfiguration.interval || 1,
+                daysOfWeek: data.repeatConfiguration.daysOfWeek || undefined,
+                dayOfMonth: data.repeatConfiguration.dayOfMonth || undefined,
+                startDate: data.repeatConfiguration.startDate
+                    ? this.normalizeToStartOfDay(new Date(data.repeatConfiguration.startDate))
+                    : undefined,
+                endDate: data.repeatConfiguration.endDate
+                    ? this.normalizeToStartOfDay(new Date(data.repeatConfiguration.endDate))
+                    : undefined,
+            };
         }
-        if(!data.hour) {
+
+        if (!data.hour) {
             data.hour = '00:00';
         }
+
         const meal = this.mealRepository.create(data);
         const saved = await this.mealRepository.save(meal);
-        // reload with diet relation
         const reloaded = await this.mealRepository.findOne({ where: { id: saved.id }, relations: ['diet'] });
         if (reloaded && reloaded.diet) {
-            // remove nested meals to avoid large circular payloads
-            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
             // @ts-ignore
             delete reloaded.diet.meals;
         }
         return reloaded as Meal;
+    }
+
+    private normalizeToStartOfDay(date: Date): Date {
+        const normalized = new Date(date);
+        normalized.setUTCHours(0, 0, 0, 0);
+        return normalized;
     }
 
     async updateOne(query: Partial<KeysOf<Meal>>, data: Partial<Meal>): Promise<Meal | null> {
@@ -50,25 +72,6 @@ export class MealService implements ServiceContract<Meal> {
         const meal = await this.mealRepository.findOne({ where: query as any });
         if (!meal) throw new NotFoundException('Meal not found');
         await this.mealRepository.delete(meal.id);
-    }
-
-    async create(data: CreateMealDto & {diet: Diet}) {
-        if (!data.repeatDays || data.repeatDays.length === 0) {
-            data.repeatDays = [1];
-        }
-        if (data.hour === undefined || data.hour === null || data.hour === '') {
-            data.hour = '00:00';
-        }
-
-        const meal = this.mealRepository.create(data);
-        const saved = await this.mealRepository.save(meal);
-        const reloaded = await this.mealRepository.findOne({ where: { id: saved.id }, relations: ['diet'] });
-        if (reloaded && reloaded.diet) {
-            // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-            // @ts-ignore
-            delete reloaded.diet.meals;
-        }
-        return reloaded as Meal;
     }
 
     async findById(id: string) {
@@ -88,11 +91,11 @@ export class MealService implements ServiceContract<Meal> {
 
     // Method for meal record service to get meal information with patient validation
     async getMealInfo(mealId: string, patientId?: string): Promise<{ dietId: string, nutritionistId: string } | null> {
-        const meal = await this.mealRepository.findOne({ 
-            where: { id: mealId }, 
-            relations: ['diet'] 
+        const meal = await this.mealRepository.findOne({
+            where: { id: mealId },
+            relations: ['diet']
         });
-        
+
         if (!meal || !meal.diet) {
             return null;
         }
@@ -105,6 +108,42 @@ export class MealService implements ServiceContract<Meal> {
         return {
             dietId: meal.diet.id,
             nutritionistId: meal.diet.nutritionistId
+        };
+    }
+
+    // Method for meal record service to get detailed meal information with patient validation
+    async getMealDetailedInfo(mealId: string, patientId?: string): Promise<{ dietId: string, nutritionistId: string, meal: any, diet: any } | null> {
+        const meal = await this.mealRepository.findOne({
+            where: { id: mealId },
+            relations: ['diet']
+        });
+
+        if (!meal || !meal.diet) {
+            return null;
+        }
+
+        // If patientId is provided, validate that the patient is assigned to this diet
+        if (patientId && meal.diet.patientId !== patientId) {
+            return null; // Patient is not assigned to this diet
+        }
+
+        return {
+            dietId: meal.diet.id,
+            nutritionistId: meal.diet.nutritionistId,
+            meal: {
+                id: meal.id,
+                name: meal.name,
+                repeatConfiguration: meal.repeatConfiguration,
+                hour: meal.hour,
+                isActive: meal.isActive
+            },
+            diet: {
+                id: meal.diet.id,
+                startDate: meal.diet.startDate,
+                endDate: meal.diet.endDate,
+                patientId: meal.diet.patientId,
+                nutritionistId: meal.diet.nutritionistId
+            }
         };
     }
 }

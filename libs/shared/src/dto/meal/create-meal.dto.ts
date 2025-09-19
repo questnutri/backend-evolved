@@ -1,15 +1,14 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsNumber, IsOptional, IsString } from "class-validator";
-import { InputType, Field } from '@nestjs/graphql';
+import { IsNumber, IsOptional, IsString, ValidateNested } from "class-validator";
+import { Type } from 'class-transformer';
+import { RepeatConfigurationDto } from '../repeat-configuration.dto';
 
-@InputType()
 export class CreateMealDto {
     @ApiProperty({
         description: 'Meal name',
         example: 'Breakfast'
     })
     @IsString()
-    @Field()
     name: string;
 
     @ApiPropertyOptional({
@@ -18,7 +17,6 @@ export class CreateMealDto {
     })
     @IsOptional()
     @IsString()
-    @Field({ nullable: true })
     description?: string;
 
     @ApiPropertyOptional({
@@ -27,15 +25,14 @@ export class CreateMealDto {
     })
     @IsOptional()
     @IsString()
-    @Field({ nullable: true })
     hour?: string;
 
     @ApiPropertyOptional({
-        description: 'Days that this meal will be repeated. Intepretation depends on the diet dayInterpretationMode',
-        example: [2, 4, 6],
+        description: 'Repeat configuration for the meal. If not provided, defaults to ONCE type.',
+        example: { type: 'WEEKLY', interval: 1, daysOfWeek: [1, 3, 5] },
     })
     @IsOptional()
-    @IsNumber({}, { each: true })
-    @Field(() => [Number], { nullable: true })
-    repeatDays?: number[];
+    @ValidateNested()
+    @Type(() => RepeatConfigurationDto)
+    repeatConfiguration?: RepeatConfigurationDto;
 }

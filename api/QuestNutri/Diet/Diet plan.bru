@@ -1,0 +1,19 @@
+meta {
+  name: Diet plan
+  type: http
+  seq: 3
+}
+
+get {
+  url: http://{{GATEWAY_URL}}/diet/plan
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{PATIENT_ACCESS_TOKEN}}
+}
+
+settings {
+  encodeUrl: true
+}

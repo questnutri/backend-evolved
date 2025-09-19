@@ -1,4 +1,4 @@
 export enum DietDayInterpretationMode {
-    WEEK = 'WEEK',
-    PROGRAM = 'PROGRAM'
+    WEEK_DAY = 'WEEK_DAY',
+    DIET_DAYS = 'DIET_DAYS'
 }

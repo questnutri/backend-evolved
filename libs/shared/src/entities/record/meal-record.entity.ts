@@ -38,8 +38,4 @@ export class MealRecord {
     @Column({ type: 'timestamp' })
     @Field()
     mealRelativeDate: Date;
-
-    @Column()
-    @Field()
-    mealRepeatDay: number;
 }

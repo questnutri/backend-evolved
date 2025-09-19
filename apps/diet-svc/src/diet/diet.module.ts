@@ -1,23 +1,22 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { DietService } from './diet.service';
 import { DietController } from './diet.controller';
 import { dbConnection } from '../database/provide-db';
-import { MealService } from '../meal/meal.service';
-import { ALIMENT_SERVICE_PROXY_NAME, PATIENT_SERVICE_PROXY_NAME, provideProxyService } from '@backend-evolved/shared';
-import { FoodService } from '../food/food.service';
+import { MealModule } from '../meal/meal.module';
+import { ALIMENT_SERVICE_PROXY_NAME, PATIENT_SERVICE_PROXY_NAME, RECORD_SERVICE_PROXY_NAME, provideProxyService } from '@backend-evolved/shared';
 
 @Module({
     imports: [
-        dbConnection()
+        dbConnection(),
+        forwardRef(() => MealModule)
     ],
     controllers: [DietController],
     providers: [
         provideProxyService(PATIENT_SERVICE_PROXY_NAME),
         provideProxyService(ALIMENT_SERVICE_PROXY_NAME),
+        provideProxyService(RECORD_SERVICE_PROXY_NAME),
         DietService,
-        MealService,
-        FoodService,
     ],
-    exports: [DietService, MealService],
+    exports: [DietService],
 })
 export class DietModule { }

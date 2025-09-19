@@ -9,7 +9,6 @@ import { GraphqlModule } from '../graphql/graphql.module';
         DietModule,
         MealModule,
         FoodModule,
-        GraphqlModule
     ],
     controllers: [],
     providers: [

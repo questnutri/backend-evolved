@@ -4,3 +4,5 @@ export * from './rabbitmq/message-registry';
 
 export * from './nest/nest-application-builder';
 export * from './nest/generate-nest-application';
+
+export * from './meal-repeat-calculator';

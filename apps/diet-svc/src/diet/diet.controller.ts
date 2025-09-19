@@ -1,10 +1,8 @@
-import { Headers, Body, Controller, Get, Post, UseGuards, ForbiddenException, Param, NotFoundException, Put, Delete, UseFilters, Inject } from '@nestjs/common';
-import { ApiBearerAuth, ApiCreatedResponse, ApiForbiddenResponse, ApiNoContentResponse, ApiNotFoundResponse, ApiOkResponse, ApiOperation, ApiSecurity } from '@nestjs/swagger';
+import { Headers, Body, Controller, Get, Post, UseGuards, ForbiddenException, Param, NotFoundException, Put, Delete, UseFilters, Query } from '@nestjs/common';
+import { ApiBearerAuth, ApiCreatedResponse, ApiForbiddenResponse, ApiNoContentResponse, ApiNotFoundResponse, ApiOkResponse, ApiOperation, ApiSecurity, ApiQuery } from '@nestjs/swagger';
 import { DietService } from './diet.service';
-import { Aliment, ALIMENT_SERVICE_PROXY_NAME, ControllerExceptionFilter, CreateDietDto, Diet, Food, JwtRoleGuard, UpdateDietDto } from '@backend-evolved/shared';
+import { ControllerExceptionFilter, CreateDietDto, Diet, JwtRoleGuard, UpdateDietDto, DietPlan } from '@backend-evolved/shared';
 import { FoodService } from '../food/food.service';
-import { ClientProxy } from '@nestjs/microservices';
-import { firstValueFrom } from 'rxjs';
 
 @Controller('diet')
 @ApiBearerAuth('bearer')
@@ -12,8 +10,7 @@ import { firstValueFrom } from 'rxjs';
 export class DietController {
 	constructor(
 		private readonly dietService: DietService,
-		private readonly foodService: FoodService,
-		@Inject(ALIMENT_SERVICE_PROXY_NAME) private readonly alimentServiceProxy: ClientProxy
+		private readonly foodService: FoodService
 	) { }
 
 	@Get()
@@ -46,6 +43,57 @@ export class DietController {
 		return [];
 	}
 
+	@Get('/plan')
+	@ApiOperation({
+		summary: 'Get complex diet plan for a patient',
+		description: 'Retrieve a comprehensive diet plan with calendar planning for a specific patient, including meal schedules and records'
+	})
+	@ApiQuery({ 
+		name: 'length', 
+		description: 'Number of months to include (default: 1 = current month + 1 back + 1 forward)', 
+		required: false, 
+		type: Number 
+	})
+	@ApiQuery({ 
+		name: 'patientId', 
+		description: 'Patient ID (required for nutritionist, optional for patient)', 
+		required: false, 
+		type: String 
+	})
+	@ApiOkResponse({
+		description: 'Diet plan has been successfully generated.',
+		type: [DietPlan]
+	})
+	@ApiForbiddenResponse({
+		description: 'User not allowed to access this diet plan',
+	})
+	@UseGuards(JwtRoleGuard(['nutritionist', 'patient']))
+	@UseFilters(ControllerExceptionFilter)
+	async getDietPlan(
+		@Headers() headers: any,
+		@Query('length') length?: number,
+		@Query('patientId') queryPatientId?: string
+	): Promise<DietPlan[]> {
+		const userId = headers['user-id'];
+		const userRole = headers['role'];
+		
+		// Determine patient ID based on user role
+		let patientId: string;
+		if (userRole === 'patient') {
+			patientId = userId;
+		} else if (userRole === 'nutritionist') {
+			if (!queryPatientId) {
+				throw new ForbiddenException('Nutritionist must specify a patientId to get diet plan');
+			}
+			patientId = queryPatientId;
+		} else {
+			throw new ForbiddenException('Invalid user role for diet plan access');
+		}
+
+		const planLength = length && length > 0 ? length : 1;
+		return await this.dietService.getDietPlanForPatient(patientId, planLength);
+	}
+
 	@Get(':dietId')
 	@ApiOperation({
 		summary: 'Retrieve a specific diet by ID',
@@ -75,39 +123,7 @@ export class DietController {
 		if (!isRelated) {
 			throw new ForbiddenException("User not allowed to access this diet");
 		}
-		return await this.fetchDietAliments(diet);
-	}
-
-	private async fetchDietAliments(diet: Diet): Promise<any> {
-		const allAlimentIds: string[] = []
-		const foodPositions: { mealIndex: number, foodIndex: number, alimentId: string }[] = []
-
-		diet.meals?.forEach((meal, mealIndex) => {
-			meal.foods?.forEach((food: Food, foodIndex: number) => {
-				if (food.alimentId) {
-					allAlimentIds.push(food.alimentId)
-					foodPositions.push({ mealIndex, foodIndex, alimentId: food.alimentId })
-				}
-			})
-		})
-
-		let fetchedAliments: Aliment[] = []
-		if (allAlimentIds.length > 0) {
-			fetchedAliments = await firstValueFrom(
-				this.alimentServiceProxy.send<Aliment[]>('findManyAlimentsByIds', { ids: allAlimentIds, source: null })
-			)
-		}
-
-		const alimentMap = new Map(fetchedAliments.map(a => [a._id.toString(), a]))
-
-		foodPositions.forEach(pos => {
-			const aliment = alimentMap.get(pos.alimentId)
-			const food = diet.meals![pos.mealIndex].foods![pos.foodIndex]
-			const { alimentId, ...rest } = food
-			diet.meals![pos.mealIndex].foods![pos.foodIndex] = { ...rest, aliment: aliment || null } as any
-		})
-
-		return diet
+		return await this.dietService.fetchDietAlimentsPublic(diet);
 	}
 
 
@@ -171,5 +187,4 @@ export class DietController {
 	): Promise<void> {
 		return await this.dietService.deleteOne({ id: dietId });
 	}
-
 }

@@ -1,16 +1,7 @@
-import { Field, InputType } from "@nestjs/graphql";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 import { IsOptional, IsString } from "class-validator";
-import { DietDayInterpretationMode } from "../../enums/diet-day-interpretation.enum";
-import { registerEnumType } from "@nestjs/graphql";
 
-registerEnumType(DietDayInterpretationMode, {
-    name: "DietDayInterpretationMode",
-});
-
-@InputType()
 export class CreateDietDto {
-    @Field({ nullable: true })
     @ApiPropertyOptional({
         description: 'Diet name',
         example: 'Bulking Diet - Week 1'
@@ -19,7 +10,6 @@ export class CreateDietDto {
     @IsOptional()
     name?: string;
 
-    @Field({ nullable: true })
     @ApiPropertyOptional({
         description: 'Diet description',
         example: 'A diet plan for muscle gain',
@@ -28,7 +18,6 @@ export class CreateDietDto {
     @IsOptional()
     description?: string;
 
-    @Field()
     @ApiProperty({
         description: 'Patient ID',
         example: '',
@@ -37,7 +26,6 @@ export class CreateDietDto {
     @IsString()
     patientId: string;
 
-    @Field({ nullable: true })
     @ApiPropertyOptional({
         description: 'Date that this date will start to be efective. If not provided, startDate will be equal to request\'s date.',
         example: '2025-09-17T01:44:54.245Z',
@@ -46,7 +34,6 @@ export class CreateDietDto {
     @IsOptional()
     startDate: Date;
 
-    @Field({ nullable: true })
     @ApiPropertyOptional({
         description: 'Date of expire of this diet. If not provided endDate will be null and this diet will not expire.',
         example: '2025-09-19T01:44:54.245Z',
@@ -54,13 +41,5 @@ export class CreateDietDto {
     @IsString()
     @IsOptional()
     endDate: Date;
-
-    @Field(() => DietDayInterpretationMode, { nullable: true })
-    @ApiPropertyOptional({
-        description: 'Diet day interpretation mode. Default is WEEK',
-        example: 'WEEK',
-    })
-    @IsOptional()
-    dayInterpretationMode: DietDayInterpretationMode;
 
 }

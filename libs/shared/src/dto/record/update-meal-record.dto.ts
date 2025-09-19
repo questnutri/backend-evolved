@@ -1,6 +1,6 @@
 import { Field, InputType } from "@nestjs/graphql";
 import { ApiPropertyOptional } from "@nestjs/swagger";
-import { IsBoolean, IsString, IsOptional, IsDateString, IsNumber } from "class-validator";
+import { IsBoolean, IsString, IsOptional, IsDateString } from "class-validator";
 
 @InputType()
 export class UpdateMealRecordDto {
@@ -57,13 +57,4 @@ export class UpdateMealRecordDto {
     @IsDateString()
     @IsOptional()
     mealRelativeDate?: Date;
-
-    @Field({ nullable: true })
-    @ApiPropertyOptional({
-        description: 'The day number in the diet plan when this meal should be repeated (0 = Sunday, 1 = Monday, etc.)',
-        example: 2
-    })
-    @IsNumber()
-    @IsOptional()
-    mealRepeatDay?: number;
 }
