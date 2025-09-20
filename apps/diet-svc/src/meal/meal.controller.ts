@@ -3,6 +3,7 @@ import { MessagePattern, Payload } from '@nestjs/microservices';
 import { MealService } from './meal.service';
 import { ApiBearerAuth, ApiSecurity, ApiCreatedResponse, ApiNoContentResponse, ApiNotFoundResponse, ApiOkResponse, ApiOperation } from '@nestjs/swagger';
 import { CreateMealDto, Meal, JwtRoleGuard, ControllerContract, ControllerExceptionFilter, ProxyMessengerFilter } from '@backend-evolved/shared';
+import { FoodService } from '../food/food.service';
 import { DietService } from '../diet/diet.service';
 
 @Controller('diet/:dietId/meal')
@@ -12,6 +13,7 @@ export class MealController implements ControllerContract<Meal> {
 	constructor(
 		private readonly mealService: MealService,
 		private readonly dietService: DietService,
+		private readonly foodService: FoodService,
 	) { }
 
 	// @Get()
@@ -183,6 +185,41 @@ When creating meal records, the system validates that the \`mealRelativeDate\` m
 		const isRelated = diet.nutritionistId === headers['user-id'] || diet.patientId === headers['user-id'];
 		if (!isRelated) throw new NotFoundException(`User doesn't have this diet`);
 		return await this.mealService.createOne({ ...createMealDto, diet });
+	}
+
+	/**
+	 * Create a meal and multiple foods in a single request.
+	 * Body may include an optional `foods` array with food payloads.
+	 */
+	@Post('full')
+	@UseGuards(JwtRoleGuard(['nutritionist']))
+	@UseFilters(ControllerExceptionFilter)
+	async postOneFull(
+		@Param('dietId') dietId: string,
+		@Body() createMealDto: any,
+		@Headers() headers: any
+	) {
+		const diet = await this.dietService.findOne({ id: dietId });
+		if (!diet) throw new NotFoundException('Diet not found');
+		const isRelated = diet.nutritionistId === headers['user-id'] || diet.patientId === headers['user-id'];
+		if (!isRelated) throw new NotFoundException(`User doesn't have this diet`);
+
+		// Create the meal first
+		const createdMeal = await this.mealService.createOne({ ...createMealDto, diet });
+
+		const createdFoods: any[] = [];
+		if (createMealDto.foods && Array.isArray(createMealDto.foods)) {
+			for (const f of createMealDto.foods) {
+				const payload: any = { ...f, meal: createdMeal };
+				const created = await this.foodService.createOne(payload as any);
+				createdFoods.push(created);
+			}
+		}
+
+		// Attach foods (with aliment loaded) to response
+		const foodsWithAliment = await this.foodService.findAll({ meal: { id: createdMeal.id } });
+		// return meal with foods array
+		return { ...createdMeal, foods: foodsWithAliment };
 	}
 
 	@Get(':mealId')

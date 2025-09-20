@@ -279,26 +279,4 @@ export class DietService implements ServiceContract<Diet> {
         }) || null;
     }
 
-    /**
-     * Determine if a meal should be included on a specific date and return the repeat day
-     * 
-     * Examples:
-     * 
-     * WEEK_DAY Mode:
-     * - startDate = 2025-09-17, endDate = 2025-09-25, dayInterpretationMode = WEEK_DAY
-     * - meal.repeatDays = [1, 4] (Sunday=1, Wednesday=4)
-     * - For 2025-09-21 (Sunday): returns 1
-     * - For 2025-09-24 (Wednesday): returns 4
-     * 
-     * DIET_DAYS Mode:
-    /**
-     * Calculate a repeat day for backward compatibility with existing meal records
-     * This will be used until meal records are migrated to use the new repeat configuration system
-     * Since dayInterpretationMode is removed, we'll use a simple day-of-week calculation
-     */
-    private calculateRepeatDayForBackwardCompatibility(diet: Diet, targetDate: Date, dietStartDate: Date): number {
-        // Use day of week calculation as default: 1=Sunday, 2=Monday, 3=Tuesday, ..., 7=Saturday
-        return targetDate.getDay() + 1; // getDay() returns 0-6, we need 1-7
-    }
-
 }

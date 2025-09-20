@@ -3,6 +3,7 @@ import { ApiBearerAuth, ApiCreatedResponse, ApiForbiddenResponse, ApiNoContentRe
 import { DietService } from './diet.service';
 import { ControllerExceptionFilter, CreateDietDto, Diet, JwtRoleGuard, UpdateDietDto, DietPlan } from '@backend-evolved/shared';
 import { FoodService } from '../food/food.service';
+import { MealService } from '../meal/meal.service';
 
 @Controller('diet')
 @ApiBearerAuth('bearer')
@@ -10,8 +11,86 @@ import { FoodService } from '../food/food.service';
 export class DietController {
 	constructor(
 		private readonly dietService: DietService,
-		private readonly foodService: FoodService
+		private readonly foodService: FoodService,
+		private readonly mealService: MealService
 	) { }
+
+		/**
+		 * Create a full diet structure in a single request.
+		 * Expected payload shape:
+		 * {
+		 *   name?: string,
+		 *   description?: string,
+		 *   patientId: string,
+		 *   startDate?: Date,
+		 *   endDate?: Date,
+		 *   meals?: [ { name, description?, hour?, repeatConfiguration?, foods?: [ { alimentId?, quantity?, portion?, description? } ] } ]
+		 * }
+		 */
+		@Post('full')
+		@ApiOperation({ summary: 'Create a full diet with meals and foods', description: 'Create diet, its meals and foods in a single JSON payload. This endpoint will orchestrate calls to meal and food creation.' })
+		@ApiCreatedResponse({ description: 'The diet and nested resources have been successfully created.', type: Diet })
+		@UseGuards(JwtRoleGuard(['nutritionist']))
+		@UseFilters(ControllerExceptionFilter)
+		async createFullDiet(
+			@Body() payload: any,
+			@Headers() headers: any
+		): Promise<any> {
+			// Ensure startDate default
+			if (!payload.startDate) payload.startDate = new Date();
+			// Attach nutritionistId from authenticated user
+			payload.nutritionistId = headers['user-id'];
+
+			const createdMeals: any[] = [];
+			const createdFoods: any[] = [];
+			let createdDiet: any = null;
+			try {
+				// Create diet
+				createdDiet = await this.dietService.createOne(payload);
+
+				// If there are meals, create them and their foods
+				if (payload.meals && Array.isArray(payload.meals)) {
+					for (const mealPayload of payload.meals) {
+						const mealToCreate = { ...mealPayload, diet: createdDiet };
+						const createdMeal = await this.mealService.createOne(mealToCreate);
+						createdMeals.push(createdMeal);
+						if (mealPayload.foods && Array.isArray(mealPayload.foods)) {
+							for (const foodPayload of mealPayload.foods) {
+								const foodToCreate = { ...foodPayload, meal: createdMeal };
+								const createdFood = await this.foodService.createOne(foodToCreate as any);
+								createdFoods.push(createdFood);
+							}
+						}
+					}
+				}
+
+				// Return the full created structure
+				const dietWithRelations = await this.dietService.findOne({ id: createdDiet.id });
+				return await this.dietService.fetchDietAlimentsPublic(dietWithRelations as Diet);
+			} catch (err) {
+				// Attempt compensation: delete created foods, meals and diet where possible
+				try {
+					for (const f of createdFoods) {
+						if (f && f.id) await this.foodService.deleteOne({ id: f.id } as any);
+					}
+				} catch (e) {
+					// swallow
+				}
+				try {
+					for (const m of createdMeals) {
+						if (m && m.id) await this.mealService.delete(m.id);
+					}
+				} catch (e) {
+					// swallow
+				}
+				try {
+					if (createdDiet && createdDiet.id) await this.dietService.deleteOne({ id: createdDiet.id });
+				} catch (e) {
+					// swallow
+				}
+				throw err;
+			}
+		}
 
 	@Get()
 	@ApiOperation({

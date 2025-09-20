@@ -5,13 +5,13 @@ meta {
 }
 
 get {
-  url: http://{{GATEWAY_URL}}/record/meal
+  url: http://{{GATEWAY_URL}}/record/meal?date=[2025-09-17;2025-09-01]
   body: none
   auth: inherit
 }
 
 params:query {
-  ~date: 2025-09-17
+  date: [2025-09-17;2025-09-01]
 }
 
 settings {
