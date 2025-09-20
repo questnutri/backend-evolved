@@ -7,7 +7,7 @@ async function bootstrap() {
         NestApplicationBuilder
             .forModule(AuthModule)
             .setName('Authentication Service')
-            .setPort(process.env.AUTH_SERVICE_PORT ?? '3032')
+            .setPort(process.env.AUTH_SERVICE_PORT ?? '3000')
             .setQueueName(process.env.AUTH_QUEUE_NAME ?? 'auth_queue')
             .setPipe({
                 whitelist: true,

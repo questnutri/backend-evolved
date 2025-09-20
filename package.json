@@ -3,7 +3,8 @@
   "version": "0.0.0",
   "license": "MIT",
   "scripts": {
-    "start:all": "nx run-many -t serve --all"
+    "start:all": "nx run-many -t serve --all",
+    "build:all": "nx run-many -t build --all"
   },
   "private": true,
   "dependencies": {

@@ -30,149 +30,17 @@ vars:pre-request {
 }
 
 script:pre-request {
-  /**
-   * Bruno script: generate meals with randomized hours, foods and repeatConfiguration.
-   * - Uses bru.getVar("availableAliments")
-   * - Reads numberOfMeals and foodsPerMeal from bru variables (falls back to 2 and 3)
-   * - Sets bru.setVar("choosedAlimentId") for each chosen food aliment
-   * - Stores final array to bru.setVar("generatedMeals")
-   */
-  
-  function randomInt(min, max) {
-    return Math.floor(Math.random() * (max - min + 1)) + min;
+  bru.setVar("generatedMeals", bru.function("mealsGenerator", [2, 3]));
+}
+
+script:post-response {
+  if(res.status === 201 && res("id")) {
+    bru.setVar("createdDiet" ,res("id"));
   }
   
-  function pad2(n) {
-    return n < 10 ? '0' + n : '' + n;
+  if(res.status !== 201) {
+      bru.setNextRequest(null);
   }
-  
-  function randomHour() {
-    // Random hour between 06:00 and 22:59 (reasonable meal times)
-    const hour = randomInt(6, 22);
-    const minute = randomInt(0, 59);
-    return `${pad2(hour)}:${pad2(minute)}`;
-  }
-  
-  function pickRandom(arr) {
-    return arr[Math.floor(Math.random() * arr.length)];
-  }
-  
-  function randomRepeatConfiguration(startDate) {
-    // Provide various repeat configuration shapes
-    const types = ['ONCE', 'DAILY', 'WEEKLY', 'WEEKDAYS', 'MONTHLY', 'MONTHLY_DATE'];
-    const type = pickRandom(types);
-  
-    const baseStart = startDate ? new Date(startDate) : new Date();
-    baseStart.setUTCHours(0,0,0,0);
-  
-    switch (type) {
-      case 'ONCE':
-        // single date between startDate and +14 days
-        const onceDate = new Date(baseStart);
-        onceDate.setDate(onceDate.getDate() + randomInt(0, 14));
-        return { type: 'ONCE', startDate: onceDate.toISOString() };
-  
-      case 'DAILY':
-        // interval 1..3
-        return { type: 'DAILY', interval: randomInt(1, 3), startDate: baseStart.toISOString() };
-  
-      case 'WEEKLY':
-        // interval 1..2 and choose 1-3 weekdays (0=Sunday..6=Saturday)
-        const daysCount = randomInt(1, 3);
-        const daysOfWeek = [];
-        while (daysOfWeek.length < daysCount) {
-          const d = randomInt(0, 6);
-          if (!daysOfWeek.includes(d)) daysOfWeek.push(d);
-        }
-        return { type: 'WEEKLY', interval: randomInt(1, 2), daysOfWeek, startDate: baseStart.toISOString() };
-  
-      case 'WEEKDAYS':
-        return { type: 'WEEKDAYS', startDate: baseStart.toISOString() };
-  
-      case 'MONTHLY':
-        // start date keeps day-of-month
-        return { type: 'MONTHLY', startDate: baseStart.toISOString() };
-  
-      case 'MONTHLY_DATE':
-        // pick a day of month 1..28
-        return { type: 'MONTHLY_DATE', dayOfMonth: randomInt(1, 28), startDate: baseStart.toISOString() };
-  
-      default:
-        return { type: 'ONCE', startDate: baseStart.toISOString() };
-    }
-  }
-  
-  // Main generator
-  (function() {
-    const numberOfMeals = Number(bru.getVar("numberOfMeals")) || 2;
-    const foodsPerMeal = Number(bru.getVar("foodsPerMeal")) || 3;
-  
-    const available = bru.getVar("availableAliments") || [];
-    const generatedMeals = [];
-  
-    // Use a base startDate if provided in vars to align repeat configs
-    const baseStartDate = bru.getVar("generatedStartDate") || bru.getVar("startDate") || new Date().toISOString();
-  
-    for (let i = 0; i < numberOfMeals; i++) {
-      const meal = {
-        name: `Generated Meal ${i + 1}`,
-        description: null,
-        hour: randomHour(),
-        repeatConfiguration: randomRepeatConfiguration(baseStartDate),
-        foods: []
-      };
-  
-      for (let j = 0; j < foodsPerMeal; j++) {
-        let chosenAliment = null;
-        if (Array.isArray(available) && available.length > 0) {
-          chosenAliment = pickRandom(available);
-          const chosenAlimentId = chosenAliment._id || chosenAliment.id || null;
-          bru.setVar("choosedAlimentId", chosenAlimentId);
-  
-          // choose a portion from aliment object - try multiple known keys
-          let portions = [];
-          if (Array.isArray(chosenAliment.portions) && chosenAliment.portions.length > 0) {
-            portions = chosenAliment.portions;
-          } else if (Array.isArray(chosenAliment.availablePortions) && chosenAliment.availablePortions.length > 0) {
-            portions = chosenAliment.availablePortions;
-          } else if (Array.isArray(chosenAliment.portionsList) && chosenAliment.portionsList.length > 0) {
-            portions = chosenAliment.portionsList;
-          } else {
-            // fallback single portion string from aliment (or use default)
-            if (chosenAliment.portion) portions = [chosenAliment.portion];
-          }
-  
-          // ensure at least one option exists (requirements guarantee this)
-          const chosenPortion = portions.length > 0 ? pickRandom(portions) : '100g';
-  
-          const food = {
-            alimentId: chosenAlimentId,
-            quantity: `${randomInt(1, 3)}`,     // random small quantity as string
-            portion: chosenPortion,
-            description: null
-          };
-          meal.foods.push(food);
-        } else {
-          // no available aliments: try reuse last chosen or set nulls
-          const lastChosen = bru.getVar("choosedAlimentId") || null;
-          const food = {
-            alimentId: lastChosen,
-            quantity: `${randomInt(1, 3)}`,
-            portion: '100g',
-            description: null
-          };
-          meal.foods.push(food);
-        }
-      }
-  
-      generatedMeals.push(meal);
-    }
-  
-    bru.setVar("generatedMeals", generatedMeals);
-    // Optionally return or log
-    // console.log('generatedMeals', generatedMeals);
-    return generatedMeals;
-  })();
 }
 
 settings {

@@ -4,7 +4,6 @@ ARG SERVICE
 
 COPY /apps/$SERVICE/dist ./
 
-RUN npm ci --omit=dev
-
+RUN npm install --omit=dev
 
 CMD ["node", "main.js"]

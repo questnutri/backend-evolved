@@ -11,16 +11,86 @@ SERVICES=(
   "aliment-svc"
 )
 
-for SERVICE in "${SERVICES[@]}"; do
+# ensure script runs from repo root
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
+# parse args: --service <name> | -s <name> (can be repeated or a comma-separated list)
+SELECTED=()
+print_usage() {
+  echo "Usage: $0 [--service <service>]..."
+  echo
+  echo "If no --service is provided, all services will be built."
+  echo "Known services: ${SERVICES[*]}"
+  exit 1
+}
+
+if [ "$#" -gt 0 ]; then
+  while [ "$#" -gt 0 ]; do
+    case "$1" in
+      --service|-s)
+        shift
+        [ -z "${1-}" ] && { echo "Missing value for --service"; print_usage; }
+        # allow comma separated list like svc1,svc2
+        IFS=',' read -r -a parts <<< "$1"
+        for p in "${parts[@]}"; do
+          SELECTED+=("$p")
+        done
+        shift
+        ;;
+      --help|-h)
+        print_usage
+        ;;
+      *)
+        echo "Unknown option: $1"
+        print_usage
+        ;;
+    esac
+  done
+fi
+
+# if none selected, build all
+if [ "${#SELECTED[@]}" -eq 0 ]; then
+  SELECTED=("${SERVICES[@]}")
+fi
+
+# validate selected services
+VALID=()
+for s in "${SELECTED[@]}"; do
+  found=false
+  for ok in "${SERVICES[@]}"; do
+    if [ "$s" = "$ok" ]; then
+      found=true
+      break
+    fi
+  done
+  if ! $found; then
+    echo "⚠️  Unknown service: $s"
+    echo "Known: ${SERVICES[*]}"
+    exit 1
+  fi
+  VALID+=("$s")
+done
+
+for SERVICE in "${VALID[@]}"; do
   echo
   echo "🔨 Building service: $SERVICE"
-  
-  docker build \
-    -f Dockerfile.base \
-    -t "$SERVICE:latest" \
-    --build-arg SERVICE="$SERVICE" \
-    .
+
+  # Priority:
+  # 1) ./<service>/Dockerfile
+  # 2) ./Dockerfile.<service>
+  # 3) ./Dockerfile.base with --build-arg SERVICE=<service>
+  if [ -d "$SERVICE" ] && [ -f "$SERVICE/Dockerfile" ]; then
+    docker build --pull -t "$SERVICE:latest" -f "$SERVICE/Dockerfile" "$SERVICE"
+  elif [ -f "Dockerfile.$SERVICE" ]; then
+    docker build --pull -t "$SERVICE:latest" -f "Dockerfile.$SERVICE" .
+  elif [ -f "Dockerfile.base" ]; then
+    docker build --pull -t "$SERVICE:latest" --build-arg SERVICE="$SERVICE" -f Dockerfile.base .
+  else
+    echo "⚠️  No Dockerfile found for $SERVICE (checked $SERVICE/Dockerfile, Dockerfile.$SERVICE, Dockerfile.base)"
+    exit 1
+  fi
 done
 
 echo
-echo "✅ All images have been built successfully!"
+echo "✅ Done."

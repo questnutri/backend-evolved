@@ -27,6 +27,12 @@ vars:post-response {
   ADMIN_REFRESH_TOKEN: res("refreshToken")
 }
 
+script:pre-request {
+  console.log(bru.function("randomInt", [1, 2]))
+  
+  
+}
+
 settings {
   encodeUrl: true
 }
