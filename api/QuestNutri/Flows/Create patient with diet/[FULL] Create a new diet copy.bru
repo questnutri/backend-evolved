@@ -1,0 +1,48 @@
+meta {
+  name: [FULL] Create a new diet copy
+  type: http
+  seq: 5
+}
+
+post {
+  url: http://{{GATEWAY_URL}}/diet/full
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{NUTRITIONIST_ACCESS_TOKEN}}
+}
+
+body:json {
+  { 
+    "name": "Week 1", 
+    "patientId": "{{PATIENT_ID}}", 
+    "startDate": "2025-09-19T00:00:00.000Z", 
+    "endDate": "2025-10-19T00:00:00.000Z", 
+    "meals": {{generatedMeals}}
+  }
+}
+
+vars:pre-request {
+  numberOfMeals: 2
+  foodsPerMeal: 5
+}
+
+script:pre-request {
+  bru.setVar("generatedMeals", bru.function("mealsGenerator", [5, 8]));
+}
+
+script:post-response {
+  if(res.status === 201 && res("id")) {
+    bru.setVar("createdDiet" ,res("id"));
+  }
+  
+  if(res.status !== 201) {
+      bru.setNextRequest(null);
+  }
+}
+
+settings {
+  encodeUrl: true
+}
