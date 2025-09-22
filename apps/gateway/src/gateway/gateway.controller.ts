@@ -1,9 +1,8 @@
-import { Controller, All, Req, Res, Headers, BadRequestException } from '@nestjs/common';
+import { Controller, All, Req, Res, Headers, Get } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import * as http from 'http';
 import * as https from 'https';
 import { URL } from 'url';
-import * as jwt from 'jsonwebtoken';
 
 @Controller()
 export class GatewayController {
@@ -11,15 +10,89 @@ export class GatewayController {
     private getTarget(path: string | undefined): string | undefined {
         if (!path) return undefined;
         switch (path) {
-            case 'admin': return process.env.ADMIN_SERVICE_URL ?? 'http://localhost:3030';
-            case 'auth': return process.env.AUTH_SERVICE_URL ?? 'http://localhost:3032';
-            case 'nutritionist': return process.env.NUTRITIONIST_SERVICE_URL ?? 'http://localhost:3033';
-            case 'patient': return process.env.PATIENT_SERVICE_URL ?? 'http://localhost:3034';
-            case 'diet': return process.env.DIET_SERVICE_URL ?? 'http://localhost:3035';
-            case 'aliment': return process.env.ALIMENT_SERVICE_URL ?? 'http://localhost:3036';
-            case 'record': return process.env.RECORD_SERVICE_URL ?? 'http://localhost:3037';
+            case 'admin': return process.env.ADMIN_SERVICE_URL ?? 'http://admin-service:3000';
+            case 'auth': return process.env.DEV_AUTH_SERVICE_URL ?? 'http://auth-service:3000';
+            case 'nutritionist': return process.env.DEV_NUTRITIONIST_SERVICE_URL ?? 'http://nutritionist-service:3000';
+            case 'patient': return process.env.DEV_PATIENT_SERVICE_URL ?? 'http://patient-service:3000';
+            case 'diet': return process.env.DEV_DIET_SERVICE_URL ?? 'http://diet-service:3000';
+            case 'aliment': return process.env.DEV_ALIMENT_SERVICE_URL ?? 'http://aliment-service:3000';
+            case 'record': return process.env.DEV_RECORD_SERVICE_URL ?? 'http://record-service:3000';
             default: return undefined;
         }
+    }
+
+    private async checkServiceHealth(serviceUrl: string): Promise<boolean> {
+        return new Promise((resolve) => {
+            try {
+                const url = new URL(serviceUrl + '/health');
+                const client = url.protocol === 'https:' ? https : http;
+
+                // console.log(`Checking health for: ${url.href}`);
+
+                const options: http.RequestOptions = {
+                    protocol: url.protocol,
+                    hostname: url.hostname,
+                    port: url.port,
+                    path: url.pathname,
+                    method: 'GET',
+                    timeout: 3000
+                };
+
+                const req = client.request(options, (res) => {
+                    // console.log(`Health check response for ${serviceUrl}: ${res.statusCode}`);
+                    resolve(res.statusCode === 200);
+                });
+
+                req.on('error', (err) => {
+                    // console.log(`Health check error for ${serviceUrl}:`, err.message);
+                    resolve(false);
+                });
+
+                req.on('timeout', () => {
+                    // console.log(`Health check timeout for ${serviceUrl}`);
+                    req.destroy();
+                    resolve(false);
+                });
+
+                req.end();
+            } catch (error) {
+                // console.log(`Health check exception for ${serviceUrl}:`, error);
+                resolve(false);
+            }
+        });
+    }
+
+    @Get('health')
+    async healthCheck() {
+        const services = ['admin', 'auth', 'nutritionist', 'patient', 'diet', 'aliment', 'record'];
+        const serviceStatus: { [key: string]: boolean } = {};
+
+        const healthChecks = services.map(async (service) => {
+            let serviceUrl = this.getTarget(service);
+            if (serviceUrl) {
+                if(service !== 'aliment') {
+                    serviceUrl = `${serviceUrl}/${service}`;
+                }
+                serviceStatus[service] = await this.checkServiceHealth(`${serviceUrl}`);
+            } else {
+                serviceStatus[service] = false;
+            }
+        });
+
+        await Promise.all(healthChecks);
+
+        const sortedServiceStatus = Object.keys(serviceStatus)
+            .sort()
+            .reduce((acc, key) => {
+                acc[key] = serviceStatus[key];
+                return acc;
+            }, {} as { [key: string]: boolean });
+
+        console.log('Final service status:', sortedServiceStatus);
+
+        return {
+            'services-status': sortedServiceStatus
+        };
     }
 
     @All('/*splat')
@@ -65,11 +138,13 @@ export class GatewayController {
             // Keep the full path including service name
             forwardedPath = Array.isArray(splat) ? '/' + splat.join('/') : '/' + splat;
         }
-        
+
         // Preserve the original query string
         const queryString = req.url?.includes('?') ? req.url.substring(req.url.indexOf('?')) : '';
         const targetUrl = new URL(targetBase + forwardedPath + queryString);
-        console.log(`Final forwarded URL: ${targetUrl.href}`); const options: http.RequestOptions = {
+        console.log(`Final forwarded URL: ${targetUrl.href}`);
+
+        const options: http.RequestOptions = {
             protocol: targetUrl.protocol,
             hostname: targetUrl.hostname,
             port: targetUrl.port,

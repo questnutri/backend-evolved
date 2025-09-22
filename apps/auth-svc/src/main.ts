@@ -7,8 +7,8 @@ async function bootstrap() {
         NestApplicationBuilder
             .forModule(AuthModule)
             .setName('Authentication Service')
-            .setPort(process.env.AUTH_SERVICE_PORT ?? '3000')
-            .setQueueName(process.env.AUTH_QUEUE_NAME ?? 'auth_queue')
+            .setPort(process.env.DEV_AUTH_SERVICE_PORT || '3000')
+            .setQueueName('auth_queue')
             .setPipe({
                 whitelist: true,
                 forbidNonWhitelisted: true,
@@ -19,7 +19,7 @@ async function bootstrap() {
                     .setTitle('Authentication Service API')
                     .setDescription('API documentation for the Authentication Service of QuestNutri')
                     .setVersion('1.0')
-                    .addServer(`${process.env.GATEWAY_URL ?? `http://localhost:${process.env.GATEWAY_PORT ?? '8080'}`}/api/v1`),
+                    .addServer(`${process.env.DEV_GATEWAY_URL ?? `http://localhost:${process.env.DEV_GATEWAY_PORT ?? '8080'}`}/api/v1`),
                 {
                     url: 'auth/docs'
                 }

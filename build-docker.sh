@@ -1,15 +1,7 @@
 #!/bin/bash
 set -e
 
-SERVICES=(
-  "auth-svc"
-  "diet-svc"
-  "patient-svc"
-  "admin-svc"
-  "nutritionist-svc"
-  "gateway"
-  "aliment-svc"
-)
+source ./services.sh
 
 # ensure script runs from repo root
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"

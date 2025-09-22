@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TacoController } from '../taco/taco.controller';
 import { TacoService } from '../taco/taco.service';
-import { dbConnection } from '../database/provide-db';
+import { dbConnection } from '../database/db-connection';
 import { GraphqlModule } from '../graphql/graphql.module';
 import { HomeMeasureController } from '../home-measure/home-measure.controller';
 import { HomeMeasureService } from '../home-measure/home-measure.service';

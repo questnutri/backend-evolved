@@ -81,4 +81,9 @@ export class AuthController {
         const jwk = await this.keyService.getJwk();
         return { keys: [jwk] };
     }
+
+    @Get('health')
+    healthCheck() {
+        return { active: true };
+    }
 }

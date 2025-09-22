@@ -1,0 +1,17 @@
+{{- range .Values.microservices }}
+{{- if and .database (eq .database.type "postgres") }}
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ .name }}-postgres-service
+spec:
+  selector:
+    app: {{ .name }}-postgres-deployment
+  type: ClusterIP
+  ports:
+    - port: {{ default 5432 .database.port }}
+      protocol: TCP
+      targetPort: 5432
+---
+{{- end }}
+{{- end }}

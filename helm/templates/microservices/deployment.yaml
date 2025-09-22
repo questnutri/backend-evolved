@@ -1,0 +1,46 @@
+{{- range .Values.microservices }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .name }}-deployment
+spec:
+  replicas: {{ .replicas }}
+  selector:
+    matchLabels:
+      app: {{ .name }}-deployment
+  template:
+    metadata:
+      labels:
+        app: {{ .name }}-deployment
+    spec:
+      containers:
+        - name: {{ .name }}
+          image: {{ .image }}
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: {{ default 3000 .port }}
+          {{- if .volumeMaps }}
+          volumeMounts:
+            {{- range $vm := .volumeMaps }}
+              {{- range $key := $vm.keys }}
+            - name: {{ printf "%s-%s" $vm.name $key | replace "." "-" }}
+              mountPath: /{{ $key }}
+              subPath: {{ $key }}
+              {{- end }}
+            {{- end }}
+          {{- end }}
+      {{- if .volumeMaps }}
+      volumes:
+        {{- range $vm := .volumeMaps }}
+          {{- range $key := $vm.keys }}
+        - name: {{ printf "%s-%s" $vm.name $key | replace "." "-" }}
+          configMap:
+            name: {{ $vm.name }}
+            items:
+              - key: {{ $key }}
+                path: {{ $key }}
+          {{- end }}
+        {{- end }}
+      {{- end }}
+---
+{{- end }}

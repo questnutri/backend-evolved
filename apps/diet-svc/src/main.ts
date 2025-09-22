@@ -10,8 +10,8 @@ async function bootstrap() {
 	await generateNestApplication(
 		NestApplicationBuilder.forModule(ServiceModule)
 			.setName("Diet Service")
-			.setPort(process.env.DIET_SERVICE_PORT || '3035')
-			.setQueueName(process.env.DIET_SERVICE_QUEUE || 'diet_queue')
+			.setPort(process.env.DEV_DIET_SERVICE_PORT || '3000')
+			.setQueueName('diet_queue')
 			.setPipe({
 				whitelist: true,
 				forbidNonWhitelisted: false,
@@ -23,7 +23,7 @@ async function bootstrap() {
 					.setDescription('API documentation for the Diet Service')
 					.setVersion('1.0')
 					.addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' }, 'bearer')
-					.addServer(`${process.env.GATEWAY_URL ?? `http://localhost:${process.env.GATEWAY_PORT ?? '8080'}`}/api/v1`),
+					.addServer(`${process.env.DEV_GATEWAY_URL ?? `http://localhost:${process.env.DEV_GATEWAY_PORT ?? '8080'}`}/api/v1`),
 				{
 					url: 'diet/docs'
 				}

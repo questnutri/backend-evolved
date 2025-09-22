@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: home-measures-config-map
+data:
+  home-measures.json: |-
+{{ .Files.Get "files/microservices/aliment/database/home-measures.json" | nindent 4 }}

@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: new-taco-config-map
+data:
+  new-taco.json: |-
+{{ .Files.Get "files/microservices/aliment/database/new-taco.json" | nindent 4 }}

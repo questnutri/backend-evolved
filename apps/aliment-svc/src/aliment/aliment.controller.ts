@@ -1,4 +1,4 @@
-import { Controller, UseFilters } from '@nestjs/common';
+import { Controller, UseFilters, Get } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { ProxyMessengerFilter, ProxyMessage, Aliment, AlimentSource } from "@backend-evolved/shared";
 import { TacoService } from '../taco/taco.service';
@@ -13,6 +13,11 @@ export class AlimentController {
         private readonly homeMeasureService: HomeMeasureService,
         private readonly secretService: SecretAlimentService
     ) { }
+
+    @Get('health')
+    getHealthCheck() {
+        return { active: true };
+    }
 
     @MessagePattern('findAlimentById')
     @UseFilters(ProxyMessengerFilter)

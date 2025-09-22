@@ -84,5 +84,8 @@ export class NutritionistController {
         }
     }
 
-
+    @Get('health')
+    healthCheck() {
+        return { active: true };
+    }
 }

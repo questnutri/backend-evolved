@@ -1,48 +1,52 @@
+{{- range .Values.microservices }}
+{{- if and .database (eq .database.type "mongodb") }}
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: aliment-svc-mongodb
+  name: {{ .name }}-mongodb-deployment
 spec:
-  replicas: 1
+  replicas: {{ default 1 .database.replicas }}
   selector:
     matchLabels:
-      app: aliment-svc-mongodb
+      app: {{ .name }}-mongodb-deployment
   template:
     metadata:
       labels:
-        app: aliment-svc-mongodb
+        app: {{ .name }}-mongodb-deployment
     spec:
       containers:
-        - name: aliment-svc-mongodb
-          image: mongo:latest
+        - name: {{ .name }}-mongodb
+          image: mongo:{{ default "latest" .database.version }}
           imagePullPolicy: IfNotPresent
           env:
             - name: MONGO_INITDB_DATABASE
-              value: questnutri
+              value: {{ default "questnutri" .database.database }}
             - name: MONGO_INITDB_ROOT_USERNAME
-              value: root
+              value: {{ default "root" .database.user }}
             - name: MONGO_INITDB_ROOT_PASSWORD
-              value: root
+              value: {{ default "root" .database.password }}
           ports:
             - containerPort: 27017
+          {{- if .database.volumeMaps }}
           volumeMounts:
-            - name: new-taco-json
-              mountPath: /docker-entrypoint-initdb.d/new-taco.json
-              subPath: new-taco.json
-            - name: home-measures-json
-              mountPath: /docker-entrypoint-initdb.d/home-measures.json
-              subPath: home-measures.json
-            - name: import-databases-sh
-              mountPath: /docker-entrypoint-initdb.d/import-databases.sh
-              subPath: import-databases.sh
-
+            {{- range $vm := .database.volumeMaps }}
+              {{- range $key := $vm.keys }}
+            - name: {{ $vm.name }}-{{ $key | replace "." "-" }}
+              mountPath: /docker-entrypoint-initdb.d/{{ $key }}
+              subPath: {{ $key }}
+              {{- end }}
+            {{- end }}
+          {{- end }}
+      {{- if .database.volumeMaps }}
       volumes:
-        - name: new-taco-json
+        {{- range $vm := .database.volumeMaps }}
+          {{- range $key := $vm.keys }}
+        - name: {{ $vm.name }}-{{ $key | replace "." "-" }}
           configMap:
-            name: new-taco-json
-        - name: home-measures-json
-          configMap:
-            name: home-measures-json
-        - name: import-databases-sh
-          configMap:
-            name: import-databases-sh
+            name: {{ $vm.name }}
+          {{- end }}
+        {{- end }}
+      {{- end }}
+---
+{{- end }}
+{{- end }}

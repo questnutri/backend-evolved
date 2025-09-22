@@ -34,7 +34,9 @@ export class NestApplicationBuilder {
     }
 
     setPort(port: string): NestApplicationBuilder {
+        console.log(`Port received: `, port);
         this.servicePort = Number(port);
+        console.log(`this.servicePort = ${this.servicePort}`)
         return this;
     }
 

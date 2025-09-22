@@ -6,6 +6,7 @@ import { provideTypeOrmDbConnection, RefreshToken, User } from '@backend-evolved
 import { JwtModule } from '@nestjs/jwt';
 import { KeyService } from '../key/key.service';
 import { KeyModule } from '../key/key.module';
+import { dbConnection } from '../database/db-connection';
 
 @Module({
     imports: [
@@ -19,12 +20,7 @@ import { KeyModule } from '../key/key.module';
                 signOptions: { algorithm: 'RS256', expiresIn: process.env.JWT_EXPIRES_IN ?? '15m' },
             }),
         }),
-        provideTypeOrmDbConnection(
-            process.env.AUTH_SERVICE_DATABASE_PORT || '5432',
-            process.env.AUTH_SERVICE_DATABASE_HOST || 'localhost',
-            [User, RefreshToken],
-            false
-        )
+        dbConnection(),
     ],
     controllers: [AuthController],
     providers: [AuthService],

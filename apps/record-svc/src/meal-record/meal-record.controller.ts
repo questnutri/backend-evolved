@@ -161,6 +161,11 @@ export class MealRecordController {
         );
     }
 
+    @Get('health')
+    healthCheck() {
+        return { active: true };
+    }
+
     // @Get(':id')
     // @ApiOperation({
     //     summary: 'Retrieve a specific meal record by ID',

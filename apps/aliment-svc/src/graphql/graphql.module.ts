@@ -1,4 +1,4 @@
-import { dbConnection } from "../database/provide-db";
+import { dbConnection } from "../database/db-connection";
 import { GraphQLModule } from '@nestjs/graphql';
 import { ApolloDriver, ApolloDriverConfig } from '@nestjs/apollo';
 import { Module } from "@nestjs/common";

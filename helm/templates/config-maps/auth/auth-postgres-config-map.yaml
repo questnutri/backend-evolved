@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: auth-postgres-config-map
+data:
+  init.sql: |-
+  {{ .Files.Get "files/microservices/auth/database/init.sql" | nindent 4 }}

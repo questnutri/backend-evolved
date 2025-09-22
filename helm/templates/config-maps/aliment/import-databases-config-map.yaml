@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: import-databases-config-map
+data:
+  import-databases.sh: |-
+{{ .Files.Get "files/microservices/aliment/database/import-databases.sh" | nindent 4 }}

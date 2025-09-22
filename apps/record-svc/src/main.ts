@@ -7,8 +7,8 @@ async function bootstrap() {
         NestApplicationBuilder
             .forModule(ServiceModule)
             .setName('Record Service')
-            .setPort(process.env.RECORD_SERVICE_PORT ?? '3037')
-            .setQueueName(process.env.RECORD_QUEUE_NAME ?? 'record_queue')
+            .setPort(process.env.DEV_RECORD_SERVICE_PORT ?? '3000')
+            .setQueueName(process.env.DEV_RECORD_QUEUE_NAME ?? 'record_queue')
             .setPipe({
                 whitelist: true,
                 forbidNonWhitelisted: true,
@@ -22,7 +22,7 @@ async function bootstrap() {
                     .setDescription('API documentation for the Record Service of QuestNutri')
                     .setVersion('1.0')
                     .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' }, 'bearer')
-                    .addServer(`${process.env.GATEWAY_URL ?? `http://localhost:${process.env.GATEWAY_PORT ?? '8080'}`}/api/v1`),
+                    .addServer(`${process.env.DEV_GATEWAY_URL ?? `http://localhost:${process.env.DEV_GATEWAY_PORT ?? '8080'}`}/api/v1`),
                 {
                     url: 'record/docs'
                 }

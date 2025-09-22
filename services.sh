@@ -1,0 +1,10 @@
+SERVICES=(
+  "auth-svc"
+  "diet-svc"
+  "patient-svc"
+  "admin-svc"
+  "nutritionist-svc"
+  "gateway"
+  "aliment-svc"
+  "record-svc"
+)

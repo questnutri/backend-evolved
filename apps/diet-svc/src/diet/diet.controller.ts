@@ -15,6 +15,11 @@ export class DietController {
 		private readonly mealService: MealService
 	) { }
 
+	@Get('health')
+	healthCheck() {
+		return { active: true };
+	}
+
 		/**
 		 * Create a full diet structure in a single request.
 		 * Expected payload shape:

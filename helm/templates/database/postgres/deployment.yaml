@@ -1,0 +1,55 @@
+{{- range .Values.microservices }}
+{{- if and .database (eq .database.type "postgres") }}
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ .name }}-postgres-deployment
+spec:
+  replicas: {{ default 1 .database.replicas }}
+  selector:
+    matchLabels:
+      app: {{ .name }}-postgres-deployment
+  template:
+    metadata:
+      labels:
+        app: {{ .name }}-postgres-deployment
+    spec:
+      containers:
+        - name: {{ .name }}-postgres
+          image: postgres:{{ default "15-alpine" .database.version }}
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: POSTGRES_DB
+              value: {{ default "questnutri" .database.db }}
+            - name: POSTGRES_USER
+              value: {{ default "root" .database.user }}
+            - name: POSTGRES_PASSWORD
+              value: {{ default "root" .database.password }}
+          ports:
+            - containerPort: 5432
+          {{- if .database.volumeMaps }}
+          volumeMounts:
+            {{- range $vm := .database.volumeMaps }}
+              {{- range $key := $vm.keys }}
+            - name: {{ printf "%s-%s" $vm.name $key | replace "." "-" }}
+              mountPath: /docker-entrypoint-initdb.d/{{ $key }}
+              subPath: {{ $key }}
+              {{- end }}
+            {{- end }}
+          {{- end }}
+      {{- if .database.volumeMaps }}
+      volumes:
+        {{- range $vm := .database.volumeMaps }}
+          {{- range $key := $vm.keys }}
+        - name: {{ printf "%s-%s" $vm.name $key | replace "." "-" }}
+          configMap:
+            name: {{ $vm.name }}
+            items:
+              - key: {{ $key }}
+                path: {{ $key }}
+          {{- end }}
+        {{- end }}
+      {{- end }}
+---
+{{- end }}
+{{- end }}

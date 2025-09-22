@@ -5,8 +5,8 @@ async function bootstrap() {
 	await generateNestApplication(
 		NestApplicationBuilder.forModule(AppModule)
 			.setName("Aliment Service")
-			.setPort(process.env.ALIMENT_SERVICE_PORT || '3000')
-			.setQueueName(process.env.ALIMENT_SERVICE_QUEUE || 'aliment_queue')
+			.setPort(process.env.DEV_ALIMENT_SERVICE_PORT || '3000')
+			.setQueueName('aliment_queue')
 			.setPipe({
 				whitelist: true,
 				forbidNonWhitelisted: false,

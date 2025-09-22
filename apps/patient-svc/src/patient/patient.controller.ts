@@ -1,4 +1,4 @@
-import { Controller, UseFilters } from '@nestjs/common';
+import { Controller, Get, UseFilters } from '@nestjs/common';
 import { PatientService } from './patient.service';
 import { MessagePattern, Payload, RpcException } from '@nestjs/microservices';
 import { type FindAllFromNutritionistPayload, type CreatePatientDto, ProxyMessengerFilter, ProxyMessage, Patient } from '@backend-evolved/shared';
@@ -15,5 +15,9 @@ export class PatientController {
         return { payload: await this.patientService.createOne(data) };
     }
 
+    @Get('health')
+    healthCheck() {
+        return { active: true };
+    }
 
 }

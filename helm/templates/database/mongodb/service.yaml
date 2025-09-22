@@ -1,12 +1,17 @@
+{{- range .Values.microservices }}
+{{- if and .database (eq .database.type "mongodb") }}
 apiVersion: v1
 kind: Service
 metadata:
-  name: aliment-svc-mongodb-service
+  name: {{ .name }}-mongodb-service
 spec:
   selector:
-    app: aliment-svc-mongodb
-  type: LoadBalancer
+    app: {{ .name }}-mongodb-deployment
+  type: ClusterIP
   ports:
-    - port: 27036
+    - port: {{ default 27017 .database.port }}
       protocol: TCP
       targetPort: 27017
+---
+{{- end }}
+{{- end }}

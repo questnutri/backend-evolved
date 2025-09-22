@@ -7,7 +7,7 @@ export const generateProxyServiceProvider = (providerName: string, queue: string
             return ClientProxyFactory.create({
                 transport: Transport.RMQ,
                 options: {
-                    urls: [process.env.RABBITMQ_URL || 'amqp://guest:guest@localhost:5672'],
+                    urls: [process.env.DEV_RABBITMQ_URL || 'amqp://rabbitmq:5672'],
                     queue,
                     queueOptions: { durable: true },
                 },

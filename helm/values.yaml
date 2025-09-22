@@ -1,31 +1,59 @@
 databases:
-  - name: auth-svc-postgres
-    port: 5432
-  - name: nutritionist-svc-postgres
-    port: 5433
-  - name: patient-svc-postgres
-    port: 5434
-  - name: diet-svc-postgres
-    port: 5435
-  - name: record-svc-postgres
-    port: 5437
-apps:
-  - name:  auth-svc
-    replicas: 1
+  - name: auth-postgres
+  - name: nutritionist-postgres
+  - name: patient-postgres
+  - name: diet-postgres
+  - name: record-postgres
+microservices:
+  - name:  auth
     image: auth-svc:latest
-    port: 3032
-    servicePort: 3032
-    serviceType: ClusterIP
-  - name: gateway
-    replicas: 1
-    image: gateway:latest
-    servicePort: 8080
-    port: 8180
-    serviceType: LoadBalancer
-  - name: record-svc
-    replicas: 1
+    volumeMaps:
+      - name: auth-keys-config-map
+        keys:
+          - private-key.pem
+          - public-key.pem
+    database: 
+      type: postgres
+      volumeMaps:
+        - name: auth-postgres-config-map
+          keys:
+            - init.sql
+  - name: aliment
+    image: aliment-svc:latest
+    database: 
+      type: mongodb
+      volumeMaps:
+        - name: new-taco-config-map
+          keys:
+            - new-taco.json
+        - name: home-measures-config-map
+          keys:
+            - home-measures.json
+        - name: import-databases-config-map
+          keys:
+            - import-databases.sh
+  - name: diet
+    image: diet-svc:latest
+    database:
+      type: postgres
+  - name: nutritionist
+    image: nutritionist-svc:latest
+    database:
+      type: postgres
+  - name: patient
+    image: patient-svc:latest
+    database:
+      type: postgres
+  - name: record
     image: record-svc:latest
-    port: 3037
-    servicePort: 3037
-    serviceType: ClusterIP
+    database:
+      type: postgres
+  - name: admin
+    image: admin-svc:latest
+  - name: gateway
+    image: gateway:latest
+    port: 8080
+    servicePort: 8080
+    serviceType: LoadBalancer
+
 rabbitmq: {}

@@ -1,4 +1,4 @@
-import { Controller, Body, Post, Inject, UseGuards, UseFilters } from '@nestjs/common';
+import { Controller, Body, Post, Inject, UseGuards, UseFilters, Get } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { AUTH_SERVICE_PROXY_NAME, ControllerExceptionFilter, JwtRoleGuard, Nutritionist, ProxyMessage } from '@backend-evolved/shared';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
@@ -10,6 +10,11 @@ export class AdminController {
         private readonly adminService: AdminService,
         @Inject(AUTH_SERVICE_PROXY_NAME) private readonly authServiceProxy: ClientProxy
     ) { }
+
+    @Get('health')
+    getHealthCheck() {
+        return { active: true };
+    }
 
     @Post('approve-nutritionist')
     @UseGuards(JwtRoleGuard(['admin']))

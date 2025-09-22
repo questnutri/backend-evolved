@@ -1,6 +1,6 @@
 import { NutritionistModule } from './nutritionist/nutritionist.module';
 import { DocumentBuilder } from '@nestjs/swagger';
-import { ControllerExceptionFilter, NestApplicationBuilder, RpcExceptionFilter, generateNestApplication, } from '@backend-evolved/shared';
+import { ControllerExceptionFilter, NestApplicationBuilder, generateNestApplication } from '@backend-evolved/shared';
 
 
 async function bootstrap() {
@@ -8,8 +8,8 @@ async function bootstrap() {
         NestApplicationBuilder
             .forModule(NutritionistModule)
             .setName('Nutritionist Service')
-            .setPort(process.env.NUTRITIONIST_SERVICE_PORT ?? '3033')
-            .setQueueName(process.env.NUTRITIONIST_QUEUE_NAME ?? 'nutritionist_queue')
+            .setPort(process.env.DEV_NUTRITIONIST_SERVICE_PORT ?? '3000')
+            .setQueueName('nutritionist_queue')
             .setPipe({
                 whitelist: true,
                 forbidNonWhitelisted: true,
@@ -22,7 +22,7 @@ async function bootstrap() {
                     .setDescription('API documentation for the Nutritionist service')
                     .setVersion('1.0')
                     .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' }, 'bearer')
-                    .addServer(`${process.env.GATEWAY_URL ?? `http://localhost:${process.env.GATEWAY_PORT ?? '8080'}`}/api/v1`),
+                    .addServer(`${process.env.DEV_GATEWAY_URL ?? `http://localhost:${process.env.DEV_GATEWAY_PORT ?? '8080'}`}/api/v1`),
                 {
                     url: 'nutritionist/docs'
                 }

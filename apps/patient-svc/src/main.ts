@@ -7,8 +7,8 @@ async function bootstrap() {
         NestApplicationBuilder
             .forModule(ServiceModule)
             .setName('Patient Service')
-            .setPort(process.env.PATIENT_SERVICE_PORT ?? '3034')
-            .setQueueName(process.env.PATIENT_QUEUE_NAME ?? 'patient-queue')
+            .setPort(process.env.DEV_PATIENT_SERVICE_PORT ?? '3000')
+            .setQueueName(process.env.DEV_PATIENT_QUEUE_NAME ?? 'patient-queue')
             .setPipe({
                 whitelist: true,
                 forbidNonWhitelisted: true,
@@ -20,7 +20,7 @@ async function bootstrap() {
                     .setDescription('API documentation for the Patient service')
                     .setVersion('1.0')
                     .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' }, 'bearer')
-                    .addServer(`${process.env.GATEWAY_URL ?? `http://localhost:${process.env.GATEWAY_PORT ?? '8080'}`}/api/v1`),
+                    .addServer(`${process.env.DEV_GATEWAY_URL ?? `http://localhost:${process.env.DEV_GATEWAY_PORT ?? '8080'}`}/api/v1`),
                 {
                     url: 'patient/docs',
                 }
