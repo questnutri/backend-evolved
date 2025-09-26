@@ -51,7 +51,7 @@ export class NestApplicationBuilder {
         return this;
     }
 
-    setQueueName(queue: string): NestApplicationBuilder {
+        setQueueName(queue: string): NestApplicationBuilder {
         this.rabbitMqQueue = queue;
         return this;
     }

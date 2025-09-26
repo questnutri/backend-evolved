@@ -12,6 +12,8 @@ export class PatientController {
     @MessagePattern('patient.creation')
     @UseFilters(ProxyMessengerFilter)
     async createPatient(@Payload() data: CreatePatientDto): Promise<ProxyMessage<Patient>> {
+        console.log('Patient creation request received in patient service.');
+        console.log(data);
         return { payload: await this.patientService.createOne(data) };
     }
 

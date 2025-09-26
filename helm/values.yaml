@@ -1,12 +1,6 @@
-databases:
-  - name: auth-postgres
-  - name: nutritionist-postgres
-  - name: patient-postgres
-  - name: diet-postgres
-  - name: record-postgres
 microservices:
   - name:  auth
-    image: auth-svc:latest
+    image: questnutri/auth-svc:latest
     volumeMaps:
       - name: auth-keys-config-map
         keys:
@@ -18,8 +12,9 @@ microservices:
         - name: auth-postgres-config-map
           keys:
             - init.sql
+          # port: 5432
   - name: aliment
-    image: aliment-svc:latest
+    image: questnutri/aliment-svc:latest
     database: 
       type: mongodb
       volumeMaps:
@@ -33,25 +28,29 @@ microservices:
           keys:
             - import-databases.sh
   - name: diet
-    image: diet-svc:latest
+    image: questnutri/diet-svc:latest
     database:
       type: postgres
+      # port: 5435
   - name: nutritionist
-    image: nutritionist-svc:latest
+    image: questnutri/nutritionist-svc:latest
     database:
       type: postgres
+      # port: 5433
   - name: patient
-    image: patient-svc:latest
+    image: questnutri/patient-svc:latest
     database:
       type: postgres
+      # port: 5434
   - name: record
-    image: record-svc:latest
+    image: questnutri/record-svc:latest
     database:
       type: postgres
+      # port: 5437
   - name: admin
-    image: admin-svc:latest
+    image: questnutri/admin-svc:latest
   - name: gateway
-    image: gateway:latest
+    image: questnutri/gateway:latest
     port: 8080
     servicePort: 8080
     serviceType: LoadBalancer

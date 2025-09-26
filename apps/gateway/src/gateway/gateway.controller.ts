@@ -10,7 +10,7 @@ export class GatewayController {
     private getTarget(path: string | undefined): string | undefined {
         if (!path) return undefined;
         switch (path) {
-            case 'admin': return process.env.ADMIN_SERVICE_URL ?? 'http://admin-service:3000';
+            case 'admin': return process.env.DEV_ADMIN_SERVICE_URL ?? 'http://admin-service:3000';
             case 'auth': return process.env.DEV_AUTH_SERVICE_URL ?? 'http://auth-service:3000';
             case 'nutritionist': return process.env.DEV_NUTRITIONIST_SERVICE_URL ?? 'http://nutritionist-service:3000';
             case 'patient': return process.env.DEV_PATIENT_SERVICE_URL ?? 'http://patient-service:3000';

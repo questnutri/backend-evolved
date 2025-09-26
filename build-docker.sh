@@ -73,11 +73,11 @@ for SERVICE in "${VALID[@]}"; do
   # 2) ./Dockerfile.<service>
   # 3) ./Dockerfile.base with --build-arg SERVICE=<service>
   if [ -d "$SERVICE" ] && [ -f "$SERVICE/Dockerfile" ]; then
-    docker build --pull -t "$SERVICE:latest" -f "$SERVICE/Dockerfile" "$SERVICE"
+    docker build --pull -t "questnutri/$SERVICE:latest" -f "$SERVICE/Dockerfile" "$SERVICE"
   elif [ -f "Dockerfile.$SERVICE" ]; then
-    docker build --pull -t "$SERVICE:latest" -f "Dockerfile.$SERVICE" .
+    docker build --pull -t "questnutri/$SERVICE:latest" -f "Dockerfile.$SERVICE" .
   elif [ -f "Dockerfile.base" ]; then
-    docker build --pull -t "$SERVICE:latest" --build-arg SERVICE="$SERVICE" -f Dockerfile.base .
+    docker build --pull -t "questnutri/$SERVICE:latest" --build-arg SERVICE="$SERVICE" -f Dockerfile.base .
   else
     echo "⚠️  No Dockerfile found for $SERVICE (checked $SERVICE/Dockerfile, Dockerfile.$SERVICE, Dockerfile.base)"
     exit 1

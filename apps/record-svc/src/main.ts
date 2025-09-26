@@ -8,7 +8,7 @@ async function bootstrap() {
             .forModule(ServiceModule)
             .setName('Record Service')
             .setPort(process.env.DEV_RECORD_SERVICE_PORT ?? '3000')
-            .setQueueName(process.env.DEV_RECORD_QUEUE_NAME ?? 'record_queue')
+            .setQueueName('record_queue')
             .setPipe({
                 whitelist: true,
                 forbidNonWhitelisted: true,

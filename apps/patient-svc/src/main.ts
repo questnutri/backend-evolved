@@ -8,7 +8,7 @@ async function bootstrap() {
             .forModule(ServiceModule)
             .setName('Patient Service')
             .setPort(process.env.DEV_PATIENT_SERVICE_PORT ?? '3000')
-            .setQueueName(process.env.DEV_PATIENT_QUEUE_NAME ?? 'patient-queue')
+            .setQueueName('patient_queue')
             .setPipe({
                 whitelist: true,
                 forbidNonWhitelisted: true,
@@ -26,6 +26,7 @@ async function bootstrap() {
                 }
             )
     );
+    console.log(`Patient service updated!`);
 }
 
 bootstrap();

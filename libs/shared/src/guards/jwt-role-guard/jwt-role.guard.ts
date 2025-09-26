@@ -4,7 +4,7 @@ import fetch from 'node-fetch'
 
 export const JwtRoleGuard = (allowedRoles?: string[]): Type<CanActivate> => {
     class JwtRoleGuardMixin implements CanActivate {
-        public url = process.env.AUTH_SERVICE_JWKS_URL ?? 'http://auth-service:3000/auth/jwks.json'
+        public url = process.env.AUTH_SERVICE_JWKS_URL || 'http://auth-service:3000/auth/jwks.json'
         public cachedKeys: jose.JWK.Key[] = []
         public cacheTime = 5 * 60 * 1000
         public lastFetch = 0

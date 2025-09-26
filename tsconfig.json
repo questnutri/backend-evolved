@@ -29,6 +29,9 @@
     },
     {
       "path": "./apps/record-svc"
+    },
+    {
+      "path": "./apps/log-svc"
     }
   ]
 }

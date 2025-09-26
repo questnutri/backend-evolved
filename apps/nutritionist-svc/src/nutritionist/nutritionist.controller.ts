@@ -67,11 +67,15 @@ export class NutritionistController {
         @Headers() headers: { 'user-id': string },
         @Body() body: BodyCreatePatientDto
     ): Promise<Patient> {
+        console.log(`Trying to create a new patient for nutritionist ${headers['user-id']}`);
+        console.log(body);
         try {
+            console.log('Sending creation request to patient service...');
             const result = await firstValueFrom(
                 this.patientServiceProxy.send<ProxyMessage<Patient>, CreatePatientDto>
                     ('patient.creation', { ...body, nutritionistId: headers['user-id'] }));
-
+            console.log('Received response from patient service:');
+            console.log(result);
             if (result && 'error' in result) {
                 throw new RpcException(result);
             }
