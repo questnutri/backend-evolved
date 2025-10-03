@@ -7,9 +7,9 @@ metadata:
 spec:
   selector:
     app: {{ .name }}-postgres-deployment
-  type: ClusterIP
+  type: {{ default "ClusterIP" ($.Values.developmentValues.serviceAccessType | default nil) }}
   ports:
-    - port: {{ default 5432 .database.port }}
+    - port: {{ default (default 5432 .database.port) (index $.Values.developmentValues.databasesPorts .name | default nil) }}
       protocol: TCP
       targetPort: 5432
 ---

@@ -1,3 +1,13 @@
+developmentValues:
+  serviceAccessType: LoadBalancer
+  databasesPorts:
+    auth: 5432
+    nutritionist: 5433
+    patient: 5434
+    diet: 5435
+    aliment: 27017
+    record: 5437
+
 microservices:
   - name:  auth
     image: questnutri/auth-svc:latest
@@ -51,7 +61,7 @@ microservices:
     image: questnutri/admin-svc:latest
   - name: gateway
     image: questnutri/gateway:latest
-    port: 8080
+    port: 8181
     servicePort: 8080
     serviceType: LoadBalancer
 
