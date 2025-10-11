@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: admin-postgres-config-map
+data:
+  init.sql: |-
+  {{ .Files.Get "files/microservices/admin/database/init.sql" | nindent 4 }}

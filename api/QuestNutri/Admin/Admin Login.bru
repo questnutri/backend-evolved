@@ -13,13 +13,13 @@ post {
 body:json {
   {
     "email": "{{email}}",
-    "password": "{{password}}"
+    "password": ""
   }
 }
 
 vars:pre-request {
   email: {{ADMIN_EMAIL}}
-  password: {{ADMIN_PASSWORD}}
+  password: 
 }
 
 vars:post-response {

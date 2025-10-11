@@ -12,10 +12,11 @@ CREATE TABLE IF NOT EXISTS users (
     "updatedAt" timestamptz DEFAULT now()
 );
 
-INSERT INTO users (email, "passwordHash", role, active)
+INSERT INTO users (id, email, "passwordHash", role, active)
 VALUES (
+    '7d6e9968-b4db-4b35-8e67-75134632b9f9',
     'admin@questnutri.com',
-    crypt('questnutri', gen_salt('bf')),
+    '$2a$12$g3vY5o2bbLqsKyzRBh/9yO1HfsZwDfgAN9ON1jQzBgfoKDYWOOaUi',
     'admin',
     true
 )

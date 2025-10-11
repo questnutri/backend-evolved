@@ -1,5 +1,4 @@
 import { Column, Entity, OneToMany, PrimaryColumn } from 'typeorm';
-import { Exclude } from 'class-transformer';
 import { PatientNutritionist } from './patient-nutritionist.entity';
 
 @Entity('patients')

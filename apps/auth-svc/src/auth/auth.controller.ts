@@ -1,6 +1,6 @@
-import { Controller, Post, Body, UseFilters, Res, Get } from '@nestjs/common';
+import { Controller, Post, Body, UseFilters, Res, Get, InternalServerErrorException, ForbiddenException, UseInterceptors } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { ProxyMessengerFilter, LoginUserDto, ProxyMessage, RefreshTokenDto, RegisterUserDto, ControllerExceptionFilter, LoginTokenResponse, userId, User, ResetPasswordDto, ForgotPasswordDto, ResetTokenResponse, ResetTokenDto } from '@backend-evolved/shared';
+import { LoggingInterceptor, ProxyMessengerFilter, LoginUserDto, ProxyMessage, RefreshTokenDto, RegisterUserDto, ControllerExceptionFilter, LoginTokenResponse, userId, User, ResetPasswordDto, ForgotPasswordDto, ResetTokenResponse, ResetTokenDto, UserRole } from '@backend-evolved/shared';
 import { ApiAcceptedResponse, ApiOkResponse, ApiOperation } from '@nestjs/swagger';
 import { MessagePattern, Payload, RpcException } from '@nestjs/microservices';
 import { instanceToPlain } from 'class-transformer'
@@ -12,31 +12,33 @@ export class AuthController {
         private readonly authService: AuthService,
         private readonly keyService: KeyService
     ) { }
-
+    
     @Post('login')
     @ApiOperation({ summary: 'Login an user' })
     @ApiOkResponse({ description: 'The user has been successfully logged in.' })
     @ApiAcceptedResponse({ description: 'The user account have been created but an admin must activate it.' })
     @UseFilters(ControllerExceptionFilter)
+    @UseInterceptors(LoggingInterceptor)
     async login(@Res() res: any, @Body() body: LoginUserDto): Promise<LoginTokenResponse> {
         const result = await this.authService.login(body);
         return res.status(200).json(result);
     }
-
+    
     @Post('refresh')
     @ApiOperation({ summary: 'Refresh user authentication token' })
     @ApiOkResponse({ description: 'The user authentication token has been successfully refreshed.' })
     @UseFilters(ControllerExceptionFilter)
+    @UseInterceptors(LoggingInterceptor)
     async refresh(@Body() body: RefreshTokenDto): Promise<LoginTokenResponse> {
         return await this.authService.refresh(body)
     }
-
+    
     @MessagePattern('user.creation')
     @UseFilters(ProxyMessengerFilter)
     async handleUserCreation(@Payload() data: RegisterUserDto): Promise<ProxyMessage<userId>> {
         return { payload: (await this.authService.register(data)).id };
     }
-
+    
     @MessagePattern('user.deletion')
     @UseFilters(ProxyMessengerFilter)
     async handleUserDeletionByEmail(@Payload() email: string): Promise<boolean> {
@@ -52,30 +54,45 @@ export class AuthController {
             });
         }
     }
-
+    
     @MessagePattern('nutritionist.approval')
     @UseFilters(ProxyMessengerFilter)
     async handleNutritionistApproval(@Payload() email: string): Promise<ProxyMessage<Partial<User>>> {
         const user = await this.authService.approveNutritionist(email);
         return { payload: instanceToPlain(user) };
     }
-
+    
+    @MessagePattern('admin.login')
+    @UseFilters(ProxyMessengerFilter)
+    async handleAdminLogin(@Payload() data: { email: string, password: string }): Promise<ProxyMessage<LoginTokenResponse>> {
+        try {
+            const result = await this.authService.loginAdmin(data.email, data.password);
+            console.log(result);
+            return { payload: result };
+        } catch (error) {
+            console.log(error);
+            throw error;
+        }
+    }
+    
     @Post('reset-password')
     @ApiOperation({ summary: 'Reset user password using reset token' })
     @ApiOkResponse({ description: 'Password reset and new tokens returned.' })
     @UseFilters(ControllerExceptionFilter)
+    @UseInterceptors(LoggingInterceptor)
     async resetPassword(@Body() body: ResetPasswordDto): Promise<LoginTokenResponse> {
         return await this.authService.resetPassword(body);
     }
-
+    
     @Post('forgot-password')
     @ApiOperation({ summary: 'Request password reset token for an email' })
     @ApiOkResponse({ description: 'Returns a password reset token to be sent to the user.' })
     @UseFilters(ControllerExceptionFilter)
+    @UseInterceptors(LoggingInterceptor)
     async forgotPassword(@Body() body: ForgotPasswordDto): Promise<ResetTokenDto> {
         return await this.authService.forgotPassword(body);
     }
-
+    
     @Get('jwks.json')
     async getJwks() {
         const jwk = await this.keyService.getJwk();

@@ -1,13 +1,3 @@
-developmentValues:
-  serviceAccessType: LoadBalancer
-  databasesPorts:
-    auth: 5432
-    nutritionist: 5433
-    patient: 5434
-    diet: 5435
-    aliment: 27017
-    record: 5437
-
 microservices:
   - name:  auth
     image: questnutri/auth-svc:latest
@@ -59,6 +49,13 @@ microservices:
       # port: 5437
   - name: admin
     image: questnutri/admin-svc:latest
+    database: 
+      type: postgres
+      volumeMaps:
+        - name: admin-postgres-config-map
+          keys:
+            - init.sql
+      # port: 5437
   - name: gateway
     image: questnutri/gateway:latest
     port: 8181

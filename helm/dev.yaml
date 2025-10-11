@@ -1,0 +1,10 @@
+developmentValues: 
+  serviceAccessType: LoadBalancer
+  databasesPorts:
+    auth: 5432
+    nutritionist: 5433
+    patient: 5434
+    diet: 5435
+    aliment: 27017
+    record: 5437
+    admin: 5430

@@ -7,9 +7,9 @@ metadata:
 spec:
   selector:
     app: {{ .name }}-mongodb-deployment
-  type: {{ default "ClusterIP" ($.Values.developmentValues.serviceAccessType | default nil) }}
+  type: {{ default "ClusterIP" (and $.Values.developmentValues $.Values.developmentValues.serviceAccessType | default nil) }}
   ports:
-    - port: {{ default (default 27017 .database.port) (index $.Values.developmentValues.databasesPorts .name | default nil) }}
+    - port: {{ default (default 27017 .database.port) (and $.Values.developmentValues $.Values.developmentValues.databasesPorts (index $.Values.developmentValues.databasesPorts .name) | default nil) }}
       protocol: TCP
       targetPort: 27017
 ---

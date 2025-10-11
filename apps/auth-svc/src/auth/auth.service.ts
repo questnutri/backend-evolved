@@ -1,5 +1,5 @@
 import { ConflictException, ForbiddenException, HttpException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
-import { LoginUserDto, RefreshToken, RefreshTokenDto, RegisterUserDto, User, UserRole } from "@backend-evolved/shared";
+import { LoginTokenResponse, LoginUserDto, RefreshToken, RefreshTokenDto, RegisterUserDto, User, UserRole } from "@backend-evolved/shared";
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm'
 import { JwtService } from '@nestjs/jwt';
@@ -37,7 +37,7 @@ export class AuthService {
         return await this.userRepository.save(user)
     }
 
-    async login(data: LoginUserDto) {
+    async login(data: LoginUserDto): Promise<LoginTokenResponse | { firstLogin: boolean, resetPassword: string }> {
         const user = await this.userRepository.findOne({ where: { email: data.email } });
         if (!user) throw new NotFoundException(`User with email ${data.email} not found`);
         const valid = await bcrypt.compare(data.password, user.passwordHash)
@@ -93,6 +93,15 @@ export class AuthService {
         }
         const resetToken = this.jwtService.sign(payload, { expiresIn: '5m' });
         return { resetPassword: resetToken };
+    }
+
+    async loginAdmin(email: string, password: string): Promise<LoginTokenResponse> {
+        const user = await this.userRepository.findOne({ where: { email } });
+        if (!user) throw new NotFoundException(`User with email ${email} not found`);
+        const valid = await bcrypt.compare(password, user.passwordHash)
+        if (!valid) throw new UnauthorizedException(`Invalid password for user ${email}`);
+        if (user.role !== UserRole.ADMIN) throw new ForbiddenException("The user is not an admin.");
+        return { ...await this.generateTokens(user), role: user.role };
     }
 
     async approveNutritionist(email: string): Promise<User> {

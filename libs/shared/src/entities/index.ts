@@ -6,6 +6,9 @@ export * from "./nutritionist/nutritionist.entity";
 export * from "./patient/patient.entity";
 export * from "./patient/patient-nutritionist.entity";
 
+export * from "./admin/admin.entity";
+export * from "./admin/manage";
+
 export * from "./diet/diet.entity";
 export * from "./diet/meal.entity";
 export * from "./diet/food.entity";
