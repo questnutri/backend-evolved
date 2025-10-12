@@ -1,0 +1,23 @@
+meta {
+  name: REST Search Example
+  type: http
+  seq: 3
+}
+
+post {
+  url: http://{{GATEWAY_URL}}/aliment/graphql
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "query": "query { aliments( source: null, page: null, items: 5, query: { name: null } ) { currentPage length isFirstPage isLastPage totalPages totalItems data { _id source name } } }"
+  //     "query": "query { findManyAlimentById(ids:[\"68ec1b03acda5e8f15d5c3e8\"]) { _id source name portions } }"
+  
+  }
+}
+
+settings {
+  encodeUrl: true
+}

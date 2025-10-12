@@ -13,19 +13,34 @@ post {
 body:json {
   {
     "name": "{{$randomFullName}}",
-    "email": "{{NUTRITIONIST_EMAIL}}",
-    "password": "{{NUTRITIONIST_PASSWORD}}",
-    "phone": "{{phone}}",
-    "crn": "{{crn}}",
+    "email": "test{{account_number}}@nutri.com",
+    "password": "123",
+    "phone": "{{random_phone}}",
+    "crn": "{{random_crn}}",
     "documentType": "cpf",
-    "documentNumber": "{{documentNumber}}"
+    "documentNumber": "{{random_cpf}}"
   }
 }
 
+script:pre-request {
+  bru.setVar("random_phone", bru.function("randomPhone", []))
+  bru.setVar("random_crn", bru.function("randomCRN", []))
+  bru.setVar("random_cpf", bru.function("randomCPF", []))
+  bru.setVar("account_number", bru.getEnvVar("NUTRITIONIST_ACCOUNT_NUMBER"));
+}
+
 script:post-response {
+  if(res.status === 201) {
+    bru.setEnvVar("NUTRITIONIST_ACCOUNT_NUMBER", 
+                  Number(bru.getEnvVar("NUTRITIONIST_ACCOUNT_NUMBER"))+1
+                 );
+  }
+  
   if(res.status !== 201) {
       bru.setNextRequest(null);
-  }
+  } 
+  
+  
 }
 
 settings {

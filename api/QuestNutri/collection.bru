@@ -1,35 +1,18 @@
 vars:pre-request {
   ADMIN_EMAIL: admin@questnutri.com
-  ADMIN_PASSWORD: questnutri
-  NUTRITIONIST_EMAIL: john.doe@nutritionist.com
-  NUTRITIONIST_PASSWORD: strongpassword123
-  PATIENT_EMAIL: john.doe5@patient.com
-  PATIENT_DOCUMENT_NUMBER: 0003
-  PATIENT_PASSWORD: 0001
+  NUTRITIONIST_PASSWORD: 123
+  PATIENT_DOCUMENT_NUMBER: 00{{TEST}}
+  PATIENT_PASSWORD: 123
   RESET_PASSWORD_TOKEN: 
-  RESET_PASSWORD_NEW_PASSWORD: strongpassword123
+  RESET_PASSWORD_NEW_PASSWORD: 123
   PATIENT_ID: 088b4efb-5c6e-4089-821d-4e0dae6ca1e1
   NUTRITIONIST_ID: 95de7397-21e2-4643-945c-62cf58c4d2b9
+  PATIENT_ACCOUNT_NUMBER: 1
+  ~NUTRITIONIST_EMAIL: test{{NUTRI_ACCOUNT_NUMBER}}@nutri.com
+  ~PATIENT_EMAIL: test{{PATIENT_ACCOUNT_NUMBER}}@patient.com
 }
 
 script:pre-request {
-  function randomPhone() {
-      const ddd = Math.floor(Math.random() * 90 + 10);
-      const number = Math.floor(Math.random() * 90000000 + 10000000);
-      return `+55 ${ddd} 9${number.toString().padStart(8, '0').slice(1, 9)}-${number.toString().slice(-4)}`;
-  }
-  
-  function randomCRN() {
-      const x = Math.floor(Math.random() * 9) + 1;
-      const y = Math.floor(Math.random() * 90000 + 10000);
-      return `CRN-${x}/${y}`;
-  }
-  
-  function randomCPF() {
-      const n = () => Math.floor(Math.random() * 10);
-      return `${n()}${n()}${n()}.${n()}${n()}${n()}.${n()}${n()}${n()}-${n()}${n()}`;
-  }
-  
   bru.setFunction = function (name, fn) {
       if (!bru._functions) {
           bru._functions = {}
@@ -54,6 +37,23 @@ script:pre-request {
       return bru._functions[name].apply(bru._functions, arguments)
     }
   }
+  
+  bru.setFunction("randomPhone", function() {
+      const ddd = Math.floor(Math.random() * 90 + 10);
+      const number = Math.floor(Math.random() * 90000000 + 10000000);
+      return `+55 ${ddd} 9${number.toString().padStart(8, '0').slice(1, 9)}-${number.toString().slice(-4)}`;
+  })
+  
+  bru.setFunction("randomCRN", function() {
+      const x = Math.floor(Math.random() * 9) + 1;
+      const y = Math.floor(Math.random() * 90000 + 10000);
+      return `CRN-${x}/${y}`;
+  })
+  
+  bru.setFunction("randomCPF", function() {
+      const n = () => Math.floor(Math.random() * 10);
+      return `${n()}${n()}${n()}.${n()}${n()}${n()}.${n()}${n()}${n()}-${n()}${n()}`;
+  })
   
   bru.setFunction("randomMealName", function () {
       const names = [
@@ -194,9 +194,5 @@ script:pre-request {
   
       return generatedMeals;
   })
-  
-  bru.setVar('phone', randomPhone());
-  bru.setVar('crn', randomCRN());
-  bru.setVar('documentNumber', randomCPF());
   
 }

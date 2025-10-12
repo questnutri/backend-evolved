@@ -24,13 +24,8 @@ body:json {
   }
 }
 
-vars:pre-request {
-  numberOfMeals: 2
-  foodsPerMeal: 5
-}
-
 script:pre-request {
-  bru.setVar("generatedMeals", bru.function("mealsGenerator", [2, 3]));
+  bru.setVar("generatedMeals", bru.function("mealsGenerator", [1, 1]));
 }
 
 script:post-response {

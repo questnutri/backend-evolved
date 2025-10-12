@@ -16,8 +16,12 @@ auth:bearer {
 
 body:json {
   {
-      "email": "{{NUTRITIONIST_EMAIL}}"
+      "email": "test{{account_number}}@nutri.com"
   }
+}
+
+script:pre-request {
+  bru.setVar("account_number", Number(bru.getEnvVar("NUTRITIONIST_ACCOUNT_NUMBER"))-1);
 }
 
 script:post-response {

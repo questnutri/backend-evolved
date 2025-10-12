@@ -47,3 +47,6 @@ Thumbs.db
 *.env
 diagrams/
 *.pem
+
+api/QuestNutri/Admin/Admin Login.bru
+run-ngrok.bat

@@ -13,9 +13,13 @@ post {
 body:json {
   {
     "name": "{{$randomFirstName}}",
-    "email": "{{PATIENT_EMAIL}}ab",
-    "documentNumber": "{{PATIENT_DOCUMENT_NUMBER}}ac"
+    "email": "test{{account_number}}@patient.com",
+    "documentNumber": "00{{account_number}}"
   }
+}
+
+script:pre-request {
+  bru.setVar("account_number", bru.getEnvVar("PATIENT_ACCOUNT_NUMBER"));
 }
 
 script:post-response {
@@ -23,6 +27,9 @@ script:post-response {
     bru.setVar("PATIENT_EMAIL" , res("email"));
     bru.setVar("PATIENT_PASSWORD", res("documentNumber"));
     bru.setVar("PATIENT_ID", res("id"));
+    bru.setEnvVar("PATIENT_ACCOUNT_NUMBER", 
+        Number(bru.getEnvVar("PATIENT_ACCOUNT_NUMBER"))+1
+    );
   }
   
   if(res.status !== 201) {
