@@ -1,0 +1,33 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: generate-keypair
+  annotations:
+    "helm.sh/hook": pre-install
+    "helm.sh/hook-weight": "0"
+    "helm.sh/hook-delete-policy": before-hook-creation,hook-succeeded
+spec:
+  template:
+    spec:
+      restartPolicy: Never
+      serviceAccountName: keygen-service-account
+      containers:
+      - name: keygen
+        image: bitnami/kubectl:latest
+        command:
+          - /bin/sh
+          - -c
+          - |
+            # Install openssl
+            apt-get update && apt-get install -y openssl
+            
+            # Generate keys
+            mkdir -p /tmp/keys
+            openssl genrsa -out /tmp/keys/private-key.pem 2048
+            openssl rsa -in /tmp/keys/private-key.pem -pubout -out /tmp/keys/public-key.pem
+
+            # Create configmap
+            kubectl delete configmap auth-keys-config-map --ignore-not-found
+            kubectl create configmap auth-keys-config-map \
+              --from-file=private-key.pem=/tmp/keys/private-key.pem \
+              --from-file=public-key.pem=/tmp/keys/public-key.pem
