@@ -9,8 +9,13 @@ cd "$SCRIPT_DIR"
 
 # parse args: --service <name> | -s <name> (can be repeated or a comma-separated list)
 SELECTED=()
+PUSH_TO_HUB=false
 print_usage() {
-  echo "Usage: $0 [--service <service>]..."
+  echo "Usage: $0 [--service <service>]... [--push]"
+  echo
+  echo "Options:"
+  echo "  --service, -s <service>   Build specific service(s) (can be repeated or comma-separated)"
+  echo "  --push                    Push built images to Docker Hub after building"
   echo
   echo "If no --service is provided, all services will be built."
   echo "Known services: ${SERVICES[*]}"
@@ -28,6 +33,10 @@ if [ "$#" -gt 0 ]; then
         for p in "${parts[@]}"; do
           SELECTED+=("$p")
         done
+        shift
+        ;;
+      --push)
+        PUSH_TO_HUB=true
         shift
         ;;
       --help|-h)
@@ -81,6 +90,13 @@ for SERVICE in "${VALID[@]}"; do
   else
     echo "⚠️  No Dockerfile found for $SERVICE (checked $SERVICE/Dockerfile, Dockerfile.$SERVICE, Dockerfile.base)"
     exit 1
+  fi
+
+  # Push to Docker Hub if --push flag was provided
+  if [ "$PUSH_TO_HUB" = true ]; then
+    echo "📤 Pushing questnutri/$SERVICE:latest to Docker Hub..."
+    docker push "questnutri/$SERVICE:latest"
+    echo "✅ Pushed questnutri/$SERVICE:latest"
   fi
 done
 

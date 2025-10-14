@@ -13,7 +13,7 @@ async function bootstrap() {
 
     app.setGlobalPrefix(globalPrefix);
     const PORT = process.env.DEV_GATEWAY_PORT ?? 8080;
-    await app.listen(PORT);
+    await app.listen(PORT, "::");
     Logger.log(`🚀 Gateway is running on: http://localhost:${PORT}/${globalPrefix}`);
 }
 

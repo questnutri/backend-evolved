@@ -16,8 +16,8 @@ spec:
       containers:
         - name: {{ .name }}
           image: {{ .image }}
-          imagePullPolicy: IfNotPresent
-          # imagePullPolicy: Always
+          # imagePullPolicy: IfNotPresent
+          imagePullPolicy: Always
           ports:
             - containerPort: {{ default 3000 .port }}
           {{- if .volumeMaps }}
