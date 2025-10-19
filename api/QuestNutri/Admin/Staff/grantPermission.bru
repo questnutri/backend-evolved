@@ -1,0 +1,30 @@
+meta {
+  name: grantPermission
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{HTTP_PROTOCOL}}://{{GATEWAY_URL}}/admin/staff/:adminId/grant-permission/:permission-type
+  body: json
+  auth: bearer
+}
+
+params:path {
+  permission-type: admin
+  adminId: d2837ad2-5555-4547-922a-dd1eeeed2828
+}
+
+auth:bearer {
+  token: {{ADMIN_ACCESS_TOKEN}}
+}
+
+body:json {
+  {
+    "canViewAdmins": true
+  }
+}
+
+settings {
+  encodeUrl: true
+}

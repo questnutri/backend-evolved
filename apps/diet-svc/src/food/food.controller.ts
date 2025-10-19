@@ -4,7 +4,7 @@ import { ControllerExceptionFilter, CreateFoodDto, Food, JwtRoleGuard } from '@b
 import { MealService } from '../meal/meal.service';
 import { ApiBearerAuth, ApiSecurity, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiNotFoundResponse, ApiNoContentResponse, ApiForbiddenResponse } from '@nestjs/swagger';
 
-@Controller('diet/:dietId/meal/:mealId/food')
+@Controller(':dietId/meal/:mealId/food')
 @ApiBearerAuth('bearer')
 @ApiSecurity('bearer')
 export class FoodController {

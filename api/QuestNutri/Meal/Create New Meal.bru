@@ -5,7 +5,7 @@ meta {
 }
 
 post {
-  url: http://{{GATEWAY_URL}}/diet/{{createdDiet}}/meal
+  url: {{HTTP_PROTOCOL}}//{{GATEWAY_URL}}/diet/{{createdDiet}}/meal
   body: json
   auth: inherit
 }

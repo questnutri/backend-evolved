@@ -6,7 +6,7 @@ import { CreateMealDto, Meal, JwtRoleGuard, ControllerContract, ControllerExcept
 import { FoodService } from '../food/food.service';
 import { DietService } from '../diet/diet.service';
 
-@Controller('diet/:dietId/meal')
+@Controller(':dietId/meal')
 @ApiBearerAuth('bearer')
 @ApiSecurity('bearer')
 export class MealController implements ControllerContract<Meal> {

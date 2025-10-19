@@ -5,7 +5,7 @@ meta {
 }
 
 post {
-  url: http://{{GATEWAY_URL}}/auth/login
+  url: {{HTTP_PROTOCOL}}//{{GATEWAY_URL}}/auth/login
   body: json
   auth: inherit
 }
@@ -18,8 +18,8 @@ body:json {
 }
 
 vars:pre-request {
-  email: 
-  password: 
+  email: test@admin.com
+  password: test
 }
 
 vars:post-response {

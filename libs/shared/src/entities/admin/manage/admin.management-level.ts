@@ -1,9 +1,14 @@
-import { Column, Entity, PrimaryColumn } from "typeorm";
+import { Column, Entity, JoinColumn, OneToOne, PrimaryColumn } from "typeorm";
+import { Admin } from "../admin.entity";
 
 @Entity('admin_management_level')
 export class AdminManagementLevel {
-    @PrimaryColumn({type: 'uuid'})
+    @PrimaryColumn({ type: 'uuid' })
     id: string;
+
+    @OneToOne(() => Admin, admin => admin.adminManagementLevel, { onDelete: 'CASCADE' })
+    @JoinColumn({ name: 'id' })
+    admin: Admin;
 
     @Column({
         default: false
@@ -38,6 +43,12 @@ export class AdminManagementLevel {
     @Column({
         default: false
     })
-    canViewOwnProfile: boolean;
+    canViewManagementLevels: boolean;
+
+
+    @Column({
+        default: false
+    })
+    canGrantAdminPermissions: boolean;
 
 }

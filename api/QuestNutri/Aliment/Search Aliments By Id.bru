@@ -5,7 +5,7 @@ meta {
 }
 
 post {
-  url: http://{{GATEWAY_URL}}/aliment/graphql
+  url: {{HTTP_PROTOCOL}}//{{GATEWAY_URL}}/aliment/graphql
   body: graphql
   auth: inherit
 }

@@ -1,19 +1,19 @@
 meta {
-  name: Admin Login
+  name: Non-Root-Login
   type: http
-  seq: 1
+  seq: 3
 }
 
 post {
-  url: http://{{GATEWAY_URL}}/auth/login
+  url: {{HTTP_PROTOCOL}}//{{GATEWAY_URL}}/auth/login
   body: json
   auth: none
 }
 
 body:json {
   {
-    "email": "{{email}}",
-    "password": ""
+    "email": "{{ADMIN_NON_ROOT_EMAIL}}",
+    "password": "{{ADMIN_NON_ROOT_PASSWORD}}"
   }
 }
 
@@ -25,12 +25,6 @@ vars:pre-request {
 vars:post-response {
   ADMIN_ACCESS_TOKEN: res("accessToken")
   ADMIN_REFRESH_TOKEN: res("refreshToken")
-}
-
-script:pre-request {
-  console.log(bru.function("randomInt", [1, 2]))
-  
-  
 }
 
 settings {

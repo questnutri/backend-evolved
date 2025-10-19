@@ -3,7 +3,7 @@ import { PatientService } from './patient.service';
 import { MessagePattern, Payload, RpcException } from '@nestjs/microservices';
 import { type FindAllFromNutritionistPayload, type CreatePatientDto, ProxyMessengerFilter, ProxyMessage, Patient } from '@backend-evolved/shared';
 
-@Controller('patient')
+@Controller()
 export class PatientController {
     constructor(
         private readonly patientService: PatientService,

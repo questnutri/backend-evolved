@@ -19,9 +19,10 @@ async function bootstrap() {
                     .setTitle('Admin Service')
                     .setDescription('The Admin Service API description')
                     .setVersion('1.0')
-                    .addServer(`${process.env.DEV_GATEWAY_URL ?? `http://localhost:${process.env.DEV_GATEWAY_PORT ?? '8080'}`}/api/v1`),
+                    .addServer(`https://questnutri.com.br/api/v1/admin`)
+                    .addServer(`${process.env.DEV_GATEWAY_URL ?? `http://localhost:${process.env.DEV_GATEWAY_PORT ?? '8080'}`}/api/v1/admin`),
                     {
-                        url: '/admin/docs'
+                        url: 'docs'
                     }
             )
     );

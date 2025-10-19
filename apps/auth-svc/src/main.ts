@@ -19,9 +19,10 @@ async function bootstrap() {
                     .setTitle('Authentication Service API')
                     .setDescription('API documentation for the Authentication Service of QuestNutri')
                     .setVersion('1.0')
-                    .addServer(`${process.env.DEV_GATEWAY_URL ?? `http://localhost:${process.env.DEV_GATEWAY_PORT ?? '8080'}`}/api/v1`),
+                    .addServer(`https://questnutri.com.br/api/v1/auth`)
+                    .addServer(`${process.env.DEV_GATEWAY_URL ?? `http://localhost:${process.env.DEV_GATEWAY_PORT ?? '8080'}`}/api/v1/auth`),
                 {
-                    url: 'auth/docs'
+                    url: 'docs'
                 }
             )
     );

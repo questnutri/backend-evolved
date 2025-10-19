@@ -1,0 +1,23 @@
+meta {
+  name: getOneById
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{HTTP_PROTOCOL}}://{{GATEWAY_URL}}/admin/staff/:staffId
+  body: none
+  auth: bearer
+}
+
+params:path {
+  staffId: a0c6f199-af91-4fd4-a79d-e5883af9a5f4
+}
+
+auth:bearer {
+  token: {{ADMIN_ACCESS_TOKEN}}
+}
+
+settings {
+  encodeUrl: true
+}

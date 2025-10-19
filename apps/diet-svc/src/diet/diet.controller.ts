@@ -5,7 +5,7 @@ import { ControllerExceptionFilter, CreateDietDto, Diet, JwtRoleGuard, UpdateDie
 import { FoodService } from '../food/food.service';
 import { MealService } from '../meal/meal.service';
 
-@Controller('diet')
+@Controller()
 @ApiBearerAuth('bearer')
 @ApiSecurity('bearer')
 export class DietController {

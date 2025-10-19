@@ -6,6 +6,9 @@ import { URL } from 'url';
 
 @Controller()
 export class GatewayController {
+    // Flag to control whether to add service prefix to forwarded paths
+    private readonly ADD_SERVICE_PREFIX = false;
+
     // Map incoming path prefixes to service base URLs. Use environment variables to override.
     private getTarget(path: string | undefined): string | undefined {
         if (!path) return undefined;
@@ -104,9 +107,10 @@ export class GatewayController {
         const splat = (req as Request).params?.splat || [];
         const choosedService = splat.at(0);
         const targetBase = this.getTarget(choosedService);
-        console.log(`Proxying request for ${req.path} to ${targetBase}`);
-        console.log(`Original URL: ${req.url}`);
-        console.log(`Splat array:`, splat);
+        // console.log(`Proxying request for ${req.path} to ${targetBase}`);
+        // console.log(`Original URL: ${req.url}`);
+        // console.log(`Splat array:`, splat);
+        // console.log(`ADD_SERVICE_PREFIX flag: ${this.ADD_SERVICE_PREFIX}`);
         if (!targetBase) {
             console.log(`No service found for ${choosedService}`);
             return res.status(502).json({ error: 'No target service configured for this path' });
@@ -135,8 +139,12 @@ export class GatewayController {
         if (Array.isArray(splat) && splat.length > 1 && splat[1] === 'graphql') {
             forwardedPath = '/' + splat.slice(1).join('/');
         } else {
-            // Keep the full path including service name
-            forwardedPath = Array.isArray(splat) ? '/' + splat.join('/') : '/' + splat;
+            // Include or exclude service name prefix based on ADD_SERVICE_PREFIX flag
+            if (this.ADD_SERVICE_PREFIX) {
+                forwardedPath = Array.isArray(splat) ? '/' + splat.join('/') : '/' + splat;
+            } else {
+                forwardedPath = Array.isArray(splat) && splat.length > 1 ? '/' + splat.slice(1).join('/') : '/';
+            }
         }
 
         // Preserve the original query string

@@ -14,7 +14,7 @@ async function bootstrap() {
                 forbidNonWhitelisted: true,
                 transform: true,
             })
-            .setGlobalPrefix('record')
+            // .setGlobalPrefix('record')
             .addExceptionFilter(new ControllerExceptionFilter())
             .setSwagger(
                 new DocumentBuilder()
@@ -22,9 +22,10 @@ async function bootstrap() {
                     .setDescription('API documentation for the Record Service of QuestNutri')
                     .setVersion('1.0')
                     .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' }, 'bearer')
-                    .addServer(`${process.env.DEV_GATEWAY_URL ?? `http://localhost:${process.env.DEV_GATEWAY_PORT ?? '8080'}`}/api/v1`),
+                    .addServer(`https://questnutri.com.br/api/v1/record`)
+                    .addServer(`${process.env.DEV_GATEWAY_URL ?? `http://localhost:${process.env.DEV_GATEWAY_PORT ?? '8080'}`}/api/v1/record`),
                 {
-                    url: 'record/docs'
+                    url: 'docs'
                 }
             )
     );

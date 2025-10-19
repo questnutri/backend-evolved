@@ -15,8 +15,9 @@ CREATE TABLE IF NOT EXISTS admin_management_level (
     "canCreateAdmin" boolean DEFAULT false,
     "canUpdateAdmin" boolean DEFAULT false,
     "canDeleteAdmin" boolean DEFAULT false,
-    "canViewOwnProfile" boolean DEFAULT false,
-    CONSTRAINT fk_admin_mgmt_admin FOREIGN KEY (id) REFERENCES admin(id) ON DELETE CASCADE
+    "canViewManagementLevels" boolean DEFAULT false,
+    "canGrantAdminPermissions" boolean DEFAULT false,
+    CONSTRAINT fk_admin_mgmt_admin FOREIGN KEY (id) REFERENCES admin(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS nutritionist_management_level (
@@ -27,7 +28,8 @@ CREATE TABLE IF NOT EXISTS nutritionist_management_level (
     "canUpdateNutritionist" boolean DEFAULT false,
     "canDeleteNutritionist" boolean DEFAULT false,
     "canViewNutritionistPatients" boolean DEFAULT false,
-    CONSTRAINT fk_nutritionist_mgmt_admin FOREIGN KEY (id) REFERENCES admin(id) ON DELETE CASCADE
+    "canApproveNutritionist" boolean DEFAULT false,
+    CONSTRAINT fk_nutritionist_mgmt_admin FOREIGN KEY (id) REFERENCES admin(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS patient_management_level (
@@ -37,21 +39,21 @@ CREATE TABLE IF NOT EXISTS patient_management_level (
     "canCreatePatient" boolean DEFAULT false,
     "canUpdatePatient" boolean DEFAULT false,
     "canDeletePatient" boolean DEFAULT false,
-    CONSTRAINT fk_patient_mgmt_admin FOREIGN KEY (id) REFERENCES admin(id) ON DELETE CASCADE
+    CONSTRAINT fk_patient_mgmt_admin FOREIGN KEY (id) REFERENCES admin(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS diet_management_level (
     id uuid PRIMARY KEY,
     "canViewDiets" boolean DEFAULT false,
     "canViewDietDetails" boolean DEFAULT false,
-    CONSTRAINT fk_diet_mgmt_admin FOREIGN KEY (id) REFERENCES admin(id) ON DELETE CASCADE
+    CONSTRAINT fk_diet_mgmt_admin FOREIGN KEY (id) REFERENCES admin(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS record_management_level (
     id uuid PRIMARY KEY,
     "canViewRecords" boolean DEFAULT false,
     "canViewRecordDetails" boolean DEFAULT false,
-    CONSTRAINT fk_record_mgmt_admin FOREIGN KEY (id) REFERENCES admin(id) ON DELETE CASCADE
+    CONSTRAINT fk_record_mgmt_admin FOREIGN KEY (id) REFERENCES admin(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS game_management_level (
@@ -61,13 +63,13 @@ CREATE TABLE IF NOT EXISTS game_management_level (
     "canCreateAchievement" boolean DEFAULT false,
     "canUpdateAchievement" boolean DEFAULT false,
     "canDeleteAchievement" boolean DEFAULT false,
-    CONSTRAINT fk_game_mgmt_admin FOREIGN KEY (id) REFERENCES admin(id) ON DELETE CASCADE
+    CONSTRAINT fk_game_mgmt_admin FOREIGN KEY (id) REFERENCES admin(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS log_management_level (
     id uuid PRIMARY KEY,
     "canViewLogs" boolean DEFAULT false,
-    CONSTRAINT fk_log_mgmt_admin FOREIGN KEY (id) REFERENCES admin(id) ON DELETE CASCADE
+    CONSTRAINT fk_log_mgmt_admin FOREIGN KEY (id) REFERENCES admin(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 INSERT INTO admin (id, "canBeDeleted", created_at, updated_at)
@@ -87,10 +89,12 @@ INSERT INTO admin_management_level (
     "canCreateAdmin",
     "canUpdateAdmin",
     "canDeleteAdmin",
-    "canViewOwnProfile"
+    "canViewManagementLevels",
+    "canGrantAdminPermissions"
 )
 VALUES (
     '7d6e9968-b4db-4b35-8e67-75134632b9f9',
+    true,
     true,
     true,
     true,
@@ -108,10 +112,12 @@ INSERT INTO nutritionist_management_level (
     "canCreateNutritionist",
     "canUpdateNutritionist",
     "canDeleteNutritionist",
-    "canViewNutritionistPatients"
+    "canViewNutritionistPatients",
+    "canApproveNutritionist"
 )
 VALUES (
     '7d6e9968-b4db-4b35-8e67-75134632b9f9',
+    true,
     true,
     true,
     true,

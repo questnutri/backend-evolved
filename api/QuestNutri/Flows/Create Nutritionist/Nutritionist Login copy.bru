@@ -5,7 +5,7 @@ meta {
 }
 
 post {
-  url: http://{{GATEWAY_URL}}/auth/login
+  url: {{HTTP_PROTOCOL}}//{{GATEWAY_URL}}/auth/login
   body: json
   auth: none
 }

@@ -1,9 +1,15 @@
-import { PrimaryColumn, Column, Entity } from "typeorm";
+import { PrimaryColumn, Column, Entity, JoinColumn, OneToOne } from "typeorm";
+import { Admin } from "../admin.entity";
+
 
 @Entity('patient_management_level')
 export class PatientManagementLevel {
     @PrimaryColumn({type: 'uuid'})
     id: string;
+
+    @OneToOne(() => Admin, admin => admin.adminManagementLevel, { onDelete: 'CASCADE' })
+    @JoinColumn({ name: 'id' })
+    admin: Admin;
 
     @Column({
         default: false

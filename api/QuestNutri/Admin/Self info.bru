@@ -1,0 +1,19 @@
+meta {
+  name: Self info
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{HTTP_PROTOCOL}}://{{GATEWAY_URL}}/admin/me
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{ADMIN_ACCESS_TOKEN}}
+}
+
+settings {
+  encodeUrl: true
+}

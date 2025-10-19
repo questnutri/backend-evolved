@@ -1,7 +1,7 @@
 import { ConflictException, ForbiddenException, HttpException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { LoginTokenResponse, LoginUserDto, RefreshToken, RefreshTokenDto, RegisterUserDto, User, UserRole } from "@backend-evolved/shared";
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm'
+import { In, Repository } from 'typeorm'
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { KeyService } from '../key/key.service';
@@ -156,6 +156,19 @@ export class AuthService {
         }
 
         return { ...await this.generateTokens(user), role: user.role };
+    }
+
+    async findManyByIds(ids: string[]): Promise<User[]> {
+        if (!ids.length) return [];
+        return await this.userRepository.find({
+            where: { id: In(ids) }
+        });
+    }
+
+    async findOne(where: { [key in keyof User]?: any }) {
+        const foundUser = await this.userRepository.findOneBy(where);
+        if (!foundUser) throw new NotFoundException('Nutritionist not found');
+        return foundUser;
     }
 
 }

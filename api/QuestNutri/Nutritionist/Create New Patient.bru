@@ -5,7 +5,7 @@ meta {
 }
 
 post {
-  url: http://{{GATEWAY_URL}}/nutritionist/patients
+  url: {{HTTP_PROTOCOL}}//{{GATEWAY_URL}}/nutritionist/patients
   body: json
   auth: inherit
 }

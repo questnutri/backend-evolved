@@ -1,0 +1,32 @@
+meta {
+  name: Root-Login
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{HTTP_PROTOCOL}}//{{GATEWAY_URL}}/auth/login
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "email": "admin@questnutri.com",
+    "password": ""
+  }
+}
+
+vars:pre-request {
+  email: {{ADMIN_EMAIL}}
+  password: 
+}
+
+vars:post-response {
+  ADMIN_ACCESS_TOKEN: res("accessToken")
+  ADMIN_REFRESH_TOKEN: res("refreshToken")
+}
+
+settings {
+  encodeUrl: true
+}

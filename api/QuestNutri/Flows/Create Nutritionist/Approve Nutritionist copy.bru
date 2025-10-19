@@ -5,7 +5,7 @@ meta {
 }
 
 post {
-  url: http://{{GATEWAY_URL}}/admin/approve-nutritionist
+  url: {{HTTP_PROTOCOL}}//{{GATEWAY_URL}}/admin/approve-nutritionist
   body: json
   auth: bearer
 }

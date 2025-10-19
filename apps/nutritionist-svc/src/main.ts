@@ -22,9 +22,10 @@ async function bootstrap() {
                     .setDescription('API documentation for the Nutritionist service')
                     .setVersion('1.0')
                     .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' }, 'bearer')
-                    .addServer(`${process.env.DEV_GATEWAY_URL ?? `http://localhost:${process.env.DEV_GATEWAY_PORT ?? '8080'}`}/api/v1`),
+                    .addServer(`https://questnutri.com.br/api/v1/nutritionist`)
+                    .addServer(`${process.env.DEV_GATEWAY_URL ?? `http://localhost:${process.env.DEV_GATEWAY_PORT ?? '8080'}`}/api/v1/nutritionist`),
                 {
-                    url: 'nutritionist/docs'
+                    url: 'docs'
                 }
             )
     );

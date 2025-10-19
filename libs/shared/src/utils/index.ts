@@ -6,3 +6,9 @@ export * from './nest/nest-application-builder';
 export * from './nest/generate-nest-application';
 
 export * from './meal-repeat-calculator';
+
+export * from './proxy/send-proxy-message';
+
+export * from './available-grant-managements';
+
+export * from './api/request-user.decorator';

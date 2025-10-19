@@ -1,15 +1,31 @@
 import { Controller, Get, Post, Body, Inject, UseGuards, Headers, UseFilters, InternalServerErrorException } from '@nestjs/common';
 import { NutritionistService } from './nutritionist.service';
-import { BodyCreatePatientDto, CreateNutritionistDto, CreatePatientDto, FindAllFromNutritionistPayload, ProxyMessage, Patient, PATIENT_SERVICE_PROXY_NAME, JwtRoleGuard, ControllerExceptionFilter } from '@backend-evolved/shared';
+import {
+    BodyCreatePatientDto,
+    CreateNutritionistDto,
+    CreatePatientDto,
+    FindAllFromNutritionistPayload,
+    ProxyMessage,
+    Patient,
+    PATIENT_SERVICE_PROXY_NAME,
+    JwtRoleGuard,
+    ControllerExceptionFilter,
+    ProxyMessengerFilter,
+    AUTH_SERVICE_PROXY_NAME,
+    sendProxyMessage,
+    User,
+    Nutritionist
+} from '@backend-evolved/shared';
 import { ApiOkResponse, ApiOperation, ApiConflictResponse, ApiBadRequestResponse, ApiBearerAuth, ApiSecurity, ApiCreatedResponse } from '@nestjs/swagger';
-import { ClientProxy, RpcException } from '@nestjs/microservices';
+import { ClientProxy, MessagePattern, RpcException } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
+import { timeout, retry } from 'rxjs/operators';
 
-
-@Controller('nutritionist')
+@Controller()
 export class NutritionistController {
     constructor(
         private readonly nutritionistService: NutritionistService,
+        @Inject(AUTH_SERVICE_PROXY_NAME) private readonly authServiceProxy: ClientProxy,
         @Inject(PATIENT_SERVICE_PROXY_NAME) private readonly patientServiceProxy: ClientProxy,
     ) { }
 
@@ -50,7 +66,7 @@ export class NutritionistController {
                     }
                 )
         );
-        if(result && "error" in result) {
+        if (result && "error" in result) {
             throw new RpcException(result);
         }
         return result.payload;
@@ -91,5 +107,17 @@ export class NutritionistController {
     @Get('health')
     healthCheck() {
         return { active: true };
+    }
+
+    @MessagePattern('nutritionist.getAll')
+    @UseFilters(ProxyMessengerFilter)
+    async getAll(): Promise<any> {
+        return { payload: await this.nutritionistService.findAll() };
+    }
+
+    @MessagePattern('nutritionist.getById')
+    @UseFilters(ProxyMessengerFilter)
+    async getById(id: string): Promise<ProxyMessage<Nutritionist>> {
+        return { payload: await this.nutritionistService.findOne({ id }) };
     }
 }

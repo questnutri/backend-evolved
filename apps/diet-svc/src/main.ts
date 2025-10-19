@@ -23,9 +23,10 @@ async function bootstrap() {
 					.setDescription('API documentation for the Diet Service')
 					.setVersion('1.0')
 					.addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' }, 'bearer')
-					.addServer(`${process.env.DEV_GATEWAY_URL ?? `http://localhost:${process.env.DEV_GATEWAY_PORT ?? '8080'}`}/api/v1`),
+					.addServer(`https://questnutri.com.br/api/v1/diet`)
+					.addServer(`${process.env.DEV_GATEWAY_URL ?? `http://localhost:${process.env.DEV_GATEWAY_PORT ?? '8080'}`}/api/v1/diet`),
 				{
-					url: 'diet/docs'
+					url: 'docs'
 				}
 			)
 	)

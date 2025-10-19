@@ -5,7 +5,7 @@ meta {
 }
 
 post {
-  url: http://{{GATEWAY_URL}}/diet/full
+  url: {{HTTP_PROTOCOL}}//{{GATEWAY_URL}}/diet/full
   body: json
   auth: bearer
 }

@@ -1,4 +1,12 @@
-import { Column, CreateDateColumn, Entity, OneToOne, PrimaryColumn, UpdateDateColumn } from 'typeorm';
+import { 
+    Column,
+    CreateDateColumn,
+    Entity,
+    OneToOne,
+    PrimaryColumn,
+    UpdateDateColumn,
+    JoinColumn
+} from 'typeorm';
 import {
     AdminManagementLevel,
     NutritionistManagementLevel,
@@ -20,31 +28,59 @@ export class Admin {
     })
     canBeDeleted: boolean;
 
-    @CreateDateColumn()
+    @CreateDateColumn({ name: 'created_at' })
     createdAt!: Date
 
-    @UpdateDateColumn()
+    @UpdateDateColumn({ name: 'updated_at' })
     updatedAt!: Date
 
-    @OneToOne(() => AdminManagementLevel, { cascade: true, eager: true })
+    @OneToOne(() => AdminManagementLevel, management => management.admin, {
+        cascade: true,
+        eager: true
+    })
+    @JoinColumn({ name: 'id' })
     adminManagementLevel: AdminManagementLevel;
 
-    @OneToOne(() => NutritionistManagementLevel, { cascade: true, eager: true })
+    @OneToOne(() => NutritionistManagementLevel, management => management.admin, {
+        cascade: true,
+        eager: true
+    })
+    @JoinColumn({ name: 'id' })
     nutritionistManagementLevel: NutritionistManagementLevel;
 
-    @OneToOne(() => PatientManagementLevel, { cascade: true, eager: true })
+    @OneToOne(() => PatientManagementLevel, management => management.admin, {
+        cascade: true,
+        eager: true 
+    })
+    @JoinColumn({ name: 'id' })
     patientManagementLevel: PatientManagementLevel;
 
-    @OneToOne(() => DietManagementLevel, { cascade: true, eager: true })
+    @OneToOne(() => DietManagementLevel, management => management.admin, {
+        cascade: true,
+        eager: true
+    })
+    @JoinColumn({ name: 'id' })
     dietManagementLevel: DietManagementLevel;
 
-    @OneToOne(() => RecordManagementLevel, { cascade: true, eager: true })
+    @OneToOne(() => RecordManagementLevel, management => management.admin, {
+        cascade: true,
+        eager: true
+    })
+    @JoinColumn({ name: 'id' })
     recordManagementLevel: RecordManagementLevel;
 
-    @OneToOne(() => GameManagementLevel, { cascade: true, eager: true })
+    @OneToOne(() => GameManagementLevel, management => management.admin, {
+        cascade: true,
+        eager: true
+    })
+    @JoinColumn({ name: 'id' })
     gameManagementLevel: GameManagementLevel;
 
-    @OneToOne(() => LogManagementLevel, { cascade: true, eager: true })
+    @OneToOne(() => LogManagementLevel, management => management.admin, {
+        cascade: true,
+        eager: true
+    })
+    @JoinColumn({ name: 'id' })
     logManagementLevel: LogManagementLevel;
 
 }
