@@ -13,14 +13,18 @@ export class Nutritionist {
     email: string;
 
     @Column({
+        type: 'varchar',
         unique: true,
+        nullable: true
     })
-    phone: string;
+    phone: string | null;
 
     @Column({
+        type: 'varchar',
         unique: true,
+        nullable: true
     })
-    crn: string;
+    crn: string | null;
 
     @Column({
         type: 'enum',
@@ -28,9 +32,11 @@ export class Nutritionist {
         default: DocumentType.CPF,
     })
     documentType: DocumentType;
-
+    
     @Column({
+        type: 'varchar',
         unique: true,
+        nullable: true
     })
-    documentNumber: string;
+    documentNumber: string | null;
 }

@@ -4,7 +4,7 @@ meta {
   seq: 4
 }
 
-get {
+post {
   url: {{HTTP_PROTOCOL}}://{{GATEWAY_URL}}/admin/staff/:adminId/grant-permission/:permission-type
   body: json
   auth: bearer
@@ -12,7 +12,7 @@ get {
 
 params:path {
   permission-type: admin
-  adminId: d2837ad2-5555-4547-922a-dd1eeeed2828
+  adminId: deb6c903-6d71-440e-93a1-2427ce77f4b6
 }
 
 auth:bearer {
@@ -21,7 +21,8 @@ auth:bearer {
 
 body:json {
   {
-    "canViewAdmins": true
+    "canViewAdmins": true,
+    "canViewManagementLevels": true,
   }
 }
 

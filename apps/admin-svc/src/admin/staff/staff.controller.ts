@@ -7,6 +7,10 @@ import {
     UseFilters,
     Get,
     Param,
+    Delete,
+    Put,
+    ForbiddenException,
+    NotFoundException,
 } from '@nestjs/common';
 import {
     AdminManagementLevel,
@@ -17,7 +21,8 @@ import {
     RegisterUserDto,
     ContextUser,
     sendProxyMessage,
-    User
+    User,
+    Admin
 } from '@backend-evolved/shared';
 import { ClientProxy } from '@nestjs/microservices';
 import { AdminService } from '../admin.service';
@@ -76,14 +81,28 @@ export class StaffController {
     @Get(':id')
     @UseGuards(
         JwtRoleGuard(['admin']),
-        ManagementGuard(AdminManagementLevel, "canViewAdmins")
+        ManagementGuard(AdminManagementLevel, "canViewAdminProfile")
     )
     @UseFilters(ControllerExceptionFilter)
     async getById(
         @Param('id') id: string,
         @ContextUser() applicantUser: ContextUser
     ): Promise<any> {
-        return await this.adminService.findOneById(id, applicantUser.id);
+        const foundAdmin = await this.adminService.findOneById(id, applicantUser.id);
+        if (!foundAdmin) throw new Error(`Admin with id ${id} not found`);
+
+        const userAdmin = await sendProxyMessage<User>(
+            {
+                proxy: this.authServiceProxy,
+                pattern: 'user.getOneById',
+                data: { id: foundAdmin.id },
+                options: {
+                    retry: { count: 5, delay: 50 }
+                }
+            }
+        );
+
+        return userAdmin;
     }
 
     @Post(':id/grant-permission/:permission')
@@ -109,6 +128,18 @@ export class StaffController {
             applicantId: applicantUser.id,
             permissions
         });
+    }
+
+    @Delete(':id')
+    @UseGuards(
+        JwtRoleGuard(['admin']),
+        ManagementGuard(AdminManagementLevel, "canDeleteAdmin")
+    )
+    @UseFilters(ControllerExceptionFilter)
+    async delete(
+        @Param('id') id: string,
+    ) {
+        await this.adminService.deleteOneById(id);
     }
 
 }

@@ -1,0 +1,19 @@
+meta {
+  name: delete
+  type: http
+  seq: 2
+}
+
+delete {
+  url: {{HTTP_PROTOCOL}}://{{GATEWAY_URL}}/admin/nutritionist/:nutritionistId
+  body: none
+  auth: inherit
+}
+
+params:path {
+  nutritionistId: {{LAST_REGISTERED_NUTRITIONIST}}
+}
+
+settings {
+  encodeUrl: true
+}

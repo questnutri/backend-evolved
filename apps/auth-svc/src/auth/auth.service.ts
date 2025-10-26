@@ -1,7 +1,7 @@
 import { ConflictException, ForbiddenException, HttpException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
-import { LoginTokenResponse, LoginUserDto, RefreshToken, RefreshTokenDto, RegisterUserDto, User, UserRole } from "@backend-evolved/shared";
+import { KeysOf, LoginTokenResponse, LoginUserDto, RefreshToken, RefreshTokenDto, RegisterUserDto, ROOT_ADMIN_EMAIL, ROOT_ADMIN_ID, User, UserRole } from "@backend-evolved/shared";
 import { InjectRepository } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm'
+import { In, Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { KeyService } from '../key/key.service';
@@ -78,11 +78,13 @@ export class AuthService {
         return { ...await this.generateTokens(saved.user), role: saved.user.role }
     }
 
-    async deleteUser(email: string): Promise<void> {
+    async deleteUserByEmail(email: string): Promise<void> {
+        if (email === ROOT_ADMIN_EMAIL) {
+            throw new ForbiddenException('You cannot delete this user.');
+        }
         const user = await this.userRepository.findOne({ where: { email } })
         if (!user) throw new NotFoundException(`User with email ${email} not found`)
         await this.userRepository.remove(user);
-        console.log(`User with email ${email} deleted successfully.`);
     }
 
     async generatePasswordResetToken(user: User): Promise<{ resetPassword: string }> {
@@ -158,6 +160,10 @@ export class AuthService {
         return { ...await this.generateTokens(user), role: user.role };
     }
 
+    async findAll(query?: Partial<KeysOf<User>>): Promise<User[]> {
+        return await this.userRepository.find({ where: query });
+    }
+
     async findManyByIds(ids: string[]): Promise<User[]> {
         if (!ids.length) return [];
         return await this.userRepository.find({
@@ -169,6 +175,29 @@ export class AuthService {
         const foundUser = await this.userRepository.findOneBy(where);
         if (!foundUser) throw new NotFoundException('Nutritionist not found');
         return foundUser;
+    }
+
+    async deleteOneById(id: string): Promise<void> {
+        if (id === ROOT_ADMIN_ID) {
+            throw new ForbiddenException('You cannot delete this user.');
+        }
+        const user = await this.userRepository.findOne({ where: { id } });
+        if (!user) throw new NotFoundException(`User with id ${id} not found`);
+
+        console.log("Received userId: ", id);
+
+        // Find all refresh tokens associated with this user and delete them
+        const refreshTokens = await this.refreshRepository.find({
+            where: { user: { id } },
+            relations: ['user']
+        });
+
+        if (refreshTokens.length > 0) {
+            await this.refreshRepository.remove(refreshTokens);
+        }
+
+        // Now delete the user
+        await this.userRepository.remove(user);
     }
 
 }

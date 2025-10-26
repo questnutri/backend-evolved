@@ -6,7 +6,7 @@ import {
     NotFoundException
 } from '@nestjs/common';
 import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
-import { Admin, AdminManagementLevel, AUTH_SERVICE_PROXY_NAME, ProxyMessage, RegisterUserDto, UserRole } from '@backend-evolved/shared';
+import { Admin, AdminManagementLevel, AUTH_SERVICE_PROXY_NAME, ContextUser, ProxyMessage, proxyPattern, RegisterUserDto, ROOT_ADMIN_ID, sendProxyMessage, UserRole } from '@backend-evolved/shared';
 import { EntityManager, Repository } from 'typeorm';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
@@ -19,7 +19,7 @@ export class AdminService {
         @InjectRepository(Admin) private adminRepository: Repository<Admin>,
         @InjectEntityManager() private readonly entityManager: EntityManager,
         private readonly permissionService: PermissionService
-    ) { }
+    ) {}
 
     private managementLevels: Array<keyof Admin> = [
         'adminManagementLevel',
@@ -55,6 +55,17 @@ export class AdminService {
         }
         throw new NotFoundException(`Admin with id ${id} not found`);
     }
+
+    // async updateOne(id: string, updateData: Partial<RegisterUserDto>): Promise<Partial<Admin>> {
+    //     const adminToUpdate = await this.adminRepository.findOne({ where: { id } });
+    //     if (!adminToUpdate) {
+    //         throw new NotFoundException(`Admin with id ${id} not found`);
+    //     }
+
+    //     Object.assign(adminToUpdate, updateData);
+    //     await this.adminRepository.save(adminToUpdate);
+    //     return this.cleanData(adminToUpdate);
+    // }
 
     private async adaptManagementViewPermission(applicantId: string, admin: Admin): Promise<Partial<Admin>> {
         const hasPermission = await this.permissionService.checkIfHasPermission({
@@ -111,6 +122,29 @@ export class AdminService {
         return savedAdmin;
     }
 
+    async deleteOne(admin: Admin): Promise<void> {
+        await this.adminRepository.remove(admin);
+    }
+
+    async deleteOneById(id: string): Promise<void> {
+        const foundAdmin = await this.adminRepository.findOne({ where: { id } });
+        if (!foundAdmin) throw new NotFoundException(`Admin with id ${id} not found`);
+        if (!foundAdmin.canBeDeleted) throw new ForbiddenException(`Admin with id ${id} cannot be deleted`);
+        const userDeletion = await sendProxyMessage<{ result: boolean }>(
+            {
+                proxy: this.authServiceProxy,
+                pattern: proxyPattern.user.deletionById,
+                data: { id: foundAdmin.id },
+                options: {
+                    retry: { count: 5, delay: 50 }
+                }
+            }
+        );
+        if (!userDeletion.result) {
+            throw new Error(`Failed to delete user with id ${id} from auth service`);
+        }
+        await this.adminRepository.remove(foundAdmin);
+    }
 
     // Helper function to remove IDs from management levels
     private cleanData(admin: Partial<Admin>): Admin {
@@ -139,6 +173,9 @@ export class AdminService {
             applicantId: string
         }
     ): Promise<any> {
+        if(data.targetAdmin === ROOT_ADMIN_ID) {
+            throw new ForbiddenException('You cannot modify permissions for this user.');
+        }
         const targetAdminFound = await this.adminRepository.findOne({ where: { id: data.targetAdmin } });
         if (!targetAdminFound) {
             throw new NotFoundException(`Admin with id ${data.targetAdmin} not found`);

@@ -18,12 +18,12 @@ export class AdminManagementLevel {
     @Column({
         default: false
     })
-    canModifyAdminPermissions: boolean;
+    canViewAdmins: boolean;
 
     @Column({
         default: false
     })
-    canViewAdmins: boolean;
+    canViewAdminProfile: boolean;
 
     @Column({
         default: false
@@ -45,10 +45,8 @@ export class AdminManagementLevel {
     })
     canViewManagementLevels: boolean;
 
-
     @Column({
         default: false
     })
     canGrantAdminPermissions: boolean;
-
 }

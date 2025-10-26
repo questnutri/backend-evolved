@@ -5,7 +5,7 @@ meta {
 }
 
 post {
-  url: {{HTTP_PROTOCOL}}//{{GATEWAY_URL}}/nutritionist/register
+  url: {{HTTP_PROTOCOL}}://{{GATEWAY_URL}}/nutritionist/register
   body: json
   auth: none
 }
@@ -20,6 +20,10 @@ body:json {
     "documentType": "cpf",
     "documentNumber": "{{random_cpf}}"
   }
+}
+
+vars:post-response {
+  LAST_REGISTERED_NUTRITIONIST: res.status == 201 ? res("id") : ""
 }
 
 script:pre-request {

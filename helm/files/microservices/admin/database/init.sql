@@ -10,8 +10,8 @@ CREATE TABLE IF NOT EXISTS admin (
 CREATE TABLE IF NOT EXISTS admin_management_level (
     id uuid PRIMARY KEY,
     "canToggleAdminImpersonation" boolean DEFAULT false,
-    "canModifyAdminPermissions" boolean DEFAULT false,
     "canViewAdmins" boolean DEFAULT false,
+    "canViewAdminProfile" boolean DEFAULT false,
     "canCreateAdmin" boolean DEFAULT false,
     "canUpdateAdmin" boolean DEFAULT false,
     "canDeleteAdmin" boolean DEFAULT false,
@@ -84,8 +84,8 @@ ON CONFLICT (id) DO NOTHING;
 INSERT INTO admin_management_level (
     id,
     "canToggleAdminImpersonation",
-    "canModifyAdminPermissions",
     "canViewAdmins",
+    "canViewAdminProfile",
     "canCreateAdmin",
     "canUpdateAdmin",
     "canDeleteAdmin",

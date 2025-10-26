@@ -1,17 +1,17 @@
 meta {
-  name: getOneById
+  name: delete
   type: http
-  seq: 3
+  seq: 5
 }
 
-get {
-  url: {{HTTP_PROTOCOL}}://{{GATEWAY_URL}}/admin/staff/:staffId
+delete {
+  url: {{HTTP_PROTOCOL}}://{{GATEWAY_URL}}/admin/staff/:adminId
   body: none
   auth: bearer
 }
 
 params:path {
-  staffId: deb6c903-6d71-440e-93a1-2427ce77f4b6
+  adminId: 398cbb2a-086a-449b-b4a4-cfe24e39e276
 }
 
 auth:bearer {

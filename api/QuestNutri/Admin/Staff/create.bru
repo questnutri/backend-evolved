@@ -21,6 +21,10 @@ body:json {
   }
 }
 
+vars:post-response {
+  LAST_CREATED_ADMIN: res("id")
+}
+
 script:post-response {
   if(res.status === 201) {
     bru.setVar("ADMIN_NON_ROOT_EMAIL", req.body.email);

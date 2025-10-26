@@ -11,15 +11,12 @@ import {
     JwtRoleGuard,
     ControllerExceptionFilter,
     ProxyMessengerFilter,
-    AUTH_SERVICE_PROXY_NAME,
-    sendProxyMessage,
-    User,
-    Nutritionist
+    AUTH_SERVICE_PROXY_NAME, Nutritionist,
+    proxyPattern
 } from '@backend-evolved/shared';
 import { ApiOkResponse, ApiOperation, ApiConflictResponse, ApiBadRequestResponse, ApiBearerAuth, ApiSecurity, ApiCreatedResponse } from '@nestjs/swagger';
-import { ClientProxy, MessagePattern, RpcException } from '@nestjs/microservices';
+import { ClientProxy, MessagePattern, Payload, RpcException } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
-import { timeout, retry } from 'rxjs/operators';
 
 @Controller()
 export class NutritionistController {
@@ -39,7 +36,7 @@ export class NutritionistController {
     async register(@Body() body: CreateNutritionistDto) {
         const registeredNutritionist = await this.nutritionistService.createOne(body);
         if (registeredNutritionist) {
-            return { message: `Nutritionist created successfully`, success: true };
+            return { message: `Nutritionist created successfully`, success: true, id: registeredNutritionist.id };
         }
         console.error(`Method nutritionist.controller.createOne has not returned a valid nutritionist and did not trigger any error while doing it. Returned value: ${registeredNutritionist}`);
         throw new InternalServerErrorException(`Error while creating a new account.`);
@@ -109,15 +106,28 @@ export class NutritionistController {
         return { active: true };
     }
 
-    @MessagePattern('nutritionist.getAll')
+    @MessagePattern(proxyPattern.nutritionist.getAll)
     @UseFilters(ProxyMessengerFilter)
     async getAll(): Promise<any> {
         return { payload: await this.nutritionistService.findAll() };
     }
 
-    @MessagePattern('nutritionist.getById')
+    @MessagePattern(proxyPattern.nutritionist.getById)
     @UseFilters(ProxyMessengerFilter)
-    async getById(id: string): Promise<ProxyMessage<Nutritionist>> {
-        return { payload: await this.nutritionistService.findOne({ id }) };
+    async getById(@Payload() payload: { id: string }): Promise<ProxyMessage<Nutritionist>> {
+        return { payload: await this.nutritionistService.findOne({ id: payload.id }) };
+    }
+
+    @MessagePattern(proxyPattern.nutritionist.getManyByIds)
+    @UseFilters(ProxyMessengerFilter)
+    async getManyByIds(@Payload() payload: { ids: string[] }): Promise<ProxyMessage<Nutritionist[]>> {
+        return { payload: await this.nutritionistService.findManyByIds(payload.ids) };
+    }
+
+    @MessagePattern(proxyPattern.nutritionist.softDeletionById)
+    @UseFilters(ProxyMessengerFilter)
+    async softDeleteOneById(@Payload() payload: { id: string }): Promise<ProxyMessage<{ result: boolean }>> {
+        const result = { payload: { result: await this.nutritionistService.softDeleteOneById(payload.id) } };
+        return result;
     }
 }

@@ -1,7 +1,7 @@
 import { ConflictException, HttpException, Inject, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { InjectRepository } from '@nestjs/typeorm';
-import { UserRole, RegisterUserDto, CreatePatientDto, Patient, AUTH_SERVICE_PROXY_NAME, PatientNutritionist, ServiceContract, KeysOf, ProxyMessage } from '@backend-evolved/shared';
+import { UserRole, RegisterUserDto, CreatePatientDto, Patient, AUTH_SERVICE_PROXY_NAME, PatientNutritionist, ServiceContract, KeysOf, ProxyMessage, proxyPattern } from '@backend-evolved/shared';
 import { firstValueFrom } from 'rxjs';
 import { QueryFailedError, Repository } from 'typeorm';
 
@@ -85,14 +85,13 @@ export class PatientService implements ServiceContract<Patient> {
         } catch (error: any) {
             if (!(error instanceof ConflictException)) {
                 await firstValueFrom(
-                    this.authServiceProxy.send<boolean, string>('user.deletion', patientData.email)
+                    this.authServiceProxy.send<boolean, string>(proxyPattern.user.deletionByEmail, patientData.email)
                 );
             }
 
             throw error;
         }
     }
-
 
     async updateOne(query: KeysOf<Patient>, data: Partial<Patient>): Promise<Patient | null> {
         try {

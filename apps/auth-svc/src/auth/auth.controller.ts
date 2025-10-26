@@ -1,11 +1,26 @@
-import { Controller, Post, Body, UseFilters, Res, Get, InternalServerErrorException, ForbiddenException, UseInterceptors } from '@nestjs/common';
+import { Controller, Post, Body, UseFilters, Res, Get, UseInterceptors } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { LoggingInterceptor, ProxyMessengerFilter, LoginUserDto, ProxyMessage, RefreshTokenDto, RegisterUserDto, ControllerExceptionFilter, LoginTokenResponse, userId, User, ResetPasswordDto, ForgotPasswordDto, ResetTokenResponse, ResetTokenDto, UserRole } from '@backend-evolved/shared';
+import { 
+    LoggingInterceptor,
+    ProxyMessengerFilter,
+    LoginUserDto,
+    ProxyMessage,
+    RefreshTokenDto,
+    RegisterUserDto,
+    ControllerExceptionFilter,
+    LoginTokenResponse,
+    userId,
+    User,
+    ResetPasswordDto,
+    ForgotPasswordDto,
+    ResetTokenDto,
+    KeysOf,
+    proxyPattern
+} from '@backend-evolved/shared';
 import { ApiAcceptedResponse, ApiOkResponse, ApiOperation } from '@nestjs/swagger';
 import { MessagePattern, Payload, RpcException } from '@nestjs/microservices';
-import { instanceToPlain } from 'class-transformer'
+import { instanceToPlain } from 'class-transformer';
 import { KeyService } from '../key/key.service';
-import { In } from 'typeorm';
 
 @Controller()
 export class AuthController {
@@ -18,7 +33,6 @@ export class AuthController {
     healthCheck() {
         return { active: true };
     }
-
 
     @Post('login')
     @ApiOperation({ summary: 'Login an user' })
@@ -66,19 +80,18 @@ export class AuthController {
     }
 
 
-    @MessagePattern('user.creation')
+    @MessagePattern(proxyPattern.user.creation)
     @UseFilters(ProxyMessengerFilter)
     async handleUserCreation(@Payload() data: RegisterUserDto): Promise<ProxyMessage<userId>> {
         return { payload: (await this.authService.register(data)).id };
     }
 
-    @MessagePattern('user.deletion')
+    @MessagePattern(proxyPattern.user.deletionByEmail)
     @UseFilters(ProxyMessengerFilter)
-    async handleUserDeletionByEmail(@Payload() email: string): Promise<boolean> {
-        console.log('Received user.deletion message with data:', email);
+    async handleUserDeletionByEmail(@Payload() payload: { email: string }): Promise<ProxyMessage<{ result: boolean }>> {
         try {
-            await this.authService.deleteUser(email);
-            return true;
+            await this.authService.deleteUserByEmail(payload.email);
+            return { payload: { result: true } };
         } catch (err: any) {
             console.log('Error in user.deletion handler:', err);
             throw new RpcException({
@@ -88,27 +101,36 @@ export class AuthController {
         }
     }
 
-    @MessagePattern('user.getManyByIds')
+    @MessagePattern(proxyPattern.user.getAll)
+    @UseFilters(ProxyMessengerFilter)
+    async handleGetAll(@Payload() data: { query: Partial<KeysOf<User>> }): Promise<ProxyMessage<User[]>> {
+        const users = await this.authService.findAll(data.query);
+        return { payload: users };
+    }
+
+    @MessagePattern(proxyPattern.user.getManyByIds)
+    @UseFilters(ProxyMessengerFilter)
     async handleGetManyByIds(@Payload() data: { ids: string[] }): Promise<ProxyMessage<User[]>> {
         const users = (await this.authService.findManyByIds(data.ids))
             .map(user => instanceToPlain(user) as User); //removes passwordHash
         return { payload: users };
     }
 
-    @MessagePattern('user.getOneById')
-    async getOneById(@Payload() id: string): Promise<ProxyMessage<Partial<User>>> {
-        return { payload: instanceToPlain(await this.authService.findOne({id})) };
+    @MessagePattern(proxyPattern.user.getOneById)
+    @UseFilters(ProxyMessengerFilter)
+    async getOneById(@Payload() data: { id: string }): Promise<ProxyMessage<Partial<User>>> {
+        return { payload: instanceToPlain(await this.authService.findOne({ id: data.id })) };
     }
-        
 
-    @MessagePattern('nutritionist.approval')
+
+    @MessagePattern(proxyPattern.nutritionist.approval)
     @UseFilters(ProxyMessengerFilter)
     async handleNutritionistApproval(@Payload() email: string): Promise<ProxyMessage<Partial<User>>> {
         const user = await this.authService.approveNutritionist(email);
         return { payload: instanceToPlain(user) };
     }
 
-    @MessagePattern('admin.login')
+    @MessagePattern(proxyPattern.admin.login)
     @UseFilters(ProxyMessengerFilter)
     async handleAdminLogin(@Payload() data: { email: string, password: string }): Promise<ProxyMessage<LoginTokenResponse>> {
         try {
@@ -121,5 +143,11 @@ export class AuthController {
         }
     }
 
+    @MessagePattern(proxyPattern.user.deletionById)
+    @UseFilters(ProxyMessengerFilter)
+    async handleUserDeletion(@Payload() data: { id: string }): Promise<ProxyMessage<{ result: boolean }>> {
+        await this.authService.deleteOneById(data.id);
+        return { payload: { result: true } };
+    }
 
 }
