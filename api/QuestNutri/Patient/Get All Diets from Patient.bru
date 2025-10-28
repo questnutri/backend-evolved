@@ -5,9 +5,13 @@ meta {
 }
 
 get {
-  url: {{HTTP_PROTOCOL}}//{{GATEWAY_URL}}/diet
+  url: {{HTTP_PROTOCOL}}://{{GATEWAY_URL}}/diet
   body: json
-  auth: inherit
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{NUTRITIONIST_ACCESS_TOKEN}}
 }
 
 body:json {
@@ -24,4 +28,5 @@ vars:pre-request {
 
 settings {
   encodeUrl: true
+  timeout: 0
 }

@@ -24,6 +24,14 @@ export class Food {
     @Column({ nullable: true })
     description?: string;
 
+    // --- TEMPORAL VERSIONING FIELDS ---
+    @Column({ type: 'timestamp with time zone', default: () => 'CURRENT_TIMESTAMP' })
+    validFrom: Date | null; // The date this version becomes effective
+
+    @Column({ type: 'timestamp with time zone', nullable: true })
+    validTo?: Date | null; // The date this version is superseded (exclusive end date)
+    // ----------------------------------
+
     @CreateDateColumn()
     createdAt: Date;
 
@@ -31,10 +39,12 @@ export class Food {
     updatedAt: Date;
 
     isPatientRelated(patientId: string): boolean {
+        // Must load relations to access diet (meal.diet)
         return this.meal.diet.patientId === patientId;
     }
 
     isNutritionistRelated(nutritionistId: string): boolean {
+        // Must load relations to access diet (meal.diet)
         return this.meal.diet.nutritionistId === nutritionistId;
     }
 }

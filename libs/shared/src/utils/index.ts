@@ -13,4 +13,6 @@ export * from './proxy/proxy-patterns';
 export * from './available-grant-managements';
 
 export * from './api/request-user.decorator';
+
+export * from './helpers';
 export * from './root-admin';

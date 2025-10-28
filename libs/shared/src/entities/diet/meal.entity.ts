@@ -26,6 +26,14 @@ export class Meal {
     @Column()
     hour?: string;
 
+    // --- TEMPORAL VERSIONING FIELDS ---
+    @Column({ type: 'timestamp with time zone', default: () => 'CURRENT_TIMESTAMP' })
+    validFrom: Date | null; // The date this version becomes effective
+
+    @Column({ type: 'timestamp with time zone', nullable: true })
+    validTo?: Date | null; // The date this version is superseded (exclusive end date)
+    // ----------------------------------
+
     @CreateDateColumn()
     createdAt: Date;
 

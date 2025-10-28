@@ -1,4 +1,4 @@
-import { Aliment, ALIMENT_SERVICE_PROXY_NAME, CreateFoodDto, Food, Meal, ProxyMessage, ServiceContract } from '@backend-evolved/shared';
+import { Aliment, ALIMENT_SERVICE_PROXY_NAME, Food, getUTCTodayStart, getUTCYesterdayEnd, ProxyMessage, ServiceContract } from '@backend-evolved/shared';
 import { Inject, Injectable, InternalServerErrorException } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -25,24 +25,28 @@ export class FoodService implements ServiceContract<Food> {
         } else {
             aliment = null;
         }
-        const {alimentId, ...rest} = food;
+        const { alimentId, ...rest } = food;
         return { ...rest, aliment };
     }
 
     async findAll(query: { [key in keyof Food]?: any }): Promise<Food[]> {
-        const foundValues = await this.foodRepository.find({where: query});
+        const where = { ...query, validTo: null } as any;
+        const foundValues = await this.foodRepository.find({ where });
         return Promise.all(foundValues.map(food => this.fetchAliment(food)));
     }
 
     async findOne(query: { [key in keyof Food]?: any }): Promise<Food | null> {
         if (!query || Object.keys(query).length === 0) return null;
-        const found = await this.foodRepository.findOne({ where: query, relations: ['meal'] });
+        const where = { ...query, validTo: null } as any;
+        const found = await this.foodRepository.findOne({ where, relations: ['meal'] });
         return found ? this.fetchAliment(found) : null;
     }
 
     async createOne(data: Partial<Food>): Promise<any> {
-        console.log("Creating food with data:", data);
-        const food = this.foodRepository.create(data);
+        const newValidFrom = getUTCTodayStart();
+        const foodData = { ...data, validFrom: newValidFrom, validTo: null };
+
+        const food = this.foodRepository.create(foodData);
         const saved = await this.foodRepository.save(food);
         if (saved) {
             return this.fetchAliment(saved);
@@ -51,16 +55,52 @@ export class FoodService implements ServiceContract<Food> {
     }
 
     async updateOne(query: { [key in keyof Food]?: any }, data: Partial<Food>): Promise<Food | null> {
-        const entity = await this.foodRepository.findOne({ where: query });
-        if (!entity) return null;
-        await this.foodRepository.update(entity.id, data);
-        return await this.foodRepository.findOne({ where: { id: entity.id } });
+        const currentFood = await this.foodRepository.findOne({
+            where: { ...query, validTo: null } as any
+        });
+
+        if (!currentFood) return null;
+
+        const newValidFrom = getUTCTodayStart();
+
+        if (newValidFrom.getTime() > currentFood!.validFrom!.getTime()) {
+            const yesterdayEnd = getUTCYesterdayEnd(newValidFrom);
+
+            // Close the current version's effective range
+            await this.foodRepository.update(currentFood.id, { validTo: yesterdayEnd });
+
+            // 4. Create a NEW version (temporal record)
+            const newFoodData = {
+                ...currentFood,
+                ...data,
+                validFrom: newValidFrom,
+                validTo: null,
+            };
+
+            const newFood = this.foodRepository.create(newFoodData);
+            const saved = await this.foodRepository.save(newFood);
+
+            return this.fetchAliment(saved);
+        } else {
+            // If `newValidFrom` is the same as `currentFood.validFrom` (e.g., multiple updates on the same day)
+            // Just update the existing record fields (not the versioning fields)
+            await this.foodRepository.update(currentFood.id, data);
+            const updated = await this.foodRepository.findOne({ where: { id: currentFood.id } });
+            return updated ? this.fetchAliment(updated) : null;
+        }
     }
 
     async deleteOne(query: { [key in keyof Food]?: any }): Promise<void> {
-        const entity = await this.foodRepository.findOne({ where: query });
-        if (entity) {
-            await this.foodRepository.delete(entity.id);
+        const currentFood = await this.foodRepository.findOne({
+            where: { ...query, validTo: null } as any
+        });
+
+        if (currentFood) {
+            const newValidFrom = getUTCTodayStart();
+
+            // Close the current version (effectively "deleting" it from today onwards)
+            const yesterdayEnd = getUTCYesterdayEnd(newValidFrom);
+            await this.foodRepository.update(currentFood.id, { validTo: yesterdayEnd });
         }
     }
 }

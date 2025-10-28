@@ -39,5 +39,11 @@ export class DietPlan {
     dietId: string;
 
     @ApiProperty({ description: 'List of daily plans', type: [DietDayPlan] })
-    dayPlans: DietDayPlan[];
+    plan: DietDayPlan[];
+
+    @ApiProperty({ description: 'The start date of the diet'})
+    startDate?: Date;
+
+    @ApiProperty({ description: 'The end date of the diet'})
+    endDate?: Date | null;
 }

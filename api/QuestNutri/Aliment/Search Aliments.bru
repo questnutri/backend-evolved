@@ -5,7 +5,7 @@ meta {
 }
 
 post {
-  url: {{HTTP_PROTOCOL}}//{{GATEWAY_URL}}/aliment/graphql
+  url: {{HTTP_PROTOCOL}}://{{GATEWAY_URL}}/aliment/graphql
   body: graphql
   auth: inherit
 }
@@ -15,7 +15,7 @@ body:graphql {
   aliments(
     source: null, 
     page: null, 
-    items: 5,
+    items: 2000,
     query: {
       name: null
     }
@@ -46,4 +46,5 @@ script:post-response {
 
 settings {
   encodeUrl: true
+  timeout: 0
 }

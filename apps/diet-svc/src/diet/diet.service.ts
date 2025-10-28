@@ -129,7 +129,7 @@ export class DietService implements ServiceContract<Diet> {
      * Generate diet plans for a patient within a specific date range
      * Default range: current month, one month back, one month forward
      */
-    async getDietPlanForPatient(patientId: string, length: number = 1): Promise<DietPlan[]> {
+    async getDietPlanForPatient(patientId: string, nutritionistId: string, length: number = 1): Promise<DietPlan[]> {
         const currentDate = new Date();
 
         // Calculate date range based on length (in months) - normalize to start of day
@@ -143,6 +143,7 @@ export class DietService implements ServiceContract<Diet> {
         const diets = await this.dietRepository.find({
             where: {
                 patientId,
+                nutritionistId,
                 startDate: Between(startDate, endDate)
             },
             relations: ['meals', 'meals.foods']
@@ -179,19 +180,21 @@ export class DietService implements ServiceContract<Diet> {
         const dietEnd = this.normalizeToStartOfDay(diet.endDate && diet.endDate < rangeEnd ? diet.endDate : rangeEnd);
 
         // Generate day plans for each day in the range
-        const currentDate = new Date(dietStart);
+        // Use ms-based increment to avoid local timezone/setDate pitfalls
+        let currentDate = new Date(dietStart);
         while (currentDate <= dietEnd) {
             const normalizedCurrentDate = this.normalizeToStartOfDay(currentDate);
             const dayPlan = await this.generateDayPlan(diet, normalizedCurrentDate, patientId, mealRecords);
             if (dayPlan.mealPlans.length > 0) {
                 dayPlans.push(dayPlan);
             }
-            currentDate.setDate(currentDate.getDate() + 1);
+            // increment by exact 24h in UTC ms to avoid DST/local offset shifts
+            currentDate = new Date(currentDate.getTime() + 24 * 60 * 60 * 1000);
         }
 
         return {
             dietId: diet.id,
-            dayPlans
+            plan: dayPlans
         };
     }
 
@@ -218,6 +221,13 @@ export class DietService implements ServiceContract<Diet> {
                 };
             }
 
+            // Normalize meal.repeatConfiguration.startDate to UTC start-of-day if present,
+            // otherwise use diet start date. This ensures the repeat calculator gets a UTC date-only start.
+            const repeatStartDate = mealRepeatConfig.startDate
+                ? this.normalizeToStartOfDay(new Date(mealRepeatConfig.startDate))
+                : normalizedDietStartDate;
+            mealRepeatConfig = { ...mealRepeatConfig, startDate: repeatStartDate };
+
             // Use new flexible repeat calculation
             const dietDays = diet.endDate ?
                 Math.floor((diet.endDate.getTime() - normalizedDietStartDate.getTime()) / (1000 * 60 * 60 * 24)) + 1 :
@@ -225,10 +235,11 @@ export class DietService implements ServiceContract<Diet> {
 
             // For ONCE meals, use the meal's own startDate from repeatConfiguration
             // For other types, use the diet's startDate as before
+            // Pass the normalized repeatStartDate so calculations are anchored correctly
             const shouldSchedule = MealRepeatCalculator.shouldMealBeScheduled(
                 mealRepeatConfig,
                 normalizedTargetDate,
-                normalizedDietStartDate,
+                repeatStartDate,
                 dietDays
             );
 

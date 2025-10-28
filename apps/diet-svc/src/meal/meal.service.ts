@@ -1,4 +1,4 @@
-import { CreateMealDto, Diet, KeysOf, Meal, ServiceContract, RepeatType, RepeatConfiguration } from '@backend-evolved/shared';
+import { CreateMealDto, KeysOf, Meal, ServiceContract, RepeatType, RepeatConfiguration, getUTCTodayStart, normalizeToStartOfDay, getUTCYesterdayEnd } from '@backend-evolved/shared';
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -16,14 +16,15 @@ export class MealService implements ServiceContract<Meal> {
 
     async findOne(query?: Partial<KeysOf<Meal>>): Promise<Meal | null> {
         if (!query) return null;
-        return await this.mealRepository.findOne({ where: query as any, relations: ['diet'] });
+        const where = { ...query, validTo: null } as any;
+        return await this.mealRepository.findOne({ where, relations: ['diet'] });
     }
 
     async createOne(data: Partial<Meal>): Promise<Meal> {
         if (!data.repeatConfiguration) {
             const defaultConfig: RepeatConfiguration = {
                 type: RepeatType.ONCE,
-                startDate: this.normalizeToStartOfDay(new Date()),
+                startDate: normalizeToStartOfDay(new Date()),
             };
             data.repeatConfiguration = defaultConfig;
         } else {
@@ -33,10 +34,10 @@ export class MealService implements ServiceContract<Meal> {
                 daysOfWeek: data.repeatConfiguration.daysOfWeek || undefined,
                 dayOfMonth: data.repeatConfiguration.dayOfMonth || undefined,
                 startDate: data.repeatConfiguration.startDate
-                    ? this.normalizeToStartOfDay(new Date(data.repeatConfiguration.startDate))
+                    ? normalizeToStartOfDay(new Date(data.repeatConfiguration.startDate))
                     : undefined,
                 endDate: data.repeatConfiguration.endDate
-                    ? this.normalizeToStartOfDay(new Date(data.repeatConfiguration.endDate))
+                    ? normalizeToStartOfDay(new Date(data.repeatConfiguration.endDate))
                     : undefined,
             };
         }
@@ -45,7 +46,10 @@ export class MealService implements ServiceContract<Meal> {
             data.hour = '00:00';
         }
 
-        const meal = this.mealRepository.create(data);
+        const newValidFrom = getUTCTodayStart();
+        const mealData = { ...data, validFrom: newValidFrom, validTo: null };
+
+        const meal = this.mealRepository.create(mealData);
         const saved = await this.mealRepository.save(meal);
         const reloaded = await this.mealRepository.findOne({ where: { id: saved.id }, relations: ['diet'] });
         if (reloaded && reloaded.diet) {
@@ -55,11 +59,6 @@ export class MealService implements ServiceContract<Meal> {
         return reloaded as Meal;
     }
 
-    private normalizeToStartOfDay(date: Date): Date {
-        const normalized = new Date(date);
-        normalized.setUTCHours(0, 0, 0, 0);
-        return normalized;
-    }
 
     async updateOne(query: Partial<KeysOf<Meal>>, data: Partial<Meal>): Promise<Meal | null> {
         const meal = await this.mealRepository.findOne({ where: query as any });
@@ -75,18 +74,56 @@ export class MealService implements ServiceContract<Meal> {
     }
 
     async findById(id: string) {
-        return await this.mealRepository.findOne({ where: { id }, relations: ['diet'] });
+        return await this.mealRepository.findOne({ where: { id, validTo: null } as any, relations: ['diet'] });
     }
 
     async update(id: string, data: Partial<CreateMealDto>) {
-        await this.mealRepository.update(id, data);
-        return await this.findById(id);
+        const currentMeal = await this.mealRepository.findOne({
+            where: { id, validTo: null } as any
+        });
+
+        if (!currentMeal) throw new NotFoundException('Meal not found');
+        const newValidFrom = getUTCTodayStart();
+        if (newValidFrom.getTime() > currentMeal!.validFrom!.getTime()) {
+            const yesterdayEnd = getUTCYesterdayEnd(newValidFrom);
+
+            // Close the current version's effective range
+            await this.mealRepository.update(currentMeal.id, { validTo: yesterdayEnd });
+
+            // 4. Create a NEW version (temporal record)
+            const newMealData = {
+                ...currentMeal,
+                ...data, // new data overrides old
+                validFrom: newValidFrom,
+                validTo: null,
+                diet: currentMeal.diet,
+            };
+
+            const newMeal = this.mealRepository.create(newMealData);
+            const saved = await this.mealRepository.save(newMeal);
+
+            // Re-fetch with relations for the return value
+            return await this.mealRepository.findOne({ where: { id: saved.id }, relations: ['diet'] });
+        } else {
+            // Same day update - update existing record
+            await this.mealRepository.update(currentMeal.id, data);
+            return await this.findById(currentMeal.id);
+        }
     }
 
+
     async delete(id: string) {
-        const foundMeal = await this.findById(id);
-        if (!foundMeal) throw new NotFoundException('Meal not found');
-        await this.mealRepository.delete(id);
+        const currentMeal = await this.mealRepository.findOne({
+            where: { id, validTo: null } as any
+        });
+
+        if (!currentMeal) throw new NotFoundException('Meal not found');
+
+        const newValidFrom = getUTCTodayStart();
+        const yesterdayEnd = getUTCYesterdayEnd(newValidFrom);
+
+        await this.mealRepository.update(currentMeal.id, { validTo: yesterdayEnd, isActive: false });
+        return await this.findById(currentMeal.id);
     }
 
     // Method for meal record service to get meal information with patient validation

@@ -5,14 +5,15 @@ meta {
 }
 
 post {
-  url: {{HTTP_PROTOCOL}}//{{GATEWAY_URL}}/diet
+  url: {{HTTP_PROTOCOL}}://{{GATEWAY_URL}}/diet
   body: json
   auth: inherit
 }
 
 body:json {
   {
-    "patientId": "{{patientId}}"
+    "patientId": "{{patientId}}",
+    "endDate": "2025-11-15"
   }
 }
 
@@ -32,4 +33,5 @@ script:post-response {
 
 settings {
   encodeUrl: true
+  timeout: 0
 }

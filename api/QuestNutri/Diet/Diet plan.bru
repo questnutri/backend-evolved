@@ -5,15 +5,27 @@ meta {
 }
 
 get {
-  url: {{HTTP_PROTOCOL}}//{{GATEWAY_URL}}/diet/plan
-  body: none
+  url: {{HTTP_PROTOCOL}}://{{GATEWAY_URL}}/diet/plan?length=24
+  body: json
   auth: bearer
 }
 
+params:query {
+  length: 24
+}
+
 auth:bearer {
-  token: {{PATIENT_ACCESS_TOKEN}}
+  token: {{NUTRITIONIST_ACCESS_TOKEN}}
+}
+
+body:json {
+  {
+    "patientId": "{{PATIENT_ID}}",
+    "nutritionistId": "{{NUTRITIONIST_ID}}"
+  }
 }
 
 settings {
   encodeUrl: true
+  timeout: 0
 }

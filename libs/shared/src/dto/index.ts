@@ -6,8 +6,10 @@ export * from './patient/create-patient.dto';
 
 export * from './diet/create-diet.dto';
 export * from './diet/update-diet.dto';
+export * from './diet/access-diet.dto';
 
 export * from './diet-plan.dto';
+
 
 export * from './repeat-configuration.dto';
 

@@ -1,0 +1,20 @@
+meta {
+  name: Delete specific meal
+  type: http
+  seq: 6
+}
+
+delete {
+  url: {{HTTP_PROTOCOL}}://{{GATEWAY_URL}}/diet/{{createdDiet}}/meal/:mealId
+  body: none
+  auth: inherit
+}
+
+params:path {
+  mealId: fe433f3b-7c0b-41aa-bf1a-c805c4fd5c86
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
