@@ -4,7 +4,7 @@ import {
     AUTH_SERVICE_PROXY_NAME,
     ControllerExceptionFilter,
     JwtRoleGuard,
-    LoginTokenResponse,
+    LoginResponse,
     LoginUserDto,
     ContextUser,
     sendProxyMessage
@@ -26,7 +26,7 @@ export class AdminController {
     @Post('login')
     @UseFilters(ControllerExceptionFilter)
     async login(@Body('email') email: string, @Body('password') password: string) {
-        return sendProxyMessage<LoginTokenResponse, LoginUserDto>({
+        return sendProxyMessage<LoginResponse, LoginUserDto>({
             proxy: this.authServiceProxy,
             pattern: 'admin.login',
             data: { email, password },

@@ -1,7 +1,7 @@
 import { UserRole } from "../../enums";
+import { AuthenticationTokens } from "./authentication-tokens.interface";
 
-export interface LoginTokenResponse {
-    accessToken: string;
-    refreshToken: string;
+export interface LoginResponse extends AuthenticationTokens {
     role: UserRole
+    id: string
 }

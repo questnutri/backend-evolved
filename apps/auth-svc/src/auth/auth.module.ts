@@ -1,12 +1,14 @@
 import { Module } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { AuthController } from './auth.controller';
+import { AuthRestController } from './auth-rest.controller';
 import { ConfigModule } from '@nestjs/config';
-import { provideTypeOrmDbConnection, RefreshToken, User } from '@backend-evolved/shared';
 import { JwtModule } from '@nestjs/jwt';
 import { KeyService } from '../key/key.service';
 import { KeyModule } from '../key/key.module';
 import { dbConnection } from '../database/db-connection';
+import { TokenService } from './token.service';
+import { UserService } from './user.service';
+import { AuthProxyController } from './auth-proxy.controller';
 
 @Module({
     imports: [
@@ -22,7 +24,14 @@ import { dbConnection } from '../database/db-connection';
         }),
         dbConnection(),
     ],
-    controllers: [AuthController],
-    providers: [AuthService],
+    controllers: [
+        AuthRestController,
+        AuthProxyController
+    ],
+    providers: [
+        AuthService,
+        TokenService,
+        UserService
+    ],
 })
 export class AuthModule { }
