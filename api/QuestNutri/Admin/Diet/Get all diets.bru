@@ -1,0 +1,26 @@
+meta {
+  name: Get all diets
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{HTTP_PROTOCOL}}://{{GATEWAY_URL}}/admin/diet
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{ADMIN_ACCESS_TOKEN}}
+}
+
+body:json {
+  {
+    "patientId": "{{PATIENT_ID}}",
+    "nutritionistId": "{{NUTRITIONIST_ID}}"
+  }
+}
+
+settings {
+  encodeUrl: true
+}

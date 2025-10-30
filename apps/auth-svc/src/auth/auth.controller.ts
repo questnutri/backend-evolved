@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseFilters, Res, Get, UseInterceptors } from '@nestjs/common';
+import { Controller, Post, Body, UseFilters, Res, Get, UseInterceptors, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { 
     LoggingInterceptor,
@@ -15,7 +15,11 @@ import {
     ForgotPasswordDto,
     ResetTokenDto,
     KeysOf,
-    proxyPattern
+    proxyPattern,
+    ChangePasswordDto,
+    JwtGuard,
+    ContextUser,
+    JwtRoleGuard
 } from '@backend-evolved/shared';
 import { ApiAcceptedResponse, ApiOkResponse, ApiOperation } from '@nestjs/swagger';
 import { MessagePattern, Payload, RpcException } from '@nestjs/microservices';
@@ -71,6 +75,18 @@ export class AuthController {
     @UseInterceptors(LoggingInterceptor)
     async forgotPassword(@Body() body: ForgotPasswordDto): Promise<ResetTokenDto> {
         return await this.authService.forgotPassword(body);
+    }
+
+    @Post('change-password')
+    @ApiOperation({summary: 'Changes a logged user password'})
+    @UseFilters(ControllerExceptionFilter)
+    @UseGuards(JwtRoleGuard(['admin', 'nutritionist', 'patient']))
+    async changePassword(
+        @ContextUser() ctxUser: ContextUser,
+        @Body() body: ChangePasswordDto
+    ): Promise<LoginTokenResponse> {
+        console.log(ctxUser);
+        return await this.authService.changePassword(ctxUser, body);
     }
 
     @Get('jwks.json')

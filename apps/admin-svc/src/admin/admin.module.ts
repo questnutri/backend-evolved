@@ -6,12 +6,14 @@ import { dbConnection } from '../database/db-connection';
 import { NutritionistModule } from './nutritionist/nutritionist.module';
 import { StaffModule } from './staff/staff.module';
 import { PermissionService } from '../permission/permission.service';
+import { DietModule } from './diet/diet.module';
 
 @Module({
     imports: [
         dbConnection(),
         NutritionistModule,
-        StaffModule
+        StaffModule,
+        DietModule
     ],
     controllers: [AdminController],
     providers: [

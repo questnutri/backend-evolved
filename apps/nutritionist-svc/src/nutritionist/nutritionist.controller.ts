@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Inject, UseGuards, Headers, UseFilters, InternalServerErrorException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Inject, UseGuards, Headers, UseFilters, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { NutritionistService } from './nutritionist.service';
 import {
     BodyCreatePatientDto,
@@ -12,7 +12,10 @@ import {
     ControllerExceptionFilter,
     ProxyMessengerFilter,
     AUTH_SERVICE_PROXY_NAME, Nutritionist,
-    proxyPattern
+    proxyPattern,
+    ContextUser,
+    sendProxyMessage,
+    User
 } from '@backend-evolved/shared';
 import { ApiOkResponse, ApiOperation, ApiConflictResponse, ApiBadRequestResponse, ApiBearerAuth, ApiSecurity, ApiCreatedResponse } from '@nestjs/swagger';
 import { ClientProxy, MessagePattern, Payload, RpcException } from '@nestjs/microservices';
@@ -104,6 +107,30 @@ export class NutritionistController {
     @Get('health')
     healthCheck() {
         return { active: true };
+    }
+
+    @Get('me')
+    @UseGuards(JwtRoleGuard(['nutritionist']))
+    @UseFilters(ControllerExceptionFilter)
+    async getMe(@ContextUser() user: ContextUser): Promise<any> {
+        const nutritionist = await this.nutritionistService.findOne({id: user.id});
+        if (!nutritionist) throw new NotFoundException("Nutritionist not found");
+        const userNutritionist = await sendProxyMessage<User>({
+            proxy: this.authServiceProxy,
+            pattern: proxyPattern.user.getOneById,
+            data: {id: user.id},
+            options: {
+                retry: {
+                    count: 1,
+                    delay: 5000,
+                }
+            }
+        })
+
+        return {
+            ...nutritionist,
+            ...userNutritionist
+        };
     }
 
     @MessagePattern(proxyPattern.nutritionist.getAll)

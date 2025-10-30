@@ -20,10 +20,14 @@ import {
     UpdateDietDto,
     DietPlan,
     ContextUser,
-    DietRequestBody
+    DietRequestBody,
+    ProxyMessengerFilter,
+    proxyPattern,
+    ProxyMessage
 } from '@backend-evolved/shared';
 import { FoodService } from '../food/food.service';
 import { MealService } from '../meal/meal.service';
+import { MessagePattern, Payload } from '@nestjs/microservices';
 
 // Use a UTC-based date-only formatter here to avoid timezone shifts
 function toDateOnlyString(date: Date | string | number): string {
@@ -76,6 +80,7 @@ export class DietController {
         }
     })
     @UseFilters(ControllerExceptionFilter)
+    @MessagePattern('diet.getAll')
     async getAllDiets(
         @Body() body: DietRequestBody,
         @ContextUser() ctxUser: ContextUser
@@ -261,7 +266,7 @@ export class DietController {
                         },
                         {
                             relativeDate: '2025-11-04', // Tuesday
-                            mealPlans: [ /* ... */ ]
+                            mealPlans: [ /* ... */]
                         }
                     ]
                 }
@@ -284,6 +289,14 @@ export class DietController {
         return this.mapDietPlanDates(rawPlans);
     }
 
+    @MessagePattern(proxyPattern.diet.getAll)
+    @UseFilters(ProxyMessengerFilter)
+    async handleGetAllDiets(
+        @Payload() body: DietRequestBody
+    ): Promise<ProxyMessage<Diet[]>> {
+        return { payload: await this.dietService.findAll({ patientId: body.patientId, nutritionistId: body.nutritionistId }) };
+    }
+
     @Get(':dietId')
     @ApiOperation({
         summary: 'Retrieve a specific diet by ID',
@@ -299,7 +312,7 @@ export class DietController {
     @ApiNotFoundResponse({
         description: 'Diet not found',
     })
-    @UseGuards(JwtRoleGuard(['nutritionist', 'patient']))
+    @UseGuards(JwtRoleGuard(['nutritionist', 'patient', 'admin']))
     @UseFilters(ControllerExceptionFilter)
     async findById(
         @Param('dietId') dietId: string,
@@ -330,8 +343,8 @@ export class DietController {
     @UseFilters(ControllerExceptionFilter)
     async createDiet(
         @Body() createDietDto: CreateDietDto,
-		@ContextUser() ctxUser: ContextUser,
-	): Promise<Diet> {
+        @ContextUser() ctxUser: ContextUser,
+    ): Promise<Diet> {
         if (!createDietDto.startDate) createDietDto.startDate = new Date();
         return await this.dietService.createOne({ ...createDietDto, nutritionistId: ctxUser.id });
     }

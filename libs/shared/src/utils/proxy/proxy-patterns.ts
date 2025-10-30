@@ -16,5 +16,8 @@ export const proxyPattern = {
     },
     admin: {
         login: 'admin.login'
+    },
+    diet: {
+        getAll: 'diet.getAll',
     }
 }

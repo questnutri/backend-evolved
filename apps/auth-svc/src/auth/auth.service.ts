@@ -1,5 +1,5 @@
-import { ConflictException, ForbiddenException, HttpException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
-import { KeysOf, LoginTokenResponse, LoginUserDto, RefreshToken, RefreshTokenDto, RegisterUserDto, ROOT_ADMIN_EMAIL, ROOT_ADMIN_ID, User, UserRole } from "@backend-evolved/shared";
+import { ConflictException, ForbiddenException, HttpException, Injectable, InternalServerErrorException, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { ChangePasswordDto, ContextUser, KeysOf, LoginTokenResponse, LoginUserDto, RefreshToken, RefreshTokenDto, RegisterUserDto, ROOT_ADMIN_EMAIL, ROOT_ADMIN_ID, User, UserRole } from "@backend-evolved/shared";
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
@@ -158,6 +158,20 @@ export class AuthService {
         }
 
         return { ...await this.generateTokens(user), role: user.role };
+    }
+
+    async changePassword(user: ContextUser, data: ChangePasswordDto): Promise<LoginTokenResponse> {
+        let foundUser = await this.userRepository.findOne({ where: { id: user.id } });
+        if (!foundUser) throw new NotFoundException("User not found");
+        const valid = await bcrypt.compare(data.currentPassword, foundUser.passwordHash);
+        if (!valid) throw new UnauthorizedException(`Invalid password`);
+        const newHashedPassword = await bcrypt.hash(data.newPassword, 10);
+        foundUser.passwordHash = newHashedPassword;
+        foundUser = await this.userRepository.save(foundUser, { reload: true });
+        return {
+            ...await this.generateTokens(foundUser),
+            role: foundUser.role
+        };
     }
 
     async findAll(query?: Partial<KeysOf<User>>): Promise<User[]> {
