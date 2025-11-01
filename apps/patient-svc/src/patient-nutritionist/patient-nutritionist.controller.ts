@@ -1,13 +1,13 @@
 import { Controller, UseFilters } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { PatientNutritionistService } from './patient-nutritionist.service';
-import { type FindAllFromNutritionistPayload, ProxyMessage, Patient, ProxyMessengerFilter, messageRegistry } from '@backend-evolved/shared';
+import { type FindAllFromNutritionistPayload, ProxyMessage, Patient, ProxyMessengerFilter, proxyPattern } from '@backend-evolved/shared';
 
 @Controller()
 export class PatientNutritionistController {
     constructor(private readonly patientNutritionistService: PatientNutritionistService) { }
 
-    @MessagePattern(messageRegistry.patient.findAllFromNutritionist.cmd)
+    @MessagePattern(proxyPattern.patient.findAllFromNutritionist)
     @UseFilters(ProxyMessengerFilter)
     async findAllPatients(@Payload() data: FindAllFromNutritionistPayload): Promise<ProxyMessage<Patient[]>> {
         const patientNutritionistArray = await this.patientNutritionistService.findAll({ nutritionistId: data.nutritionistId });
@@ -15,7 +15,7 @@ export class PatientNutritionistController {
         return { payload: patients };
     }
 
-    @MessagePattern('patient.isRelatedToNutritionist')
+    @MessagePattern(proxyPattern.patient.isRelatedToNutritionist)
     @UseFilters(ProxyMessengerFilter)
     async isNutritionistRelated(data: {patientId: string, nutritionistId: string}): Promise<ProxyMessage<boolean>> {
         return { payload: (await this.patientNutritionistService.findOne(data)) !== null };

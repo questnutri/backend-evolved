@@ -6,6 +6,10 @@ export const proxyPattern = {
         softDeletionById: 'nutritionist.softDeletionById',
         approval: 'nutritionist.approval'
     },
+    patient: {
+        findAllFromNutritionist: 'patient.findAllFromNutritionist',
+        isRelatedToNutritionist: 'patient.isRelatedToNutritionist'
+    },
     user: {
         getOneById: 'user.getOneById',
         getManyByIds: 'user.getManyByIds',

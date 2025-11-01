@@ -4,7 +4,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
-import { KeyService } from '../key/key.service';
+import { KeyService } from '../../key/key.service';
 import { TokenService } from './token.service';
 import { UserService } from './user.service';
 

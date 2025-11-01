@@ -1,8 +1,9 @@
 import { Module } from '@nestjs/common';
 import { NutritionistService } from './nutritionist.service';
-import { NutritionistController } from './nutritionist.controller';
+import { NutritionistRestController } from './nutritionist-rest.controller';
 import { AUTH_SERVICE_PROXY_NAME, PATIENT_SERVICE_PROXY_NAME, provideProxyService } from '@backend-evolved/shared';
 import { dbConnection } from '../database/db-connection';
+import { NutritionistProxyController } from './nutritionist-proxy.controller';
 
 
 @Module({
@@ -10,7 +11,8 @@ import { dbConnection } from '../database/db-connection';
         dbConnection()
     ],
     controllers: [
-        NutritionistController
+        NutritionistRestController,
+        NutritionistProxyController
     ],
     providers: [
         NutritionistService,

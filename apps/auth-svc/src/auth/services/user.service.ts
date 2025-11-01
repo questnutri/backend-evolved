@@ -1,5 +1,12 @@
 import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { KeysOf, RefreshToken, RegisterUserDto, ROOT_ADMIN_EMAIL, ROOT_ADMIN_ID, User } from "@backend-evolved/shared";
+import { 
+    KeysOf,
+    RefreshToken,
+    RegisterUserDto,
+    ROOT_ADMIN_EMAIL,
+    ROOT_ADMIN_ID,
+    User
+} from "@backend-evolved/shared";
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
 import * as bcrypt from 'bcrypt';

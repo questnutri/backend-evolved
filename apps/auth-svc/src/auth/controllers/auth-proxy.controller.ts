@@ -1,5 +1,5 @@
 import { Controller, UseFilters } from '@nestjs/common';
-import { AuthService } from './auth.service';
+import { AuthService } from '../services/auth.service';
 import {
     ProxyMessengerFilter, ProxyMessage, RegisterUserDto, LoginResponse,
     userId,
@@ -9,17 +9,13 @@ import {
 } from '@backend-evolved/shared';
 import { MessagePattern, Payload, RpcException } from '@nestjs/microservices';
 import { instanceToPlain } from 'class-transformer';
-import { KeyService } from '../key/key.service';
-import { UserService } from './user.service';
-import { TokenService } from './token.service';
+import { UserService } from '../services/user.service';
 
 @Controller()
 export class AuthProxyController {
     constructor(
         private readonly authService: AuthService,
         private readonly userService: UserService,
-        private readonly tokenService: TokenService,
-        private readonly keyService: KeyService
     ) { }
 
     @MessagePattern(proxyPattern.user.creation)

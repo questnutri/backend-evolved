@@ -1,14 +1,14 @@
 import { Module } from '@nestjs/common';
-import { AuthService } from './auth.service';
-import { AuthRestController } from './auth-rest.controller';
+import { AuthService } from './services/auth.service';
+import { AuthRestController } from './controllers/auth-rest.controller';
 import { ConfigModule } from '@nestjs/config';
 import { JwtModule } from '@nestjs/jwt';
 import { KeyService } from '../key/key.service';
 import { KeyModule } from '../key/key.module';
 import { dbConnection } from '../database/db-connection';
-import { TokenService } from './token.service';
-import { UserService } from './user.service';
-import { AuthProxyController } from './auth-proxy.controller';
+import { TokenService } from './services/token.service';
+import { UserService } from './services/user.service';
+import { AuthProxyController } from './controllers/auth-proxy.controller';
 
 @Module({
     imports: [

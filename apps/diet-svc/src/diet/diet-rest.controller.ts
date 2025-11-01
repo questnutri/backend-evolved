@@ -42,12 +42,36 @@ function toDateOnlyString(date: Date | string | number): string {
 @ApiTags('diets')
 @ApiBearerAuth('bearer')
 @ApiSecurity('bearer')
-export class DietController {
+export class DietRestController {
     constructor(
         private readonly dietService: DietService,
         private readonly foodService: FoodService,
         private readonly mealService: MealService
     ) { }
+
+    // Helper: map startDate/endDate on Diet and relativeDate on DietPlan dayPlans
+    private mapDietDates(diet: any): any {
+        if (!diet) return diet;
+        if (diet.startDate) diet.startDate = toDateOnlyString(diet.startDate);
+        if (diet.endDate) diet.endDate = toDateOnlyString(diet.endDate);
+        return diet;
+    }
+
+    private mapDietPlanDates(plans: DietPlan[] | any): DietPlan[] {
+        if (!plans || !Array.isArray(plans)) return plans;
+        return plans.map(plan => ({
+            ...plan,
+            dayPlans: Array.isArray(plan.dayPlans) ? plan.dayPlans.map((dp: any) => ({
+                ...dp,
+                relativeDate: toDateOnlyString((dp as any).relativeDate)
+            })) : plan.dayPlans
+        }));
+    }
+
+    @Get('health')
+    healthCheck() {
+        return { active: true };
+    }
 
     @Get()
     @ApiOperation({ summary: 'Get all diets', description: 'Retrieve all diets filtered by patientId and/or nutritionistId. Returns date-only startDate/endDate fields (YYYY-MM-DD, UTC).' })
@@ -80,7 +104,6 @@ export class DietController {
         }
     })
     @UseFilters(ControllerExceptionFilter)
-    @MessagePattern('diet.getAll')
     async getAllDiets(
         @Body() body: DietRequestBody,
         @ContextUser() ctxUser: ContextUser
@@ -89,30 +112,6 @@ export class DietController {
 
         const diets = await this.dietService.findAll({ patientId: body.patientId, nutritionistId: body.nutritionistId });
         return diets.map(diet => this.mapDietDates(diet));
-    }
-
-    // Helper: map startDate/endDate on Diet and relativeDate on DietPlan dayPlans
-    private mapDietDates(diet: any): any {
-        if (!diet) return diet;
-        if (diet.startDate) diet.startDate = toDateOnlyString(diet.startDate);
-        if (diet.endDate) diet.endDate = toDateOnlyString(diet.endDate);
-        return diet;
-    }
-
-    private mapDietPlanDates(plans: DietPlan[] | any): DietPlan[] {
-        if (!plans || !Array.isArray(plans)) return plans;
-        return plans.map(plan => ({
-            ...plan,
-            dayPlans: Array.isArray(plan.dayPlans) ? plan.dayPlans.map((dp: any) => ({
-                ...dp,
-                relativeDate: toDateOnlyString((dp as any).relativeDate)
-            })) : plan.dayPlans
-        }));
-    }
-
-    @Get('health')
-    healthCheck() {
-        return { active: true };
     }
 
     /**
@@ -282,7 +281,7 @@ export class DietController {
         @Body() body: DietRequestBody,
         @ContextUser() ctxUser: ContextUser,
         @Query('length') length?: number,
-    ): Promise<any> {
+    ): Promise<DietPlan[]> {
         this.checkLogicalAccess(ctxUser, body);
         const planLength = length && length > 0 ? length : 1;
         const rawPlans = await this.dietService.getDietPlanForPatient(body.patientId, body.nutritionistId, planLength);
@@ -316,16 +315,14 @@ export class DietController {
     @UseFilters(ControllerExceptionFilter)
     async findById(
         @Param('dietId') dietId: string,
-        @Headers() headers: any
+        @ContextUser() ctxUser: ContextUser,
     ): Promise<Diet> {
         const diet = await this.dietService.findOne({ id: dietId });
         if (!diet) {
             throw new NotFoundException("Diet not found");
         }
-        const isRelated = diet.nutritionistId === headers['user-id'] || diet.patientId === headers['user-id'];
-        if (!isRelated) {
-            throw new ForbiddenException("User not allowed to access this diet");
-        }
+        this.checkLogicalAccess(ctxUser, {patientId: diet.patientId, nutritionistId: diet.nutritionistId})
+
         const publicDiet = await this.dietService.fetchDietAlimentsPublic(diet);
         return this.mapDietDates(publicDiet);
     }

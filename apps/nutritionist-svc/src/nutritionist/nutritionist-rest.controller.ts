@@ -9,20 +9,17 @@ import {
     Patient,
     PATIENT_SERVICE_PROXY_NAME,
     JwtRoleGuard,
-    ControllerExceptionFilter,
-    ProxyMessengerFilter,
-    AUTH_SERVICE_PROXY_NAME, Nutritionist,
-    proxyPattern,
+    ControllerExceptionFilter, AUTH_SERVICE_PROXY_NAME, proxyPattern,
     ContextUser,
     sendProxyMessage,
     User
 } from '@backend-evolved/shared';
 import { ApiOkResponse, ApiOperation, ApiConflictResponse, ApiBadRequestResponse, ApiBearerAuth, ApiSecurity, ApiCreatedResponse } from '@nestjs/swagger';
-import { ClientProxy, MessagePattern, Payload, RpcException } from '@nestjs/microservices';
+import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 
 @Controller()
-export class NutritionistController {
+export class NutritionistRestController {
     constructor(
         private readonly nutritionistService: NutritionistService,
         @Inject(AUTH_SERVICE_PROXY_NAME) private readonly authServiceProxy: ClientProxy,
@@ -131,30 +128,5 @@ export class NutritionistController {
             ...nutritionist,
             ...userNutritionist
         };
-    }
-
-    @MessagePattern(proxyPattern.nutritionist.getAll)
-    @UseFilters(ProxyMessengerFilter)
-    async getAll(): Promise<any> {
-        return { payload: await this.nutritionistService.findAll() };
-    }
-
-    @MessagePattern(proxyPattern.nutritionist.getById)
-    @UseFilters(ProxyMessengerFilter)
-    async getById(@Payload() payload: { id: string }): Promise<ProxyMessage<Nutritionist>> {
-        return { payload: await this.nutritionistService.findOne({ id: payload.id }) };
-    }
-
-    @MessagePattern(proxyPattern.nutritionist.getManyByIds)
-    @UseFilters(ProxyMessengerFilter)
-    async getManyByIds(@Payload() payload: { ids: string[] }): Promise<ProxyMessage<Nutritionist[]>> {
-        return { payload: await this.nutritionistService.findManyByIds(payload.ids) };
-    }
-
-    @MessagePattern(proxyPattern.nutritionist.softDeletionById)
-    @UseFilters(ProxyMessengerFilter)
-    async softDeleteOneById(@Payload() payload: { id: string }): Promise<ProxyMessage<{ result: boolean }>> {
-        const result = { payload: { result: await this.nutritionistService.softDeleteOneById(payload.id) } };
-        return result;
     }
 }
