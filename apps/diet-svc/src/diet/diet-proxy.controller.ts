@@ -47,10 +47,11 @@ export class DietRestController {
     @MessagePattern(proxyPattern.diet.getAll)
     @UseFilters(ProxyMessengerFilter)
     async handleGetAllDiets(
-        @Payload() body: DietRequestBody
+        @Payload() payload: DietRequestBody
     ): Promise<ProxyMessage<Diet[]>> {
-        const diets = await this.dietService.findAll({ patientId: body.patientId, nutritionistId: body.nutritionistId });
+        const diets = await this.dietService.findAll({ ...payload });
         return { payload: diets.map(diet => this.mapDietDates(diet)) };
+        
     }
 
 }

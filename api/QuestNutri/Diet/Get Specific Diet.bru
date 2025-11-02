@@ -5,9 +5,17 @@ meta {
 }
 
 get {
-  url: {{HTTP_PROTOCOL}}://{{GATEWAY_URL}}/diet/{{createdDiet}}
+  url: {{HTTP_PROTOCOL}}://{{GATEWAY_URL}}/diet/:createdDiet
   body: none
-  auth: inherit
+  auth: bearer
+}
+
+params:path {
+  createdDiet: a93adba8-b929-48bf-bcc1-2cb70cd85e0f
+}
+
+auth:bearer {
+  token: {{PATIENT_ACCESS_TOKEN}}
 }
 
 vars:pre-request {
@@ -16,4 +24,5 @@ vars:pre-request {
 
 settings {
   encodeUrl: true
+  timeout: 0
 }

@@ -25,7 +25,7 @@ export class NutritionistService implements ServiceContract<Nutritionist> {
         });
     }
 
-    async findOne(where: { [key in keyof Nutritionist]?: any }) {
+    async findOneWhere(where: { [key in keyof Nutritionist]?: any }) {
         const foundNutritionist = await this.nutritionistRepository.findOneBy(where);
         if (!foundNutritionist) throw new NotFoundException('Nutritionist not found');
         return foundNutritionist;

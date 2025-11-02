@@ -7,10 +7,7 @@ import {
     UseFilters,
     Get,
     Param,
-    Delete,
-    Put,
-    ForbiddenException,
-    NotFoundException,
+    Delete
 } from '@nestjs/common';
 import {
     AdminManagementLevel,
@@ -21,18 +18,19 @@ import {
     RegisterUserDto,
     ContextUser,
     sendProxyMessage,
-    User,
-    Admin
+    User
 } from '@backend-evolved/shared';
 import { ClientProxy } from '@nestjs/microservices';
 import { AdminService } from '../admin.service';
 import { ManagementGuard } from '../../guards/management.guard';
+import { PermissionService } from '../../permission/permission.service';
 
 @Controller('staff')
 export class StaffController {
     constructor(
         private readonly adminService: AdminService,
         @Inject(AUTH_SERVICE_PROXY_NAME) private readonly authServiceProxy: ClientProxy,
+        private readonly permissionService: PermissionService
     ) { }
 
     @Post('create')
@@ -88,7 +86,21 @@ export class StaffController {
         @Param('id') id: string,
         @ContextUser() applicantUser: ContextUser
     ): Promise<any> {
-        const foundAdmin = await this.adminService.findOneById(id, applicantUser.id);
+        const canViewManagementLevels = await this.permissionService.checkIfHasPermission({
+            userId: applicantUser.id,
+            managementClass: AdminManagementLevel,
+            permissionField: "canViewManagementLevels"
+        });
+
+        console.log('canViewManagementLevels', canViewManagementLevels);
+
+        const foundAdmin = await this.adminService.findOneById(
+            id,
+            applicantUser.id,
+            {
+                adaptManagementView: !canViewManagementLevels
+            }
+        );
         if (!foundAdmin) throw new Error(`Admin with id ${id} not found`);
 
         const userAdmin = await sendProxyMessage<User>(
@@ -102,7 +114,10 @@ export class StaffController {
             }
         );
 
-        return userAdmin;
+        return {
+            ...foundAdmin,
+            ...userAdmin
+        };
     }
 
     @Post(':id/grant-permission/:permission')

@@ -51,11 +51,11 @@ export class FoodController {
     @UseFilters(ControllerExceptionFilter)
     async getOneById(@Param('mealId') mealId: string, @Param('foodId') foodId: string, @Headers() headers: any) {
         console.log("Reached here");
-        const meal = await this.mealService.findOne({ id: mealId });
+        const meal = await this.mealService.findOneWhere({ id: mealId });
         if (!meal) throw new NotFoundException('Meal not found');
         const isRelated = meal.diet.nutritionistId === headers['user-id'] || meal.diet.patientId === headers['user-id'];
         if (!isRelated) throw new ForbiddenException('User not allowed to access this food');
-        const food = await this.foodService.findOne({ id: foodId });
+        const food = await this.foodService.findOneWhere({ id: foodId });
         console.log(food);
         if (!food) throw new NotFoundException('Food not found');
         return food;
@@ -68,7 +68,7 @@ export class FoodController {
     @UseGuards(JwtRoleGuard(['nutritionist']))
     @UseFilters(ControllerExceptionFilter)
     async updateOneById(@Param('mealId') mealId: string, @Param('foodId') foodId: string, @Body() update: Partial<CreateFoodDto>, @Headers() headers: any) {
-        const meal = await this.mealService.findOne({ id: mealId });
+        const meal = await this.mealService.findOneWhere({ id: mealId });
         if (!meal) throw new NotFoundException('Meal not found');
         const isRelated = meal.diet.nutritionistId === headers['user-id'] || meal.diet.patientId === headers['user-id'];
         if (!isRelated) throw new NotFoundException(`User doesn't have this diet`);
@@ -87,7 +87,7 @@ export class FoodController {
     @UseGuards(JwtRoleGuard(['nutritionist']))
     @UseFilters(ControllerExceptionFilter)
     async deleteOneById(@Param('mealId') mealId: string, @Param('foodId') foodId: string, @Headers() headers: any) {
-        const meal = await this.mealService.findOne({ id: mealId });
+        const meal = await this.mealService.findOneWhere({ id: mealId });
         if (!meal) throw new NotFoundException('Meal not found');
         const isRelated = meal.diet.nutritionistId === headers['user-id'] || meal.diet.patientId === headers['user-id'];
         if (!isRelated) throw new NotFoundException(`User doesn't have this diet`);

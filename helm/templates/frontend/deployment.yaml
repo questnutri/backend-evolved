@@ -1,0 +1,20 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: questnutri-frontend-deployment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: questnutri-frontend-deployment
+  template:
+    metadata:
+      labels:
+        app: questnutri-frontend-deployment
+    spec:
+      containers:
+        - name: frontend
+          image: "questnutri/frontend-evolved:0.0.3"
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 80

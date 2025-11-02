@@ -14,7 +14,7 @@ export class MealService implements ServiceContract<Meal> {
         return await this.mealRepository.find({ where: query });
     }
 
-    async findOne(query?: Partial<KeysOf<Meal>>): Promise<Meal | null> {
+    async findOneWhere(query?: Partial<KeysOf<Meal>>): Promise<Meal | null> {
         if (!query) return null;
         const where = { ...query, validTo: null } as any;
         return await this.mealRepository.findOne({ where, relations: ['diet'] });

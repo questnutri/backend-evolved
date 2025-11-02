@@ -35,7 +35,7 @@ export class FoodService implements ServiceContract<Food> {
         return Promise.all(foundValues.map(food => this.fetchAliment(food)));
     }
 
-    async findOne(query: { [key in keyof Food]?: any }): Promise<Food | null> {
+    async findOneWhere(query: { [key in keyof Food]?: any }): Promise<Food | null> {
         if (!query || Object.keys(query).length === 0) return null;
         const where = { ...query, validTo: null } as any;
         const found = await this.foodRepository.findOne({ where, relations: ['meal'] });

@@ -180,7 +180,7 @@ When creating meal records, the system validates that the \`mealRelativeDate\` m
 		@Body() createMealDto: CreateMealDto,
 		@Headers() headers: any
 	) {
-		const diet = await this.dietService.findOne({ id: dietId });
+		const diet = await this.dietService.findOneWhere({ id: dietId });
 		if (!diet) throw new NotFoundException('Diet not found');
 		const isRelated = diet.nutritionistId === headers['user-id'] || diet.patientId === headers['user-id'];
 		if (!isRelated) throw new NotFoundException(`User doesn't have this diet`);
@@ -199,7 +199,7 @@ When creating meal records, the system validates that the \`mealRelativeDate\` m
 		@Body() createMealDto: any,
 		@Headers() headers: any
 	) {
-		const diet = await this.dietService.findOne({ id: dietId });
+		const diet = await this.dietService.findOneWhere({ id: dietId });
 		if (!diet) throw new NotFoundException('Diet not found');
 		const isRelated = diet.nutritionistId === headers['user-id'] || diet.patientId === headers['user-id'];
 		if (!isRelated) throw new NotFoundException(`User doesn't have this diet`);

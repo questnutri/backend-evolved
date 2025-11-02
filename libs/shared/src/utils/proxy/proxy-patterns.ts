@@ -7,11 +7,16 @@ export const proxyPattern = {
         approval: 'nutritionist.approval'
     },
     patient: {
-        findAllFromNutritionist: 'patient.findAllFromNutritionist',
+        creation: 'patient.creation',
+        getById: 'patient.getById', //data: { id: string }
+        getManyByIds: 'patient.getManyByIds',
+        getAll: 'patient.getAll', //no data
+        softDeletionById: 'patient.softDeletionById',
+        findAllFromNutritionist: 'patient.findAllFromNutritionist',//data: { nutritionistId: string }
         isRelatedToNutritionist: 'patient.isRelatedToNutritionist'
     },
     user: {
-        getOneById: 'user.getOneById',
+        getOneById: 'user.getOneById', //data: { id: string }
         getManyByIds: 'user.getManyByIds',
         getAll: 'user.getAll',
         deletionById: 'user.deletionById',

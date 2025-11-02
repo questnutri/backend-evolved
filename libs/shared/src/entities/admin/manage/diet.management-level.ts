@@ -1,6 +1,7 @@
 import { Column, Entity, JoinColumn, OneToOne, PrimaryColumn } from "typeorm";
 import { Admin } from "../admin.entity";
 
+
 @Entity('diet_management_level')
 export class DietManagementLevel {
     @PrimaryColumn({ type: 'uuid' })

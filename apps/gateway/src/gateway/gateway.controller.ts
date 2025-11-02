@@ -73,10 +73,7 @@ export class GatewayController {
         const healthChecks = services.map(async (service) => {
             let serviceUrl = this.getTarget(service);
             if (serviceUrl) {
-                if(service !== 'aliment') {
-                    serviceUrl = `${serviceUrl}/${service}`;
-                }
-                serviceStatus[service] = await this.checkServiceHealth(`${serviceUrl}`);
+                serviceStatus[service] = await this.checkServiceHealth(`${serviceUrl}/health`);
             } else {
                 serviceStatus[service] = false;
             }

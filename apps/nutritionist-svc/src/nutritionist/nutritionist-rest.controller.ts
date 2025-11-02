@@ -1,22 +1,18 @@
-import { Controller, Get, Post, Body, Inject, UseGuards, Headers, UseFilters, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Inject, UseGuards, UseFilters, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { NutritionistService } from './nutritionist.service';
 import {
     BodyCreatePatientDto,
-    CreateNutritionistDto,
-    CreatePatientDto,
-    FindAllFromNutritionistPayload,
-    ProxyMessage,
-    Patient,
+    CreateNutritionistDto, Patient,
     PATIENT_SERVICE_PROXY_NAME,
     JwtRoleGuard,
     ControllerExceptionFilter, AUTH_SERVICE_PROXY_NAME, proxyPattern,
     ContextUser,
     sendProxyMessage,
-    User
+    User,
+    IsRelatedGuard
 } from '@backend-evolved/shared';
 import { ApiOkResponse, ApiOperation, ApiConflictResponse, ApiBadRequestResponse, ApiBearerAuth, ApiSecurity, ApiCreatedResponse } from '@nestjs/swagger';
-import { ClientProxy, RpcException } from '@nestjs/microservices';
-import { firstValueFrom } from 'rxjs';
+import { ClientProxy } from '@nestjs/microservices';
 
 @Controller()
 export class NutritionistRestController {
@@ -25,6 +21,36 @@ export class NutritionistRestController {
         @Inject(AUTH_SERVICE_PROXY_NAME) private readonly authServiceProxy: ClientProxy,
         @Inject(PATIENT_SERVICE_PROXY_NAME) private readonly patientServiceProxy: ClientProxy,
     ) { }
+
+
+    @Get('health')
+    healthCheck() {
+        return { active: true };
+    }
+
+    @Get('me')
+    @UseGuards(JwtRoleGuard(['nutritionist']))
+    @UseFilters(ControllerExceptionFilter)
+    async getMe(@ContextUser() ctxUser: ContextUser): Promise<any> {
+        const nutritionist = await this.nutritionistService.findOneWhere({ id: ctxUser.id });
+        if (!nutritionist) throw new NotFoundException("Nutritionist not found");
+        const userNutritionist = await sendProxyMessage<User>({
+            proxy: this.authServiceProxy,
+            pattern: proxyPattern.user.getOneById,
+            data: { id: ctxUser.id },
+            options: {
+                retry: {
+                    count: 1,
+                    delay: 5000,
+                }
+            }
+        })
+
+        return {
+            ...nutritionist,
+            ...userNutritionist
+        };
+    }
 
     @Post('register')
     @ApiOperation({ summary: 'Register a new nutritionist' })
@@ -50,23 +76,13 @@ export class NutritionistRestController {
     @UseGuards(JwtRoleGuard(['nutritionist', 'admin']))
     @UseFilters(ControllerExceptionFilter)
     async getAllPatients(
-        @Headers() headers: { 'user-id': string },
+        @ContextUser() ctxUser: ContextUser
     ): Promise<Patient[]> {
-        const result = await firstValueFrom(
-            this.patientServiceProxy.send<
-                ProxyMessage<Patient[]>,
-                FindAllFromNutritionistPayload
-            >
-                ('patient.findAllFromNutritionist',
-                    {
-                        nutritionistId: headers['user-id']
-                    }
-                )
-        );
-        if (result && "error" in result) {
-            throw new RpcException(result);
-        }
-        return result.payload;
+        return await sendProxyMessage<Patient[]>({
+            proxy: this.patientServiceProxy,
+            pattern: proxyPattern.patient.findAllFromNutritionist,
+            data: { nutritionistId: ctxUser.id } //gets from JWT!
+        });
     }
 
     @Post('patients')
@@ -74,59 +90,25 @@ export class NutritionistRestController {
     @ApiBearerAuth('bearer')
     @ApiSecurity('bearer')
     @ApiCreatedResponse({ description: 'Patient created successfully' })
-    @UseGuards(JwtRoleGuard(['nutritionist', 'admin']))
+    @UseGuards(
+        JwtRoleGuard(['nutritionist', 'admin']),
+        IsRelatedGuard({
+            on: 'body',
+            withKeys: ['nutritionistId'],
+            adminBypass: true,
+            errorMessage: () => 'Nutritionist can only create patients for himself'
+
+        })
+    )
     @UseFilters(ControllerExceptionFilter)
     async createPatient(
-        @Headers() headers: { 'user-id': string },
         @Body() body: BodyCreatePatientDto
     ): Promise<Patient> {
-        console.log(`Trying to create a new patient for nutritionist ${headers['user-id']}`);
-        console.log(body);
-        try {
-            console.log('Sending creation request to patient service...');
-            const result = await firstValueFrom(
-                this.patientServiceProxy.send<ProxyMessage<Patient>, CreatePatientDto>
-                    ('patient.creation', { ...body, nutritionistId: headers['user-id'] }));
-            console.log('Received response from patient service:');
-            console.log(result);
-            if (result && 'error' in result) {
-                throw new RpcException(result);
-            }
-
-            return result.payload;
-
-        } catch (error) {
-            console.log(error);
-            throw error;
-        }
+        return await sendProxyMessage<Patient, BodyCreatePatientDto>({
+            proxy: this.patientServiceProxy,
+            pattern: proxyPattern.patient.creation,
+            data: body,
+        });
     }
 
-    @Get('health')
-    healthCheck() {
-        return { active: true };
-    }
-
-    @Get('me')
-    @UseGuards(JwtRoleGuard(['nutritionist']))
-    @UseFilters(ControllerExceptionFilter)
-    async getMe(@ContextUser() user: ContextUser): Promise<any> {
-        const nutritionist = await this.nutritionistService.findOne({id: user.id});
-        if (!nutritionist) throw new NotFoundException("Nutritionist not found");
-        const userNutritionist = await sendProxyMessage<User>({
-            proxy: this.authServiceProxy,
-            pattern: proxyPattern.user.getOneById,
-            data: {id: user.id},
-            options: {
-                retry: {
-                    count: 1,
-                    delay: 5000,
-                }
-            }
-        })
-
-        return {
-            ...nutritionist,
-            ...userNutritionist
-        };
-    }
 }

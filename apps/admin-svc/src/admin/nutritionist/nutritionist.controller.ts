@@ -1,11 +1,15 @@
 import { Controller, Body, Post, Inject, UseGuards, UseFilters, Get, Param, Query, Delete } from '@nestjs/common';
 import {
     AUTH_SERVICE_PROXY_NAME,
+    BodyCreatePatientDto,
     ControllerExceptionFilter,
     JwtRoleGuard,
     Nutritionist,
     NUTRITIONIST_SERVICE_PROXY_NAME,
     NutritionistManagementLevel,
+    Patient,
+    PATIENT_SERVICE_PROXY_NAME,
+    PatientManagementLevel,
     ProxyMessage,
     proxyPattern,
     sendProxyMessage,
@@ -22,7 +26,8 @@ type NutriUser = Nutritionist & User;
 export class NutritionistController {
     constructor(
         @Inject(AUTH_SERVICE_PROXY_NAME) private readonly authServiceProxy: ClientProxy,
-        @Inject(NUTRITIONIST_SERVICE_PROXY_NAME) private readonly nutritionistServiceProxy: ClientProxy
+        @Inject(NUTRITIONIST_SERVICE_PROXY_NAME) private readonly nutritionistServiceProxy: ClientProxy,
+        @Inject(PATIENT_SERVICE_PROXY_NAME) private readonly patientProxy: ClientProxy
     ) { }
 
     @Post('approve')
@@ -159,4 +164,36 @@ export class NutritionistController {
         }
         return { message: 'Failed to delete nutritionist', success: false };
     }
+
+    @Get(':id/patients')
+    @UseGuards(
+        JwtRoleGuard(['admin']),
+        ManagementGuard(NutritionistManagementLevel, "canViewNutritionistPatients")
+    )
+    @UseFilters(ControllerExceptionFilter)
+    async getNutritionistAllPatients(@Param('id') id: string) {
+        return await sendProxyMessage<Patient[]>({
+            proxy: this.patientProxy,
+            pattern: proxyPattern.patient.findAllFromNutritionist,
+            data: { nutritionistId: id }
+        });
+    }
+
+    @Post(':id/patients')
+    @UseGuards(
+        JwtRoleGuard(['admin']),
+        ManagementGuard(PatientManagementLevel, "canCreatePatient")
+    )
+    @UseFilters(ControllerExceptionFilter)
+    async createNutritionistPatient(
+        @Param('id') id: string,
+        @Body() patientData: BodyCreatePatientDto
+    ) {
+        return await sendProxyMessage<Patient>({
+            proxy: this.patientProxy,
+            pattern: proxyPattern.patient.creation,
+            data: { ...patientData, nutritionistId: id }
+        });
+    }
+
 }

@@ -1,9 +1,11 @@
 import { ConflictException, HttpException, Inject, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { InjectRepository } from '@nestjs/typeorm';
-import { UserRole, RegisterUserDto, CreatePatientDto, Patient, AUTH_SERVICE_PROXY_NAME, PatientNutritionist, ServiceContract, KeysOf, ProxyMessage, proxyPattern } from '@backend-evolved/shared';
+import { UserRole, RegisterUserDto, Patient, AUTH_SERVICE_PROXY_NAME, PatientNutritionist, ServiceContract, KeysOf, ProxyMessage, proxyPattern, BodyCreatePatientDto, NUTRITIONIST_SERVICE_PROXY_NAME, Nutritionist, sendProxyMessage } from '@backend-evolved/shared';
 import { firstValueFrom } from 'rxjs';
 import { QueryFailedError, Repository } from 'typeorm';
+
+export type TreatedPatient = Partial<Omit<Patient, 'nutritionists'>> & { nutritionists: string[] };
 
 @Injectable()
 export class PatientService implements ServiceContract<Patient> {
@@ -12,6 +14,8 @@ export class PatientService implements ServiceContract<Patient> {
         private readonly patientRepository: Repository<Patient>,
         @InjectRepository(PatientNutritionist)
         private readonly patientNutritionistRepository: Repository<PatientNutritionist>,
+
+        @Inject(NUTRITIONIST_SERVICE_PROXY_NAME) private readonly nutritionistProxy: ClientProxy,
         // @InjectRepository(Nutritionist)
         // private readonly nutritionistRepository: Repository<Nutritionist>,
         @Inject(AUTH_SERVICE_PROXY_NAME) private readonly authServiceProxy: ClientProxy,
@@ -23,17 +27,24 @@ export class PatientService implements ServiceContract<Patient> {
         });
     }
 
-    async findOne(query: KeysOf<Patient>): Promise<Patient | null> {
+    async findOneWhere(
+        query: {
+            [key: string]: any 
+        }): Promise<TreatedPatient> {
         const patient = await this.patientRepository.findOne({
             where: query,
-            relations: ['patient_nutritionist']
+            relations: ['nutritionists']
         });
-        return patient;
+        if (!patient) throw new NotFoundException('Patient not found');
+        return {
+            ...patient,
+            nutritionists: patient.nutritionists?.map(n => n.nutritionistId) || []
+        };
     }
 
     async createOne(data: Partial<Patient>): Promise<Patient> {
         // Cast data to CreatePatientDto for compatibility
-        const patientData = data as CreatePatientDto;
+        const patientData = data as BodyCreatePatientDto;
         try {
             const payload = {
                 email: patientData.email,
@@ -113,6 +124,7 @@ export class PatientService implements ServiceContract<Patient> {
             }
         }
     }
+
     async deleteOne(query: KeysOf<Patient>): Promise<void> {
         try {
             const result = await this.patientRepository.delete(query);
@@ -136,6 +148,33 @@ export class PatientService implements ServiceContract<Patient> {
             .getMany();
 
         return patients;
+    }
+
+    private async formatPatientWithNutritionists(patient: Patient): Promise<any> {
+        const nutritionists = patient?.nutritionists?.map(n => n.nutritionistId) || [];
+        let nutritionistsDetails: Partial<Nutritionist>[] = [];
+        if(nutritionists && nutritionists.length > 0) {
+            let proxyResponse = await sendProxyMessage<Nutritionist[]>({
+                proxy: this.nutritionistProxy,
+                pattern: proxyPattern.nutritionist.getManyByIds,
+                data: {ids: nutritionists},
+                options: {
+                    retry: { count: 3, delay: 2000 }
+                }
+            });
+            
+            nutritionistsDetails = proxyResponse.map(n => {
+                return {
+                    nutritionistId: n.id,
+                    name: n.name,
+                }
+            });
+
+        }
+        return {
+            ...patient,
+            nutritionists: nutritionistsDetails
+        };
     }
 
 }

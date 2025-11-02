@@ -19,7 +19,7 @@ export class AdminService {
         @InjectRepository(Admin) private adminRepository: Repository<Admin>,
         @InjectEntityManager() private readonly entityManager: EntityManager,
         private readonly permissionService: PermissionService
-    ) {}
+    ) { }
 
     private managementLevels: Array<keyof Admin> = [
         'adminManagementLevel',
@@ -41,14 +41,14 @@ export class AdminService {
         return processedAdmins;
     }
 
-    async findOneById(id: string, applicantId: string, options: {
+    async findOneById(id: string, applicantId: string, options?: {
         adaptManagementView?: boolean
-    }={adaptManagementView: true}): Promise<Partial<Admin>> {
+    }): Promise<Partial<Admin>> {
         const admin = await this.adminRepository.findOne({
             where: { id },
         });
         if (admin) {
-            const adaptedAdmin = options.adaptManagementView
+            const adaptedAdmin = options?.adaptManagementView
                 ? await this.adaptManagementViewPermission(applicantId, admin)
                 : admin;
             return this.cleanData(adaptedAdmin);
@@ -173,7 +173,7 @@ export class AdminService {
             applicantId: string
         }
     ): Promise<any> {
-        if(data.targetAdmin === ROOT_ADMIN_ID) {
+        if (data.targetAdmin === ROOT_ADMIN_ID) {
             throw new ForbiddenException('You cannot modify permissions for this user.');
         }
         const targetAdminFound = await this.adminRepository.findOne({ where: { id: data.targetAdmin } });

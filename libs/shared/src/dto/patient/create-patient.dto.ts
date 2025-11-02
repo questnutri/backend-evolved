@@ -1,16 +1,18 @@
-import { IntersectionType, ApiProperty } from "@nestjs/swagger";
+import { ApiProperty } from "@nestjs/swagger";
 import {
-    IsEnum,
     IsNotEmpty,
-    IsString,
-    ValidatorConstraint,
-    ValidatorConstraintInterface,
-    ValidationArguments,
-    Validate,
-    IsEmail
+    IsString, IsEmail
 } from 'class-validator';
 
 export class BodyCreatePatientDto {
+    @ApiProperty({
+        description: 'ID of the nutritionist creating the patient',
+        required: true,
+        example: 'nutritionist-uuid-1234',
+    })
+    @IsString()
+    nutritionistId: string;
+
     @ApiProperty({
         description: 'Name of the patient',
         required: true,
@@ -41,12 +43,4 @@ export class BodyCreatePatientDto {
         message: 'Document number must not be empty',
     })
     documentNumber: string;
-
 }
-
-
-export class CreatePatientDto extends IntersectionType(BodyCreatePatientDto) {
-    @IsString()
-    nutritionistId?: string;
-}
-

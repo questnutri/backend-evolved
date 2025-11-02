@@ -19,7 +19,7 @@ export class DietService implements ServiceContract<Diet> {
         return await this.dietRepository.find({ where: query });
     }
 
-    async findOne(query: { [key in keyof Diet]?: any }): Promise<Diet | null> {
+    async findOneWhere(query: { [key in keyof Diet]?: any }): Promise<Diet | null> {
         return await this.dietRepository.findOne({ where: query, relations: ['meals', 'meals.foods'] });
     }
 

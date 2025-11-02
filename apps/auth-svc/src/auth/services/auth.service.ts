@@ -103,6 +103,7 @@ export class AuthService {
         if (!valid) throw new UnauthorizedException(`Invalid password`);
         const newHashedPassword = await bcrypt.hash(data.newPassword, 10);
         foundUser.passwordHash = newHashedPassword;
+        await this.userService.save(foundUser);
         return await this.tokenService.loginTokenResponse(foundUser);
     }
 

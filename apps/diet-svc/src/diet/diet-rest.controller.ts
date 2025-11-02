@@ -23,7 +23,10 @@ import {
     DietRequestBody,
     ProxyMessengerFilter,
     proxyPattern,
-    ProxyMessage
+    ProxyMessage,
+    IsRelatedGuard,
+    ensureUserRelatedOrThrow,
+    UserRole
 } from '@backend-evolved/shared';
 import { FoodService } from '../food/food.service';
 import { MealService } from '../meal/meal.service';
@@ -75,7 +78,6 @@ export class DietRestController {
 
     @Get()
     @ApiOperation({ summary: 'Get all diets', description: 'Retrieve all diets filtered by patientId and/or nutritionistId. Returns date-only startDate/endDate fields (YYYY-MM-DD, UTC).' })
-    @UseGuards(JwtRoleGuard(['nutritionist', 'patient']))
     @ApiBody({
         type: DietRequestBody,
         required: true,
@@ -103,14 +105,24 @@ export class DietRestController {
             ]
         }
     })
+    @UseGuards(
+        JwtRoleGuard(['nutritionist', 'patient']),
+        IsRelatedGuard({
+            on: 'body',
+            withKeys: ['patientId', 'nutritionistId'],
+            errorMessage: (role: UserRole) => {
+                if (role === 'patient') {
+                    return 'Patients can only access their own diets.';
+                }
+                return 'Nutritionists can only access diets of their patients.';
+            }
+        })
+    )
     @UseFilters(ControllerExceptionFilter)
     async getAllDiets(
         @Body() body: DietRequestBody,
-        @ContextUser() ctxUser: ContextUser
     ): Promise<Diet[]> {
-        this.checkLogicalAccess(ctxUser, body);
-
-        const diets = await this.dietService.findAll({ patientId: body.patientId, nutritionistId: body.nutritionistId });
+        const diets = await this.dietService.findAll({...body});
         return diets.map(diet => this.mapDietDates(diet));
     }
 
@@ -192,7 +204,7 @@ export class DietRestController {
             }
 
             // Return the full created structure
-            const dietWithRelations = await this.dietService.findOne({ id: createdDiet.id });
+            const dietWithRelations = await this.dietService.findOneWhere({ id: createdDiet.id });
             const publicDiet = await this.dietService.fetchDietAlimentsPublic(dietWithRelations as Diet);
             return this.mapDietDates(publicDiet);
         } catch (err) {
@@ -275,25 +287,30 @@ export class DietRestController {
     @ApiForbiddenResponse({
         description: 'User not allowed to access this diet plan',
     })
-    @UseGuards(JwtRoleGuard(['nutritionist', 'patient']))
+    @UseGuards(
+        JwtRoleGuard(['nutritionist', 'patient']),
+        IsRelatedGuard({
+            on: 'body',
+            withKeys: ['patientId', 'nutritionistId'],
+            errorMessage: (role: UserRole) => {
+                if (role === 'patient') {
+                    return 'Patients can only access their own diet plans.';
+                }
+                if (role === 'nutritionist') {
+                    return 'Nutritionists can only access diet plans of their patients.';
+                }
+                return 'Access denied.';
+            },
+        })
+    )
     @UseFilters(ControllerExceptionFilter)
     async getDietPlan(
         @Body() body: DietRequestBody,
-        @ContextUser() ctxUser: ContextUser,
         @Query('length') length?: number,
     ): Promise<DietPlan[]> {
-        this.checkLogicalAccess(ctxUser, body);
         const planLength = length && length > 0 ? length : 1;
         const rawPlans = await this.dietService.getDietPlanForPatient(body.patientId, body.nutritionistId, planLength);
         return this.mapDietPlanDates(rawPlans);
-    }
-
-    @MessagePattern(proxyPattern.diet.getAll)
-    @UseFilters(ProxyMessengerFilter)
-    async handleGetAllDiets(
-        @Payload() body: DietRequestBody
-    ): Promise<ProxyMessage<Diet[]>> {
-        return { payload: await this.dietService.findAll({ patientId: body.patientId, nutritionistId: body.nutritionistId }) };
     }
 
     @Get(':dietId')
@@ -317,11 +334,20 @@ export class DietRestController {
         @Param('dietId') dietId: string,
         @ContextUser() ctxUser: ContextUser,
     ): Promise<Diet> {
-        const diet = await this.dietService.findOne({ id: dietId });
+        const diet = await this.dietService.findOneWhere({ id: dietId });
         if (!diet) {
             throw new NotFoundException("Diet not found");
         }
-        this.checkLogicalAccess(ctxUser, {patientId: diet.patientId, nutritionistId: diet.nutritionistId})
+
+        ensureUserRelatedOrThrow(
+            ctxUser,
+            { body: { patientId: diet.patientId, nutritionistId: diet.nutritionistId } },
+            {
+                withKeys: ['patientId', 'nutritionistId'],
+                adminBypass: true
+            }
+        )
+        // this.checkLogicalAccess(ctxUser, {patientId: diet.patientId, nutritionistId: diet.nutritionistId})
 
         const publicDiet = await this.dietService.fetchDietAlimentsPublic(diet);
         return this.mapDietDates(publicDiet);

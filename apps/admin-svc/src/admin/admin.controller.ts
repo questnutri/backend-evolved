@@ -1,21 +1,24 @@
 import { Controller, Body, Post, Inject, UseGuards, UseFilters, Get, NotFoundException } from '@nestjs/common';
 import { AdminService } from './admin.service';
-import { 
+import {
     AUTH_SERVICE_PROXY_NAME,
     ControllerExceptionFilter,
     JwtRoleGuard,
     LoginResponse,
     LoginUserDto,
     ContextUser,
-    sendProxyMessage
+    sendProxyMessage,
+    User,
+    proxyPattern
 } from '@backend-evolved/shared';
 import { ClientProxy } from '@nestjs/microservices';
+import { Admin } from 'typeorm';
 
 @Controller()
 export class AdminController {
     constructor(
         private readonly adminService: AdminService,
-        @Inject(AUTH_SERVICE_PROXY_NAME) private readonly authServiceProxy: ClientProxy
+        @Inject(AUTH_SERVICE_PROXY_NAME) private readonly authProxy: ClientProxy
     ) { }
 
     @Get('health')
@@ -27,7 +30,7 @@ export class AdminController {
     @UseFilters(ControllerExceptionFilter)
     async login(@Body('email') email: string, @Body('password') password: string) {
         return sendProxyMessage<LoginResponse, LoginUserDto>({
-            proxy: this.authServiceProxy,
+            proxy: this.authProxy,
             pattern: 'admin.login',
             data: { email, password },
             options: {
@@ -41,10 +44,23 @@ export class AdminController {
     @Get('me')
     @UseGuards(JwtRoleGuard(['admin']))
     @UseFilters(ControllerExceptionFilter)
-    async getMe(@ContextUser() user: ContextUser) {
+    async getMe(@ContextUser() user: ContextUser): Promise<Partial<Admin> & Partial<User>> {
         const admin = await this.adminService.findOneById(user.id, user.id, { adaptManagementView: false });
         if (!admin) throw new NotFoundException("Admin not found");
-        return admin;
+        const userAdmin = await sendProxyMessage<User>({
+            proxy: this.authProxy,
+            pattern: proxyPattern.user.getOneById,
+            data: { id: admin.id },
+            options: {
+                retry: {
+                    count: 2, delay: 50
+                }
+            }
+        });
+        return {
+            ...userAdmin,
+            ...admin,
+        };
     }
 
 }

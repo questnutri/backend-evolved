@@ -21,7 +21,7 @@ export class NutritionistProxyController {
     @MessagePattern(proxyPattern.nutritionist.getById)
     @UseFilters(ProxyMessengerFilter)
     async getById(@Payload() payload: { id: string }): Promise<ProxyMessage<Nutritionist>> {
-        return { payload: await this.nutritionistService.findOne({ id: payload.id }) };
+        return { payload: await this.nutritionistService.findOneWhere({ id: payload.id }) };
     }
 
     @MessagePattern(proxyPattern.nutritionist.getManyByIds)

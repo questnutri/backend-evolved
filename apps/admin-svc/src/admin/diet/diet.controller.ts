@@ -1,14 +1,23 @@
-import { Body, Controller, Get, UseFilters, UseGuards } from '@nestjs/common';
-import { DietService } from './diet.service';
-import { JwtRoleGuard } from '../../../../../libs/shared/src/guards';
-import { DietRequestBody } from '../../../../../libs/shared/src/dto';
-import { DietManagementLevel, NutritionistManagementLevel } from '../../../../../libs/shared/src/entities';
+import { Body, Controller, Get, Inject, UseFilters, UseGuards } from '@nestjs/common';
+import {
+    JwtRoleGuard,
+    DietRequestBody,
+    DietManagementLevel,
+    ControllerExceptionFilter,
+    DIET_SERVICE_PROXY_NAME,
+    sendProxyMessage,
+    Diet,
+    proxyPattern
+} from "@backend-evolved/shared";
+
 import { ManagementGuard } from '../../guards/management.guard';
-import { ControllerExceptionFilter } from '../../../../../libs/shared/src/filters';
+import { ClientProxy } from '@nestjs/microservices';
 
 @Controller('diet')
 export class DietController {
-    constructor(private readonly dietService: DietService) { }
+    constructor(
+        @Inject(DIET_SERVICE_PROXY_NAME) private readonly dietProxy: ClientProxy
+    ) { }
 
     @Get()
     @UseGuards(
@@ -19,7 +28,11 @@ export class DietController {
     async getAllDiets(
         @Body() body: DietRequestBody,
     ) {
-        return await this.dietService.getAll(body.patientId, body.nutritionistId);
+        return await sendProxyMessage<Diet[]>({
+            proxy: this.dietProxy,
+            pattern: proxyPattern.diet.getAll,
+            data: body
+        })
     }
 
 }

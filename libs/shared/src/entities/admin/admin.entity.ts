@@ -1,4 +1,4 @@
-import { 
+import {
     Column,
     CreateDateColumn,
     Entity,
@@ -28,10 +28,10 @@ export class Admin {
     })
     canBeDeleted: boolean;
 
-    @CreateDateColumn({ name: 'created_at' })
+    @CreateDateColumn({ name: 'created_at', type: 'timestamptz' })
     createdAt!: Date
 
-    @UpdateDateColumn({ name: 'updated_at' })
+    @UpdateDateColumn({ name: 'updated_at', type: 'timestamptz' })
     updatedAt!: Date
 
     @OneToOne(() => AdminManagementLevel, management => management.admin, {
@@ -50,7 +50,7 @@ export class Admin {
 
     @OneToOne(() => PatientManagementLevel, management => management.admin, {
         cascade: true,
-        eager: true 
+        eager: true
     })
     @JoinColumn({ name: 'id' })
     patientManagementLevel: PatientManagementLevel;

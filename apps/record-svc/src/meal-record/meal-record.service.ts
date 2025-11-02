@@ -140,7 +140,7 @@ export class MealRecordService implements ServiceContract<MealRecord> {
         return await this.mealRecordRepository.find({ where: query });
     }
 
-    async findOne(query: Partial<KeysOf<MealRecord>>): Promise<MealRecord | null> {
+    async findOneWhere(query: Partial<KeysOf<MealRecord>>): Promise<MealRecord | null> {
         return await this.mealRecordRepository.findOne({ where: query });
     }
 

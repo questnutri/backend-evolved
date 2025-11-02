@@ -1,13 +1,21 @@
 meta {
-  name: Create New Patient
+  name: createPatient
   type: http
   seq: 4
 }
 
 post {
-  url: {{HTTP_PROTOCOL}}://{{GATEWAY_URL}}/nutritionist/patients
+  url: {{HTTP_PROTOCOL}}://{{GATEWAY_URL}}/admin/nutritionist/:nutritionistId/patients
   body: json
-  auth: inherit
+  auth: bearer
+}
+
+params:path {
+  nutritionistId: {{NUTRITIONIST_ID}}
+}
+
+auth:bearer {
+  token: {{ADMIN_ACCESS_TOKEN}}
 }
 
 body:json {

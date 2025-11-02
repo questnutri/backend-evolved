@@ -17,7 +17,7 @@ export class PatientNutritionistService implements ServiceContract<PatientNutrit
         });
     }
 
-    async findOne(query: Partial<KeysOf<PatientNutritionist>>): Promise<PatientNutritionist | null> {
+    async findOneWhere(query: Partial<KeysOf<PatientNutritionist>>): Promise<PatientNutritionist | null> {
         const patient = await this.patientNutritionistRepository.findOne({
             where: query
         });

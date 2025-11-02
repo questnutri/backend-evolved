@@ -9,17 +9,17 @@ cd "$SCRIPT_DIR"
 
 # parse args: --service <name> | -s <name> (can be repeated or a comma-separated list)
 SELECTED=()
-PUSH_TO_HUB=false
 VERSION=""
+FORCE=false
 print_usage() {
-  echo "Usage: $0 [--service <service>]... [--version <version>] [--push]"
+  echo "Usage: $0 [--service <service>]... [--version <version>] [--force]"
   echo
   echo "Options:"
-  echo "  --service, -s <service>   Build specific service(s) (can be repeated or comma-separated)"
+  echo "  --service, -s <service>   Delete specific service(s) (can be repeated or comma-separated)"
   echo "  --version, -v <version>   Specify image version tag (default: latest)"
-  echo "  --push                    Push built images to Docker Hub after building"
+  echo "  --force, -f               Skip confirmation prompt"
   echo
-  echo "If no --service is provided, all services will be built."
+  echo "If no --service is provided, all services will be deleted."
   echo "Known services: ${SERVICES[*]}"
   exit 1
 }
@@ -43,8 +43,8 @@ if [ "$#" -gt 0 ]; then
         VERSION="$1"
         shift
         ;;
-      --push)
-        PUSH_TO_HUB=true
+      --force|-f)
+        FORCE=true
         shift
         ;;
       --help|-h)
@@ -63,7 +63,7 @@ if [ -z "$VERSION" ]; then
   VERSION="latest"
 fi
 
-# if none selected, build all
+# if none selected, delete all
 if [ "${#SELECTED[@]}" -eq 0 ]; then
   SELECTED=("${SERVICES[@]}")
 fi
@@ -86,30 +86,32 @@ for s in "${SELECTED[@]}"; do
   VALID+=("$s")
 done
 
+# Show what will be deleted
+echo "🗑️  The following images will be deleted:"
 for SERVICE in "${VALID[@]}"; do
-  echo
-  echo "🔨 Building service: $SERVICE (version: $VERSION)"
+  echo "  - questnutri/$SERVICE:$VERSION"
+done
+echo
 
-  # Priority:
-  # 1) ./<service>/Dockerfile
-  # 2) ./Dockerfile.<service>
-  # 3) ./Dockerfile.base with --build-arg SERVICE=<service>
-  if [ -d "$SERVICE" ] && [ -f "$SERVICE/Dockerfile" ]; then
-    docker build --pull -t "questnutri/$SERVICE:$VERSION" -f "$SERVICE/Dockerfile" "$SERVICE"
-  elif [ -f "Dockerfile.$SERVICE" ]; then
-    docker build --pull -t "questnutri/$SERVICE:$VERSION" -f "Dockerfile.$SERVICE" .
-  elif [ -f "Dockerfile.base" ]; then
-    docker build --pull -t "questnutri/$SERVICE:$VERSION" --build-arg SERVICE="$SERVICE" -f Dockerfile.base .
-  else
-    echo "⚠️  No Dockerfile found for $SERVICE (checked $SERVICE/Dockerfile, Dockerfile.$SERVICE, Dockerfile.base)"
+# Confirm unless --force flag is used
+if [ "$FORCE" = false ]; then
+  read -p "Continue? (y/N) " -n 1 -r
+  echo
+  if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+    echo "❌ Cancelled."
     exit 1
   fi
+fi
 
-  # Push to Docker Hub if --push flag was provided
-  if [ "$PUSH_TO_HUB" = true ]; then
-    echo "📤 Pushing questnutri/$SERVICE:$VERSION to Docker Hub..."
-    docker push "questnutri/$SERVICE:$VERSION"
-    echo "✅ Pushed questnutri/$SERVICE:$VERSION"
+# Delete images
+for SERVICE in "${VALID[@]}"; do
+  echo
+  echo "🗑️  Deleting image: questnutri/$SERVICE:$VERSION"
+  
+  if docker rmi "questnutri/$SERVICE:$VERSION" 2>/dev/null; then
+    echo "✅ Deleted questnutri/$SERVICE:$VERSION"
+  else
+    echo "⚠️  Image not found or could not delete: questnutri/$SERVICE:$VERSION"
   fi
 done
 
