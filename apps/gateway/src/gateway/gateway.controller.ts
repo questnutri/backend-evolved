@@ -1,4 +1,4 @@
-import { Controller, All, Req, Res, Headers, Get } from '@nestjs/common';
+import { Controller, All, Req, Res, Headers, Get, Redirect } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import * as http from 'http';
 import * as https from 'https';
@@ -45,6 +45,7 @@ export class GatewayController {
                     // console.log(`Health check response for ${serviceUrl}: ${res.statusCode}`);
                     resolve(res.statusCode === 200);
                 });
+                console.log(req);
 
                 req.on('error', (err) => {
                     // console.log(`Health check error for ${serviceUrl}:`, err.message);
@@ -73,7 +74,7 @@ export class GatewayController {
         const healthChecks = services.map(async (service) => {
             let serviceUrl = this.getTarget(service);
             if (serviceUrl) {
-                serviceStatus[service] = await this.checkServiceHealth(`${serviceUrl}/health`);
+                serviceStatus[service] = await this.checkServiceHealth(serviceUrl);
             } else {
                 serviceStatus[service] = false;
             }
@@ -104,33 +105,13 @@ export class GatewayController {
         const splat = (req as Request).params?.splat || [];
         const choosedService = splat.at(0);
         const targetBase = this.getTarget(choosedService);
-        // console.log(`Proxying request for ${req.path} to ${targetBase}`);
-        // console.log(`Original URL: ${req.url}`);
-        // console.log(`Splat array:`, splat);
-        // console.log(`ADD_SERVICE_PREFIX flag: ${this.ADD_SERVICE_PREFIX}`);
+
         if (!targetBase) {
             console.log(`No service found for ${choosedService}`);
             return res.status(502).json({ error: 'No target service configured for this path' });
         }
 
         let decoded: any = null;
-
-        // if (authHeader) {
-        //     try {
-        //         decoded = jwt.verify(
-        //             authHeader?.replace('Bearer ', '') || '',
-        //             process.env.JWT_SECRET as string
-        //         ) as jwt.JwtPayload;
-        //     } catch (error: any) {
-        //         if (error instanceof jwt.TokenExpiredError) {
-        //             throw new BadRequestException('Token expired');
-        //         } else if (error instanceof jwt.JsonWebTokenError) {
-        //             console.log(`Access failed due an invalid token`);
-        //             console.log(error);
-        //             throw new BadRequestException('Invalid token');
-        //         }
-        //     }
-        // }
 
         let forwardedPath: string;
         if (Array.isArray(splat) && splat.length > 1 && splat[1] === 'graphql') {

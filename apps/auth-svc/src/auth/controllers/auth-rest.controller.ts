@@ -18,6 +18,7 @@ import {
     ContextUser,
     JwtRoleGuard,
     ResetPasswordResponse,
+    ROOT_ADMIN_EMAIL,
 } from '@backend-evolved/shared';
 import {
     ApiAcceptedResponse,
@@ -79,6 +80,7 @@ export class AuthRestController {
     @ApiOkResponse({ description: 'Returns a password reset token to be sent to the user.' })
     @UseFilters(ControllerExceptionFilter)
     async forgotPassword(@Body() body: ForgotPasswordDto): Promise<ResetPasswordResponse> {
+        if(body.email === ROOT_ADMIN_EMAIL) return {}
         return await this.authService.forgotPassword(body.email);
     }
 
