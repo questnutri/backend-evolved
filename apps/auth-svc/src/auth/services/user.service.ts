@@ -1,5 +1,5 @@
 import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
-import { 
+import {
     KeysOf,
     RefreshToken,
     RegisterUserDto,
@@ -76,11 +76,24 @@ export class UserService {
 
 
     async deleteOneByEmail(email: string): Promise<void> {
+        console.log("Received email for deletion: ", email);
         if (email === ROOT_ADMIN_EMAIL) {
             throw new ForbiddenException('You cannot delete this user.');
         }
         const user = await this.userRepository.findOne({ where: { email } });
         if (!user) throw new NotFoundException(`User with email ${email} not found`);
+
+        console.log("Found user for deletion: ", user);
+
+        const refreshTokens = await this.refreshRepository.find({
+            where: { user: { id: user.id } },
+            relations: ['user']
+        });
+
+        if (refreshTokens.length > 0) {
+            await this.refreshRepository.remove(refreshTokens);
+        }
+
         await this.userRepository.remove(user);
     }
 

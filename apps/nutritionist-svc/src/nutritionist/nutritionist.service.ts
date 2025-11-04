@@ -54,7 +54,7 @@ export class NutritionistService implements ServiceContract<Nutritionist> {
             const userDeletionResult = await sendProxyMessage({
                 proxy: this.authServiceProxy,
                 pattern: proxyPattern.user.deletionById,
-                data: userId
+                data: { id: userId }
             });
             console.log('User deletion result after nutritionist creation failure:', userDeletionResult);
             throw new InternalServerErrorException('Failed to create nutritionist: ' + (error?.detail ?? 'unknown'));
@@ -63,9 +63,9 @@ export class NutritionistService implements ServiceContract<Nutritionist> {
 
     async updateOneById(id: string, data: Partial<CreateNutritionistDto>) {
         try {
-            const result = await this.nutritionistRepository.update({id}, data);
+            const result = await this.nutritionistRepository.update({ id }, data);
             if (result.affected === 0) throw new NotFoundException('Nutritionist not found');
-            return await this.nutritionistRepository.findOne({where: {id}});
+            return await this.nutritionistRepository.findOne({ where: { id } });
         } catch (error: any) {
             if (error instanceof HttpException) {
                 throw error;
@@ -83,7 +83,7 @@ export class NutritionistService implements ServiceContract<Nutritionist> {
     }
 
     async deleteOneById(id: string): Promise<void> {
-        const nutritionist = await this.nutritionistRepository.findOne({where: {id}});
+        const nutritionist = await this.nutritionistRepository.findOne({ where: { id } });
         if (!nutritionist) throw new NotFoundException('Nutritionist not found');
         try {
             await this.nutritionistRepository.remove(nutritionist);
