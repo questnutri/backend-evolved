@@ -1,4 +1,8 @@
-import { NestApplicationBuilder, generateNestApplication } from '@backend-evolved/shared';
+import { 
+    NestApplicationBuilder,
+    generateNestApplication,
+    provideJaegerTracing
+} from '@backend-evolved/shared';
 import { AdminModule } from './admin/admin.module';
 import { DocumentBuilder } from '@nestjs/swagger';
 
@@ -6,7 +10,8 @@ async function bootstrap() {
     await generateNestApplication(
         NestApplicationBuilder
             .forModule(AdminModule)
-            .setName('Admin Service')
+            .setServiceName('Admin Service')
+            .setJaeger('admin-svc')
             .setPort(process.env.DEV_ADMIN_SERVICE_PORT || '3000')
             .setPipe({
                 whitelist: true,

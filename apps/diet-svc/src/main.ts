@@ -1,7 +1,3 @@
-/**
- * This is not a production server yet!
- * This is only a minimal backend to get started.
- */
 import { generateNestApplication, NestApplicationBuilder } from "@backend-evolved/shared";
 import { DocumentBuilder } from '@nestjs/swagger';
 import { ServiceModule } from "./service/service.module";
@@ -9,7 +5,8 @@ import { ServiceModule } from "./service/service.module";
 async function bootstrap() {
 	await generateNestApplication(
 		NestApplicationBuilder.forModule(ServiceModule)
-			.setName("Diet Service")
+			.setServiceName("Diet Service")
+			.setJaeger('diet-svc')
 			.setPort(process.env.DEV_DIET_SERVICE_PORT || '3000')
 			.setQueueName('diet_queue')
 			.setPipe({

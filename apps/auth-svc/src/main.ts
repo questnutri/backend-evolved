@@ -1,12 +1,13 @@
 import { AuthModule } from './auth/auth.module';
 import { DocumentBuilder } from '@nestjs/swagger';
-import { NestApplicationBuilder, generateNestApplication } from '@backend-evolved/shared';
+import { NestApplicationBuilder, generateNestApplication, provideJaegerTracing } from '@backend-evolved/shared';
 
 async function bootstrap() {
     await generateNestApplication(
         NestApplicationBuilder
             .forModule(AuthModule)
-            .setName('Authentication Service')
+            .setServiceName('Authentication Service')
+            .setJaeger('auth-svc')
             .setPort(process.env.DEV_AUTH_SERVICE_PORT || '3000')
             .setQueueName('auth_queue')
             .setPipe({

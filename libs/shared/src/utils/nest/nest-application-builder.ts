@@ -3,8 +3,8 @@ import { NestFactory } from '@nestjs/core';
 import { MicroserviceOptions } from '@nestjs/microservices';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { provideRabbitMqConnection } from '../rabbitmq/provide-rabbitmq-connection';
+import { provideJaegerTracing } from '../../providers';
 type IEntryNestModule = Type<any> | DynamicModule | ForwardReference | Promise<IEntryNestModule>;
-
 
 export class NestApplicationBuilder {
     private module: IEntryNestModule;
@@ -17,6 +17,7 @@ export class NestApplicationBuilder {
     private serviceName: string = 'Application';
     private exceptionFilters: ExceptionFilter[] = [];
     private globalPrefix: string | undefined;
+    private jaegerServiceName: string | undefined;
 
 
     private constructor(module: IEntryNestModule, options?: NestApplicationOptions) {
@@ -28,8 +29,13 @@ export class NestApplicationBuilder {
         return new NestApplicationBuilder(module, options);
     }
 
-    setName(name: string): NestApplicationBuilder {
+    setServiceName(name: string): NestApplicationBuilder {
         this.serviceName = name;
+        return this;
+    }
+
+    setJaeger(name: string) {
+        this.jaegerServiceName = name;
         return this;
     }
 
@@ -51,7 +57,7 @@ export class NestApplicationBuilder {
         return this;
     }
 
-        setQueueName(queue: string): NestApplicationBuilder {
+    setQueueName(queue: string): NestApplicationBuilder {
         this.rabbitMqQueue = queue;
         return this;
     }
@@ -75,6 +81,14 @@ export class NestApplicationBuilder {
     }
 
     async getApp() {
+        if(this.jaegerServiceName) {
+            const jaeger = provideJaegerTracing({
+                serviceName: this.jaegerServiceName,
+                endpoint: process.env.JAEGER_ENDPOINT,
+            });
+            jaeger.useFactory();
+        }
+
         const app = await NestFactory.create(this.module, this.nestAppOptions);
 
         if (this.globalPrefix) {

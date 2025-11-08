@@ -6,7 +6,8 @@ async function bootstrap() {
     await generateNestApplication(
         NestApplicationBuilder
             .forModule(ServiceModule)
-            .setName('Record Service')
+            .setServiceName('Record Service')
+            .setJaeger('record-svc')
             .setPort(process.env.DEV_RECORD_SERVICE_PORT ?? '3000')
             .setQueueName('record_queue')
             .setPipe({

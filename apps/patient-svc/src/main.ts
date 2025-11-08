@@ -6,7 +6,8 @@ async function bootstrap() {
     await generateNestApplication(
         NestApplicationBuilder
             .forModule(ServiceModule)
-            .setName('Patient Service')
+            .setServiceName('Patient Service')
+            .setJaeger('patient-svc')
             .setPort(process.env.DEV_PATIENT_SERVICE_PORT ?? '3000')
             .setQueueName('patient_queue')
             .setPipe({
