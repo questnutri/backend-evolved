@@ -11,12 +11,14 @@ cd "$SCRIPT_DIR"
 SELECTED=()
 VERSION=""
 FORCE=false
+ALL_VERSIONS=false
 print_usage() {
-  echo "Usage: $0 [--service <service>]... [--version <version>] [--force]"
+  echo "Usage: $0 [--service <service>]... [--version <version>] [--all-versions] [--force]"
   echo
   echo "Options:"
   echo "  --service, -s <service>   Delete specific service(s) (can be repeated or comma-separated)"
   echo "  --version, -v <version>   Specify image version tag (default: latest)"
+  echo "  --all-versions, -a        Delete all versions of the image(s), including <none> tags"
   echo "  --force, -f               Skip confirmation prompt"
   echo
   echo "If no --service is provided, all services will be deleted."
@@ -43,6 +45,10 @@ if [ "$#" -gt 0 ]; then
         VERSION="$1"
         shift
         ;;
+      --all-versions|-a)
+        ALL_VERSIONS=true
+        shift
+        ;;
       --force|-f)
         FORCE=true
         shift
@@ -56,11 +62,6 @@ if [ "$#" -gt 0 ]; then
         ;;
     esac
   done
-fi
-
-# if no version specified, use latest
-if [ -z "$VERSION" ]; then
-  VERSION="latest"
 fi
 
 # if none selected, delete all
@@ -89,7 +90,14 @@ done
 # Show what will be deleted
 echo "🗑️  The following images will be deleted:"
 for SERVICE in "${VALID[@]}"; do
-  echo "  - questnutri/$SERVICE:$VERSION"
+  if [ "$ALL_VERSIONS" = true ]; then
+    docker images --format "{{.Repository}}:{{.Tag}} {{.ID}}" | grep "^questnutri/$SERVICE:" | awk '{print $1 " (" $2 ")"}' || echo "  - No images found for questnutri/$SERVICE"
+    # Also show <none> tags for this repo
+    docker images --format "{{.Repository}}:{{.Tag}} {{.ID}}" | grep "^questnutri/$SERVICE:<none>" | awk '{print $1 " (" $2 ")"}'
+  else
+    TAG="${VERSION:-latest}"
+    echo "  - questnutri/$SERVICE:$TAG"
+  fi
 done
 echo
 
@@ -105,13 +113,45 @@ fi
 
 # Delete images
 for SERVICE in "${VALID[@]}"; do
-  echo
-  echo "🗑️  Deleting image: questnutri/$SERVICE:$VERSION"
-  
-  if docker rmi "questnutri/$SERVICE:$VERSION" 2>/dev/null; then
-    echo "✅ Deleted questnutri/$SERVICE:$VERSION"
+  if [ "$ALL_VERSIONS" = true ]; then
+    # Get all images for this service, including <none> tags
+    IMAGE_IDS=$(docker images --format "{{.Repository}}:{{.Tag}} {{.ID}}" | grep "^questnutri/$SERVICE:" | awk '{print $2}' | sort -u)
+    if [ -z "$IMAGE_IDS" ]; then
+      echo "⚠️  No images found for questnutri/$SERVICE"
+    else
+      for IMAGE_ID in $IMAGE_IDS; do
+        if [ "$IMAGE_ID" != "<none>" ]; then
+          echo
+          echo "🗑️  Deleting image ID: $IMAGE_ID"
+          if docker rmi "$IMAGE_ID" 2>/dev/null; then
+            echo "✅ Deleted $IMAGE_ID"
+          else
+            echo "⚠️  Image not found or could not delete: $IMAGE_ID"
+          fi
+        fi
+      done
+      # Now delete <none> tags for this repo
+      NONE_IDS=$(docker images --format "{{.Repository}}:{{.Tag}} {{.ID}}" | grep "^questnutri/$SERVICE:<none>" | awk '{print $2}' | sort -u)
+      for NONE_ID in $NONE_IDS; do
+        echo
+        echo "🗑️  Deleting <none> image ID: $NONE_ID"
+        if docker rmi "$NONE_ID" 2>/dev/null; then
+          echo "✅ Deleted $NONE_ID"
+        else
+          echo "⚠️  <none> image not found or could not delete: $NONE_ID"
+        fi
+      done
+    fi
   else
-    echo "⚠️  Image not found or could not delete: questnutri/$SERVICE:$VERSION"
+    TAG="${VERSION:-latest}"
+    IMAGE="questnutri/$SERVICE:$TAG"
+    echo
+    echo "🗑️  Deleting image: $IMAGE"
+    if docker rmi "$IMAGE" 2>/dev/null; then
+      echo "✅ Deleted $IMAGE"
+    else
+      echo "⚠️  Image not found or could not delete: $IMAGE"
+    fi
   fi
 done
 

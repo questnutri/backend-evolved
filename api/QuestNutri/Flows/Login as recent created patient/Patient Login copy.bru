@@ -23,8 +23,12 @@ vars:pre-request {
 }
 
 script:post-response {
-  if(res.status === 200 && res("firstLogin")) {
-    bru.setVar("RESET_PASSWORD_TOKEN" ,res("resetPassword"));
+  if(res.status === 200) {
+    if(res("firstLogin")) {
+    bru.setVar("RESET_PASSWORD_TOKEN", res("resetPassword"));
+  }else {
+    bru.setVar("PATIENT_ACCESS_TOKEN",res("accessToken"));
+  }
   }
   
   if(res.status !== 200) {
@@ -34,4 +38,5 @@ script:post-response {
 
 settings {
   encodeUrl: true
+  timeout: 0
 }

@@ -7,17 +7,19 @@ source ./services.sh
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$SCRIPT_DIR"
 
-# parse args: --service <name> | -s <name> (can be repeated or a comma-separated list)
+# parse args: --service <name> | -s <name> (can be repeated or comma-separated list)
 SELECTED=()
 PUSH_TO_HUB=false
 VERSION=""
+DO_BUILD=false
 print_usage() {
-  echo "Usage: $0 [--service <service>]... [--version <version>] [--push]"
+  echo "Usage: $0 [--service <service>]... [--version <version>] [--push] [--build]"
   echo
   echo "Options:"
   echo "  --service, -s <service>   Build specific service(s) (can be repeated or comma-separated)"
-  echo "  --version, -v <version>   Specify image version tag (default: latest)"
+  echo "  --version, -v <version>   Specify image version tag (default: extracted from package.json or latest)"
   echo "  --push                    Push built images to Docker Hub after building"
+  echo "  --build, -b               Run nx build for selected services before building Docker images"
   echo
   echo "If no --service is provided, all services will be built."
   echo "Known services: ${SERVICES[*]}"
@@ -43,8 +45,12 @@ if [ "$#" -gt 0 ]; then
         VERSION="$1"
         shift
         ;;
-      --push)
+      --push|-p)
         PUSH_TO_HUB=true
+        shift
+        ;;
+      --build|-b)
+        DO_BUILD=true
         shift
         ;;
       --help|-h)
@@ -56,11 +62,6 @@ if [ "$#" -gt 0 ]; then
         ;;
     esac
   done
-fi
-
-# if no version specified, use latest
-if [ -z "$VERSION" ]; then
-  VERSION="latest"
 fi
 
 # if none selected, build all
@@ -86,20 +87,52 @@ for s in "${SELECTED[@]}"; do
   VALID+=("$s")
 done
 
+# If --build/-b is set, run nx build for each selected service
+if [ "$DO_BUILD" = true ]; then
+  NX_BUILD_ARGS=()
+  for SERVICE in "${VALID[@]}"; do
+    NX_BUILD_ARGS+=("-p" "$SERVICE")
+  done
+  echo "🏗️  Running: npx nx run-many -t build ${NX_BUILD_ARGS[*]}"
+  npx nx run-many -t build "${NX_BUILD_ARGS[@]}"
+fi
+
 for SERVICE in "${VALID[@]}"; do
+  # --- Version extraction logic ---
+  VERSION_TO_USE="$VERSION"
+  if [ -z "$VERSION" ]; then
+    PKG_JSON_PATH="apps/$SERVICE/package.json"
+    if [ -f "$PKG_JSON_PATH" ]; then
+      if command -v jq >/dev/null 2>&1; then
+        EXTRACTED_VERSION=$(jq -r '.version // empty' "$PKG_JSON_PATH")
+      else
+        EXTRACTED_VERSION=$(grep '"version"' "$PKG_JSON_PATH" | head -1 | sed -E 's/.*"version": *"([^"]+)".*/\1/')
+      fi
+      if [ -n "$EXTRACTED_VERSION" ]; then
+        VERSION_TO_USE="$EXTRACTED_VERSION"
+      else
+        echo "⚠️  Could not extract version from $PKG_JSON_PATH, using 'latest'"
+        VERSION_TO_USE="latest"
+      fi
+    else
+      echo "⚠️  No package.json found at $PKG_JSON_PATH, using 'latest'"
+      VERSION_TO_USE="latest"
+    fi
+  fi
+
   echo
-  echo "🔨 Building service: $SERVICE (version: $VERSION)"
+  echo "🔨 Building service: $SERVICE (version: $VERSION_TO_USE)"
 
   # Priority:
   # 1) ./<service>/Dockerfile
   # 2) ./Dockerfile.<service>
   # 3) ./Dockerfile.base with --build-arg SERVICE=<service>
   if [ -d "$SERVICE" ] && [ -f "$SERVICE/Dockerfile" ]; then
-    docker build --pull -t "questnutri/$SERVICE:$VERSION" -f "$SERVICE/Dockerfile" "$SERVICE"
+    docker build --pull -t "questnutri/$SERVICE:$VERSION_TO_USE" -f "$SERVICE/Dockerfile" "$SERVICE"
   elif [ -f "Dockerfile.$SERVICE" ]; then
-    docker build --pull -t "questnutri/$SERVICE:$VERSION" -f "Dockerfile.$SERVICE" .
+    docker build --pull -t "questnutri/$SERVICE:$VERSION_TO_USE" -f "Dockerfile.$SERVICE" .
   elif [ -f "Dockerfile.base" ]; then
-    docker build --pull -t "questnutri/$SERVICE:$VERSION" --build-arg SERVICE="$SERVICE" -f Dockerfile.base .
+    docker build --pull -t "questnutri/$SERVICE:$VERSION_TO_USE" --build-arg SERVICE="$SERVICE" -f Dockerfile.base .
   else
     echo "⚠️  No Dockerfile found for $SERVICE (checked $SERVICE/Dockerfile, Dockerfile.$SERVICE, Dockerfile.base)"
     exit 1
@@ -107,9 +140,9 @@ for SERVICE in "${VALID[@]}"; do
 
   # Push to Docker Hub if --push flag was provided
   if [ "$PUSH_TO_HUB" = true ]; then
-    echo "📤 Pushing questnutri/$SERVICE:$VERSION to Docker Hub..."
-    docker push "questnutri/$SERVICE:$VERSION"
-    echo "✅ Pushed questnutri/$SERVICE:$VERSION"
+    echo "📤 Pushing questnutri/$SERVICE:$VERSION_TO_USE to Docker Hub..."
+    docker push "questnutri/$SERVICE:$VERSION_TO_USE"
+    echo "✅ Pushed questnutri/$SERVICE:$VERSION_TO_USE"
   fi
 done
 

@@ -1,5 +1,5 @@
 meta {
-  name: Patient Login copy 2
+  name: Patient Login copy copy
   type: http
   seq: 3
 }
@@ -23,15 +23,20 @@ vars:pre-request {
 }
 
 script:post-response {
-  if(res.status === 200 && res("firstLogin")) {
-    bru.setVar("RESET_PASSWORD_TOKEN" ,res("resetPassword"));
+  if(res.status === 200) {
+    if(res("firstLogin")) {
+    bru.setVar("RESET_PASSWORD_TOKEN", res("resetPassword"));
+  }else {
+    bru.setVar("PATIENT_ACCESS_TOKEN",res("accessToken"));
+  }
   }
   
-  if(res.status !== 201) {
+  if(res.status !== 200) {
       bru.setNextRequest(null);
   }
 }
 
 settings {
   encodeUrl: true
+  timeout: 0
 }

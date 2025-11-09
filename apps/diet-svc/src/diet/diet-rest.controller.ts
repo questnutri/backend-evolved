@@ -76,7 +76,7 @@ export class DietRestController {
         return { active: true };
     }
 
-    @Get()
+    @Post()
     @ApiOperation({ summary: 'Get all diets', description: 'Retrieve all diets filtered by patientId and/or nutritionistId. Returns date-only startDate/endDate fields (YYYY-MM-DD, UTC).' })
     @ApiBody({
         type: DietRequestBody,
@@ -232,7 +232,7 @@ export class DietRestController {
         }
     }
 
-    @Get('/plan')
+    @Post('plan')
     @ApiOperation({
         summary: 'Get complex diet plan for a patient',
         description: 'Retrieve a comprehensive diet plan with calendar planning for a specific patient, including meal schedules and records. Dates are returned as YYYY-MM-DD (UTC) and meals include their configured hour separately.'
@@ -313,6 +313,25 @@ export class DietRestController {
         return this.mapDietPlanDates(rawPlans);
     }
 
+    @Post('new')
+    @ApiOperation({
+        summary: 'Create a new diet',
+        description: 'Create a new diet for a given patient. If startDate is omitted, it defaults to today (UTC).'
+    })
+    @ApiCreatedResponse({
+        description: 'The diet has been successfully created.',
+        type: CreateDietDto
+    })
+    @UseGuards(JwtRoleGuard(['nutritionist']))
+    @UseFilters(ControllerExceptionFilter)
+    async createDiet(
+        @Body() createDietDto: CreateDietDto,
+        @ContextUser() ctxUser: ContextUser,
+    ): Promise<Diet> {
+        if (!createDietDto.startDate) createDietDto.startDate = new Date();
+        return await this.dietService.createOne({ ...createDietDto, nutritionistId: ctxUser.id });
+    }
+
     @Get(':dietId')
     @ApiOperation({
         summary: 'Retrieve a specific diet by ID',
@@ -353,24 +372,7 @@ export class DietRestController {
         return this.mapDietDates(publicDiet);
     }
 
-    @Post()
-    @ApiOperation({
-        summary: 'Create a new diet',
-        description: 'Create a new diet for a given patient. If startDate is omitted, it defaults to today (UTC).'
-    })
-    @ApiCreatedResponse({
-        description: 'The diet has been successfully created.',
-        type: CreateDietDto
-    })
-    @UseGuards(JwtRoleGuard(['nutritionist']))
-    @UseFilters(ControllerExceptionFilter)
-    async createDiet(
-        @Body() createDietDto: CreateDietDto,
-        @ContextUser() ctxUser: ContextUser,
-    ): Promise<Diet> {
-        if (!createDietDto.startDate) createDietDto.startDate = new Date();
-        return await this.dietService.createOne({ ...createDietDto, nutritionistId: ctxUser.id });
-    }
+
 
     @Put(':dietId')
     @ApiOperation({

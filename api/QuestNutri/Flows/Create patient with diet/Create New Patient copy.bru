@@ -1,7 +1,7 @@
 meta {
   name: Create New Patient copy
   type: http
-  seq: 2
+  seq: 1
 }
 
 post {
@@ -16,10 +16,15 @@ auth:bearer {
 
 body:json {
   {
+    "nutritionistId": "{{NUTRITIONIST_ID}}",
     "name": "{{$randomFirstName}}",
-    "email": "{{$randomEmail}}",
-    "documentNumber": "{{$randomNanoId}}"
+    "email": "test{{account_number}}@patient.com",
+    "documentNumber": "00{{account_number}}"
   }
+}
+
+script:pre-request {
+  bru.setVar("account_number", bru.getEnvVar("PATIENT_ACCOUNT_NUMBER"));
 }
 
 script:post-response {
@@ -27,6 +32,9 @@ script:post-response {
     bru.setVar("PATIENT_EMAIL" , res("email"));
     bru.setVar("PATIENT_PASSWORD", res("documentNumber"));
     bru.setVar("PATIENT_ID", res("id"));
+    bru.setEnvVar("PATIENT_ACCOUNT_NUMBER", 
+        Number(bru.getEnvVar("PATIENT_ACCOUNT_NUMBER"))+1
+    );
   }
   
   if(res.status !== 201) {
@@ -36,4 +44,5 @@ script:post-response {
 
 settings {
   encodeUrl: true
+  timeout: 0
 }

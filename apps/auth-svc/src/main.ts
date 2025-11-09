@@ -1,6 +1,6 @@
 import { AuthModule } from './auth/auth.module';
 import { DocumentBuilder } from '@nestjs/swagger';
-import { NestApplicationBuilder, generateNestApplication, provideJaegerTracing } from '@backend-evolved/shared';
+import { NestApplicationBuilder, generateNestApplication } from '@backend-evolved/shared';
 
 async function bootstrap() {
     await generateNestApplication(

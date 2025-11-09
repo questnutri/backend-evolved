@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Inject, UseFilters, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Inject, Post, UseFilters, UseGuards } from '@nestjs/common';
 import {
     JwtRoleGuard,
     DietRequestBody,
@@ -19,7 +19,7 @@ export class DietController {
         @Inject(DIET_SERVICE_PROXY_NAME) private readonly dietProxy: ClientProxy
     ) { }
 
-    @Get()
+    @Post()
     @UseGuards(
         JwtRoleGuard(['admin']),
         ManagementGuard(DietManagementLevel, "canViewDiets")
