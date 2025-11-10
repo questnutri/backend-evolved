@@ -1,6 +1,6 @@
 {
   "name": "@backend-evolved/record-svc",
-  "version": "0.0.1",
+  "version": "2.1.0",
   "private": true,
   "nx": {
     "targets": {
