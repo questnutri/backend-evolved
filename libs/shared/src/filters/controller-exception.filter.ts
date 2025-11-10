@@ -1,4 +1,4 @@
-import { ArgumentsHost, Catch, ConflictException, ExceptionFilter } from '@nestjs/common';
+import { ArgumentsHost, Catch, ExceptionFilter } from '@nestjs/common';
 import { ErrorMapper } from '../errors/error.mapper';
 
 @Catch()

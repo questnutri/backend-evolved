@@ -5,7 +5,8 @@ import {
     UseFilters,
     Res,
     Get,
-    UseGuards
+    UseGuards,
+    UseInterceptors
 } from '@nestjs/common';
 import {
     LoginUserDto,
@@ -19,6 +20,7 @@ import {
     JwtRoleGuard,
     ResetPasswordResponse,
     ROOT_ADMIN_EMAIL,
+    LogInjector,
 } from '@backend-evolved/shared';
 import {
     ApiAcceptedResponse,
@@ -54,6 +56,7 @@ export class AuthRestController {
     @ApiOkResponse({ description: 'The user has been successfully logged in.' })
     @ApiAcceptedResponse({ description: 'The user account have been created but an admin must activate it.' })
     @UseFilters(ControllerExceptionFilter)
+    @UseInterceptors(LogInjector)
     async login(@Res() res: any, @Body() body: LoginUserDto): Promise<LoginResponse> {
         const result = await this.authService.generalLogin(body);
         return res.status(200).json(result);
@@ -88,6 +91,7 @@ export class AuthRestController {
     @ApiOperation({ summary: 'Changes a logged user password' })
     @UseFilters(ControllerExceptionFilter)
     @UseGuards(JwtRoleGuard(['admin', 'nutritionist', 'patient']))
+    @UseInterceptors(LogInjector)
     async changePassword(
         @ContextUser() ctxUser: ContextUser,
         @Body() body: ChangePasswordDto

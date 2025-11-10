@@ -29,15 +29,15 @@ export class AdminController {
     @Post('login')
     @UseFilters(ControllerExceptionFilter)
     async login(@Body('email') email: string, @Body('password') password: string) {
-        return sendProxyMessage<LoginResponse, LoginUserDto>({
+        return await sendProxyMessage<LoginResponse, LoginUserDto>({
             proxy: this.authProxy,
-            pattern: 'admin.login',
+            pattern: proxyPattern.admin.login,
             data: { email, password },
             options: {
                 retry: {
-                    count: 2, delay: 50
+                    count: 10, delay: 50
                 }
-            }
+            },
         });
     }
 

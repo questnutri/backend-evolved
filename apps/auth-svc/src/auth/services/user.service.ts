@@ -20,6 +20,7 @@ export class UserService {
     ) { }
 
     async create(userData: RegisterUserDto): Promise<User> {
+        console.log("USER SERVICE CALLED TO CREATE A NEW USER!!!")
         const existing = await this.userRepository.findOne({ where: { email: userData.email } });
         if (existing) throw new ConflictException('An User with this email already exists');
         const hash = await bcrypt.hash(userData.password, 10);

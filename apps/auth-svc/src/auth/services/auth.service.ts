@@ -106,5 +106,4 @@ export class AuthService {
         await this.userService.save(foundUser);
         return await this.tokenService.loginTokenResponse(foundUser);
     }
-
 }

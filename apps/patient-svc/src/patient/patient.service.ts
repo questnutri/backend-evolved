@@ -1,7 +1,7 @@
 import { ConflictException, HttpException, Inject, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { InjectRepository } from '@nestjs/typeorm';
-import { UserRole, RegisterUserDto, Patient, AUTH_SERVICE_PROXY_NAME, PatientNutritionist, ServiceContract, KeysOf, ProxyMessage, proxyPattern, BodyCreatePatientDto, NUTRITIONIST_SERVICE_PROXY_NAME, Nutritionist, sendProxyMessage } from '@backend-evolved/shared';
+import { UserRole, RegisterUserDto, Patient, AUTH_SERVICE_PROXY_NAME, PatientNutritionist, ServiceContract, KeysOf, ProxyMessage, proxyPattern, BodyCreatePatientDto, NUTRITIONIST_SERVICE_PROXY_NAME, Nutritionist, sendProxyMessage, ContextLog } from '@backend-evolved/shared';
 import { firstValueFrom } from 'rxjs';
 import { QueryFailedError, Repository } from 'typeorm';
 
@@ -29,7 +29,7 @@ export class PatientService implements ServiceContract<Patient> {
 
     async findOneWhere(
         query: {
-            [key: string]: any 
+            [key: string]: any
         }): Promise<TreatedPatient> {
         const patient = await this.patientRepository.findOne({
             where: query,
@@ -42,8 +42,7 @@ export class PatientService implements ServiceContract<Patient> {
         };
     }
 
-    async createOne(data: Partial<Patient>): Promise<Patient> {
-        // Cast data to CreatePatientDto for compatibility
+    async createOne(data: Partial<Patient>, contextLog?: ContextLog): Promise<Patient> {
         const patientData = data as BodyCreatePatientDto;
         try {
             const payload = {
@@ -52,15 +51,17 @@ export class PatientService implements ServiceContract<Patient> {
                 role: UserRole.PATIENT
             };
             try {
-                const userCreationResult = await firstValueFrom(
-                    this.authServiceProxy.send<ProxyMessage<string>, RegisterUserDto>('user.creation', payload)
-                );
-                if (userCreationResult && 'error' in userCreationResult) {
-                    throw new RpcException(userCreationResult);
-                }
-                const userId = userCreationResult.payload;
+                const userId = await sendProxyMessage<{id: string}, RegisterUserDto>({
+                    proxy: this.authServiceProxy,
+                    pattern: proxyPattern.user.creation,
+                    data: payload,
+                    contextLog,
+                    options: {
+                        retry: { count: 4, delay: 1000 }
+                    }
+                });
                 if (!userId) throw new InternalServerErrorException('Auth service did not return user id');
-                const patient = this.patientRepository.create({ ...patientData, id: userId });
+                const patient = this.patientRepository.create({ ...patientData, id: userId.id });
                 const savedPatient = await this.patientRepository.save(patient);
                 const patientNutritionist = this.patientNutritionistRepository.create({
                     patientId: savedPatient.id,
@@ -95,9 +96,13 @@ export class PatientService implements ServiceContract<Patient> {
             }
         } catch (error: any) {
             if (!(error instanceof ConflictException)) {
-                await firstValueFrom(
-                    this.authServiceProxy.send<boolean, string>(proxyPattern.user.deletionByEmail, patientData.email)
-                );
+                // Use sendProxyMessage for user deletion as well
+                await sendProxyMessage<boolean, string>({
+                    proxy: this.authServiceProxy,
+                    pattern: proxyPattern.user.deletionByEmail,
+                    data: patientData.email,
+                    contextLog
+                });
             }
 
             throw error;
@@ -153,16 +158,16 @@ export class PatientService implements ServiceContract<Patient> {
     private async formatPatientWithNutritionists(patient: Patient): Promise<any> {
         const nutritionists = patient?.nutritionists?.map(n => n.nutritionistId) || [];
         let nutritionistsDetails: Partial<Nutritionist>[] = [];
-        if(nutritionists && nutritionists.length > 0) {
+        if (nutritionists && nutritionists.length > 0) {
             let proxyResponse = await sendProxyMessage<Nutritionist[]>({
                 proxy: this.nutritionistProxy,
                 pattern: proxyPattern.nutritionist.getManyByIds,
-                data: {ids: nutritionists},
+                data: { ids: nutritionists },
                 options: {
                     retry: { count: 3, delay: 2000 }
                 }
             });
-            
+
             nutritionistsDetails = proxyResponse.map(n => {
                 return {
                     nutritionistId: n.id,

@@ -14,6 +14,7 @@ export class PatientRestController {
 
     @Get('health')
     healthCheck() {
+        console.log('Patient Service is healthy');
         return { active: true };
     }
 

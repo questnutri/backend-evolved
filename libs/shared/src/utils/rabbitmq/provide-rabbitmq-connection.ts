@@ -6,7 +6,8 @@ export const provideRabbitMqConnection = (queue: string): MicroserviceOptions =>
         options: {
             urls: [process.env.DEV_RABBITMQ_URL || 'amqp://rabbitmq:5672'],
             queue,
-            queueOptions: { durable: true },
+            replyQueue: `${queue}_reply`,
+            queueOptions: { durable: true, },
         },
     }
 };

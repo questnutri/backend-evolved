@@ -23,6 +23,11 @@
           "configName": "tsconfig.lib.json",
           "buildDepsName": "build-deps",
           "watchDepsName": "watch-deps"
+        },
+        "debug": {
+          "targetName": "debug",
+          "inspect": true,
+          "port": 9231
         }
       },
       "exclude": [
@@ -38,7 +43,8 @@
         "previewTargetName": "preview",
         "buildDepsTargetName": "build-deps",
         "watchDepsTargetName": "watch-deps",
-        "serveStaticTargetName": "serve-static"
+        "serveStaticTargetName": "serve-static",
+        "debugTargetName": "debug"
       }
     },
     {
