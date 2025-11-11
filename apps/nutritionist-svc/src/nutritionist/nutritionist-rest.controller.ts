@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Inject, UseGuards, UseFilters, InternalServerErrorException, NotFoundException, UseInterceptors } from '@nestjs/common';
+import { Controller, Get, Post, Body, Inject, UseGuards, UseFilters, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { NutritionistService } from './nutritionist.service';
 import {
     BodyCreatePatientDto,
@@ -9,9 +9,7 @@ import {
     ContextUser,
     sendProxyMessage,
     User,
-    IsRelatedGuard,
-    LogInjector,
-    ContextLog
+    IsRelatedGuard
 } from '@backend-evolved/shared';
 import { ApiOkResponse, ApiOperation, ApiConflictResponse, ApiBadRequestResponse, ApiBearerAuth, ApiSecurity, ApiCreatedResponse } from '@nestjs/swagger';
 import { ClientProxy } from '@nestjs/microservices';
@@ -103,18 +101,13 @@ export class NutritionistRestController {
         })
     )
     @UseFilters(ControllerExceptionFilter)
-    @UseInterceptors(LogInjector)
     async createPatient(
-        @ContextUser() ctxUser: ContextUser,
-        @ContextLog() contextLog: ContextLog,
-        @Body() body: BodyCreatePatientDto,
+        @Body() body: BodyCreatePatientDto
     ): Promise<Patient> {
-        console.log("[NutritionistRestController] Creating patient with context log id:", contextLog.id);
         return await sendProxyMessage<Patient, BodyCreatePatientDto>({
             proxy: this.patientServiceProxy,
             pattern: proxyPattern.patient.creation,
             data: body,
-            contextLog
         });
     }
 

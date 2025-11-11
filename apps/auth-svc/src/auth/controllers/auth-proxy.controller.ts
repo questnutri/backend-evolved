@@ -1,13 +1,11 @@
-import { Controller, UseFilters, UseInterceptors } from '@nestjs/common';
+import { Controller, UseFilters } from '@nestjs/common';
 import { AuthService } from '../services/auth.service';
 import {
     ProxyMessengerFilter, ProxyMessage, RegisterUserDto, LoginResponse,
     userId,
     User, KeysOf,
     proxyPattern,
-    LoginUserDto,
-    LogInjector,
-    ContextLog
+    LoginUserDto
 } from '@backend-evolved/shared';
 import { MessagePattern, Payload, RpcException } from '@nestjs/microservices';
 import { instanceToPlain } from 'class-transformer';
@@ -22,13 +20,8 @@ export class AuthProxyController {
 
     @MessagePattern(proxyPattern.user.creation)
     @UseFilters(ProxyMessengerFilter)
-    async handleUserCreation(
-        @Payload() data: RegisterUserDto,
-        @ContextLog() contextLog: ContextLog
-    ): Promise<ProxyMessage<{ id: string }>> {
-        const user = await this.userService.create(data);
-        const payload = { id: user.id };
-        return { payload };
+    async handleUserCreation(@Payload() data: RegisterUserDto): Promise<ProxyMessage<userId>> {
+        return { payload: (await this.userService.create(data)).id };
     }
 
     @MessagePattern(proxyPattern.user.deletionByEmail)
@@ -77,12 +70,7 @@ export class AuthProxyController {
 
     @MessagePattern(proxyPattern.admin.login)
     @UseFilters(ProxyMessengerFilter)
-    @UseInterceptors(LogInjector)
-    async handleAdminLogin(
-        @Payload() payload: LoginUserDto,
-        @ContextLog() log: ContextLog
-    ): Promise<ProxyMessage<LoginResponse>> {
-        console.log('Admin login attempt with log id:', log.id);
+    async handleAdminLogin(@Payload() payload: LoginUserDto): Promise<ProxyMessage<LoginResponse>> {
         try {
             const result = await this.authService.adminLogin(payload);
             return { payload: result };

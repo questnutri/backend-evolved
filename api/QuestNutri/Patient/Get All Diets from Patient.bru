@@ -4,14 +4,14 @@ meta {
   seq: 1
 }
 
-post {
+get {
   url: {{HTTP_PROTOCOL}}://{{GATEWAY_URL}}/diet
   body: json
   auth: bearer
 }
 
 auth:bearer {
-  token: {{PATIENT_ACCESS_TOKEN}}
+  token: {{ADMIN_ACCESS_TOKEN}}
 }
 
 body:json {

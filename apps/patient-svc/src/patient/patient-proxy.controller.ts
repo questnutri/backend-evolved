@@ -1,7 +1,7 @@
 import { Controller, UseFilters } from '@nestjs/common';
 import { PatientService, TreatedPatient } from './patient.service';
 import { MessagePattern, Payload } from '@nestjs/microservices';
-import { ProxyMessengerFilter, ProxyMessage, Patient, proxyPattern, BodyCreatePatientDto, ContextLog } from '@backend-evolved/shared';
+import { ProxyMessengerFilter, ProxyMessage, Patient, proxyPattern, BodyCreatePatientDto } from '@backend-evolved/shared';
 
 @Controller()
 export class PatientProxyController {
@@ -11,12 +11,8 @@ export class PatientProxyController {
 
     @MessagePattern(proxyPattern.patient.creation)
     @UseFilters(ProxyMessengerFilter)
-    async createPatient(
-        @Payload() data: BodyCreatePatientDto,
-        @ContextLog() contextLog: ContextLog
-    ): Promise<ProxyMessage<Patient>> {
-        console.log("[PatientProxyController] Creating patient with context log id:", contextLog.id);
-        return { payload: await this.patientService.createOne(data, contextLog) };
+    async createPatient(@Payload() data: BodyCreatePatientDto): Promise<ProxyMessage<Patient>> {
+        return { payload: await this.patientService.createOne(data) };
     }
 
     @MessagePattern(proxyPattern.patient.getAll)

@@ -14,7 +14,5 @@ export * from './available-grant-managements';
 
 export * from './context-user';
 
-export * from './context-log/context-log';
-
 export * from './helpers';
 export * from './root-admin';
