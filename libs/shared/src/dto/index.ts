@@ -3,6 +3,7 @@ export * from './auth';
 export * from "./nutritionist/create-nutritionist.dto";
 
 export * from './patient/create-patient.dto';
+export * from './patient/water-goal.dto';
 
 export * from './diet/create-diet.dto';
 export * from './diet/update-diet.dto';
@@ -23,3 +24,5 @@ export * from './record/create-meal-record.dto';
 export * from './record/update-meal-record.dto';
 
 export * from './response';
+
+// export * from './proxy';

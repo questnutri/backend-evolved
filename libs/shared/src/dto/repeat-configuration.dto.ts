@@ -1,61 +1,45 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEnum, IsOptional, IsNumber, IsArray, IsDateString, Min, Max } from 'class-validator';
-import { RepeatType, DayOfWeek } from '../types/repeat-configuration';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger'
+import { IsEnum, IsOptional, IsNumber, IsArray, IsDateString, Min, Max } from 'class-validator'
+import { RepeatType, DayOfWeek } from '../types/repeat-configuration'
 
 export class RepeatConfigurationDto {
     @ApiProperty({
-        description: 'Type of repeat pattern',
         enum: RepeatType,
         example: 'WEEKLY'
     })
     @IsEnum(RepeatType)
-    type: RepeatType;
+    type: RepeatType
 
     @ApiPropertyOptional({
-        description: 'Interval for repetition (every X days/weeks/months)',
-        example: 1,
-        minimum: 1
+        example: 1
     })
     @IsOptional()
     @IsNumber()
     @Min(1)
-    interval?: number;
+    repeatTarget?: number
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsDateString()
+    targetDate?: string
 
     @ApiPropertyOptional({
-        description: 'Days of the week (0=Sunday, 1=Monday, etc.)',
-        example: [1, 3, 5],
-        type: [Number]
+        type: [Number],
+        example: [1, 3, 5]
     })
     @IsOptional()
     @IsArray()
     @IsEnum(DayOfWeek, { each: true })
-    daysOfWeek?: DayOfWeek[];
+    daysOfWeek?: DayOfWeek[]
 
     @ApiPropertyOptional({
-        description: 'Day of the month (1-31) for MONTHLY_DATE type',
-        example: 15,
-        minimum: 1,
-        maximum: 31
+        type: [Number],
+        example: [1, 15, 30]
     })
     @IsOptional()
-    @IsNumber()
-    @Min(1)
-    @Max(31)
-    dayOfMonth?: number;
-
-    @ApiPropertyOptional({
-        description: 'Start date for the repeat pattern (accepts YYYY-MM-DD or full ISO string)',
-        example: '2025-09-18'
-    })
-    @IsOptional()
-    @IsDateString()
-    startDate?: Date;
-
-    @ApiPropertyOptional({
-        description: 'End date for the repeat pattern (accepts YYYY-MM-DD or full ISO string)',
-        example: '2025-12-18'
-    })
-    @IsOptional()
-    @IsDateString()
-    endDate?: Date;
+    @IsArray()
+    @IsNumber({}, { each: true })
+    @Min(1, { each: true })
+    @Max(31, { each: true })
+    daysOfMonth?: number[]
 }

@@ -1,0 +1,25 @@
+meta {
+  name: Create achievement
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{HTTP_PROTOCOL}}://{{GATEWAY_URL}}/game/achievements
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "targetEvent": "MEAL",
+    "targetAmount": "100",
+    "name": "100 meals!",
+    "xpAmount": 1000
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

@@ -30,16 +30,13 @@ export class PatientService implements ServiceContract<Patient> {
     async findOneWhere(
         query: {
             [key: string]: any 
-        }): Promise<TreatedPatient> {
+        }): Promise<Patient> {
         const patient = await this.patientRepository.findOne({
             where: query,
             relations: ['nutritionists']
         });
         if (!patient) throw new NotFoundException('Patient not found');
-        return {
-            ...patient,
-            nutritionists: patient.nutritionists?.map(n => n.nutritionistId) || []
-        };
+        return patient;
     }
 
     async createOne(data: Partial<Patient>): Promise<Patient> {
@@ -104,7 +101,7 @@ export class PatientService implements ServiceContract<Patient> {
         }
     }
 
-    async updateOne(query: KeysOf<Patient>, data: Partial<Patient>): Promise<Patient | null> {
+    async updateOne(query: any, data: Partial<Patient>): Promise<Patient | null> {
         try {
             const result = await this.patientRepository.update(query, data);
             if (result.affected === 0) throw new NotFoundException('Patient not found');
@@ -125,7 +122,7 @@ export class PatientService implements ServiceContract<Patient> {
         }
     }
 
-    async deleteOne(query: KeysOf<Patient>): Promise<void> {
+    async deleteOne(query: any): Promise<void> {
         try {
             const result = await this.patientRepository.delete(query);
             if (result.affected === 0) throw new NotFoundException('Patient not found');

@@ -5,6 +5,7 @@ export * from "./nutritionist/nutritionist.entity";
 
 export * from "./patient/patient.entity";
 export * from "./patient/patient-nutritionist.entity";
+export * from "./patient/water-goal.entity";
 
 export * from "./admin/admin.entity";
 export * from "./admin/manage";
@@ -19,3 +20,4 @@ export * from "./aliment/home-measure-aliment.entity";
 export * from "./aliment/secret-aliment.entity";
 
 export * from "./record/meal-record.entity";
+export * from "./record/water-record.entity";

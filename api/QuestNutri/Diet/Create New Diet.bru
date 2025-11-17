@@ -7,13 +7,18 @@ meta {
 post {
   url: {{HTTP_PROTOCOL}}://{{GATEWAY_URL}}/diet
   body: json
-  auth: inherit
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{NUTRITIONIST_ACCESS_TOKEN}}
 }
 
 body:json {
   {
-    "patientId": "{{patientId}}",
-    "endDate": "2025-11-15"
+    "patientId": "{{PATIENT_ID}}",
+    "startDate": "2025-04-01",
+    "endDate": "2025-12-15"
   }
 }
 

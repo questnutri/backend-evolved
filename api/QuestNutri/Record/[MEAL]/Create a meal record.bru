@@ -1,0 +1,30 @@
+meta {
+  name: Create a meal record
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{HTTP_PROTOCOL}}://{{GATEWAY_URL}}/record/meal/:mealId
+  body: json
+  auth: bearer
+}
+
+params:path {
+  mealId: {{createdMeal}}
+}
+
+auth:bearer {
+  token: {{PATIENT_ACCESS_TOKEN}}
+}
+
+body:json {
+  {
+    "date": "2025-11-20"
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

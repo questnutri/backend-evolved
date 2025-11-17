@@ -1,0 +1,26 @@
+meta {
+  name: Create new goal
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{HTTP_PROTOCOL}}://{{GATEWAY_URL}}/nutritionist/patients/:patientId/water
+  body: json
+  auth: inherit
+}
+
+params:path {
+  patientId: {{PATIENT_ID}}
+}
+
+body:json {
+  {
+    "amountInMl": 2000
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

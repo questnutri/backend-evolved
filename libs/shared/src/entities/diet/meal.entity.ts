@@ -14,9 +14,6 @@ export class Meal {
     @ManyToOne(() => Diet, (diet) => diet.meals)
     diet: Diet;
 
-    @Column()
-    isActive: boolean = true;
-
     @OneToMany(() => Food, (food) => food.meal)
     foods: Food[];
 
@@ -28,10 +25,10 @@ export class Meal {
 
     // --- TEMPORAL VERSIONING FIELDS ---
     @Column({ type: 'timestamp with time zone', default: () => 'CURRENT_TIMESTAMP' })
-    validFrom: Date | null; // The date this version becomes effective
+    startDate: Date | null; // The date this version becomes effective
 
     @Column({ type: 'timestamp with time zone', nullable: true })
-    validTo?: Date | null; // The date this version is superseded (exclusive end date)
+    endDate?: Date | null; // The date this version is superseded (exclusive end date)
     // ----------------------------------
 
     @CreateDateColumn()

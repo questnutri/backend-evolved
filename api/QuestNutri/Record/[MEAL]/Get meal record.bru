@@ -1,0 +1,24 @@
+meta {
+  name: Get meal record
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{HTTP_PROTOCOL}}://{{GATEWAY_URL}}/record/meal/:mealId
+  body: none
+  auth: bearer
+}
+
+params:path {
+  mealId: 123
+}
+
+auth:bearer {
+  token: {{PATIENT_ACCESS_TOKEN}}
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

@@ -12,12 +12,13 @@ post {
 
 body:json {
   {
-    "name": "Dinner",
-    "repeatConfiguration": 
-      {
-        "type": "WEEKLY",
-        "daysOfWeek": [1, 2]
-      }
+    "dietId": "{{createdDiet}}",
+    "name": "Breakfast",
+    "hour": "09:00",
+    "repeatConfiguration": {
+      "type": "WEEKLY",
+      "targetDate": "2025-11-01"
+    }
   }
 }
 

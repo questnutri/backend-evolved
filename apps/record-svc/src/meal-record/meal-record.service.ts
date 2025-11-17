@@ -1,7 +1,7 @@
 import { Injectable, NotFoundException, Inject, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ServiceContract, KeysOf, MealRecord, CreateMealRecordDto, UpdateMealRecordDto, DIET_SERVICE_PROXY_NAME, ProxyMessage, MealRepeatCalculator } from '@backend-evolved/shared';
+import { ServiceContract, KeysOf, MealRecord, CreateMealRecordDto, UpdateMealRecordDto, DIET_SERVICE_PROXY_NAME, ProxyMessage, MealRepeatCalculator, Meal, RepeatType, SchedulerHelper } from '@backend-evolved/shared';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 
@@ -25,7 +25,7 @@ export class MealRecordService implements ServiceContract<MealRecord> {
         try {
             // Convert string date to Date object if needed
             const targetDate = typeof mealRelativeDate === 'string' ? new Date(mealRelativeDate) : mealRelativeDate;
-            
+
             // Validate that the date is valid
             if (isNaN(targetDate.getTime())) {
                 throw new BadRequestException(`Invalid date format: ${mealRelativeDate}. Expected format: YYYY-MM-DD`);
@@ -52,7 +52,7 @@ export class MealRecordService implements ServiceContract<MealRecord> {
             }
 
             const { meal, diet } = mealInfo.payload;
-            
+
             if (!meal.repeatConfiguration) {
                 // If no repeat configuration, assume it's valid (backward compatibility)
                 return;
@@ -67,7 +67,7 @@ export class MealRecordService implements ServiceContract<MealRecord> {
             normalizedDietStartDate.setUTCHours(0, 0, 0, 0);
 
             // Calculate diet duration in days
-            const dietDays = diet.endDate ? 
+            const dietDays = diet.endDate ?
                 Math.floor((new Date(diet.endDate).getTime() - normalizedDietStartDate.getTime()) / (1000 * 60 * 60 * 24)) + 1 :
                 365; // Default to 1 year if no end date
 
@@ -86,7 +86,7 @@ export class MealRecordService implements ServiceContract<MealRecord> {
                 const dietStartString = normalizedDietStartDate.toISOString().split('T')[0];
                 const dietEndString = diet.endDate ? new Date(diet.endDate).toISOString().split('T')[0] : 'no end date';
                 let errorMessage = `Date ${dateString} is not valid for meal "${meal.name}" with repeat type ${repeatType}`;
-                
+
                 switch (repeatType) {
                     case 'ONCE':
                         const onceDate = meal.repeatConfiguration.startDate || normalizedDietStartDate;
@@ -136,22 +136,187 @@ export class MealRecordService implements ServiceContract<MealRecord> {
         }
     }
 
-    async findAll(query: Partial<KeysOf<MealRecord>> = {}): Promise<MealRecord[]> {
-        return await this.mealRecordRepository.find({ where: query });
+    async findAll(where: any): Promise<MealRecord[]> {
+        return await this.mealRecordRepository.find({ where });
     }
 
     async findOneWhere(query: Partial<KeysOf<MealRecord>>): Promise<MealRecord | null> {
         return await this.mealRecordRepository.findOne({ where: query });
     }
 
-    async createOne(data: CreateMealRecordDto): Promise<MealRecord> {
-        // Validate the mealRelativeDate if both mealId and patientId are provided
-        if (data.mealId && data.patientId && data.mealRelativeDate) {
-            await this.validateMealRelativeDate(data.mealId, data.mealRelativeDate, data.patientId);
+    async createOrUpdate(meal: Meal, date?: string, time?: string): Promise<any> {
+        const scheduler = new SchedulerHelper(meal.diet.timeZone);
+        const requestDate = scheduler.buildDate({
+            date,
+            time
+        });
+
+        const foundPreviousRecord = await this.mealRecordRepository.findOne({
+            where: {
+                mealId: meal.id,
+                patientId: meal.diet.patientId,
+                dietId: meal.diet.id,
+                nutritionistId: meal.diet.nutritionistId,
+                mealRelativeDate: scheduler.buildDate({ date: requestDate, startOfDay: true, offset: { day: -1 } })
+            }
+        });
+        if (foundPreviousRecord) {
+            const updated = this.mealRecordRepository.merge(foundPreviousRecord, { isCompleted: !foundPreviousRecord.isCompleted });
+            return await this.mealRecordRepository.save(updated);
         }
-        
-        const mealRecord = this.mealRecordRepository.create(data);
-        return await this.mealRecordRepository.save(mealRecord);
+
+        const { repeatConfiguration } = meal;
+        let start;
+        let end;
+        let endDate;
+        let isValid;
+
+        switch (repeatConfiguration.type) {
+            case RepeatType.ONCE:
+                start = scheduler.buildDate({
+                    date: repeatConfiguration.targetDate,
+                    time: meal!.hour!
+                });
+                end = scheduler.buildDate({
+                    date: repeatConfiguration.targetDate,
+                    endOfDay: true
+                });
+                isValid = scheduler.isBetween({
+                    start,
+                    end,
+                    target: requestDate,
+                });
+
+                if (!isValid) {
+                    throw new BadRequestException(`The date ${scheduler.formatDate(requestDate, 'YYYY-MM-DD')} is not valid for this meal which is scheduled once on ${scheduler.formatDate(repeatConfiguration.targetDate!, 'YYYY-MM-DD')}.`)
+                }
+                break;
+            case RepeatType.DAILY:
+                start = scheduler.buildDate({
+                    date: meal.startDate!,
+                });
+                endDate = meal.endDate || meal.diet.endDate;
+                end = scheduler.buildDate({
+                    date: endDate!,
+                });
+                isValid = scheduler.isBetween({
+                    start,
+                    end,
+                    target: requestDate,
+                });
+
+                if (!isValid) {
+                    throw new BadRequestException(
+                        `The date ${scheduler.formatDate(requestDate, 'YYYY-MM-DD')} is not within the scheduled range for this meal which is between ${scheduler.formatDate(start, 'YYYY-MM-DD')} and ${scheduler.formatDate(end, 'YYYY-MM-DD')}.`
+                    );
+                }
+
+                const daysFromMealStart = scheduler.getDaysDifference(
+                    start,
+                    requestDate
+                );
+                const interval = repeatConfiguration.repeatTarget!;
+                if ((daysFromMealStart % interval) !== 0)
+                    throw new BadRequestException(
+                        `The date ${scheduler.formatDate(requestDate, 'YYYY-MM-DD')} is not valid for this meal which repeats every ${interval} day(s) starting from ${scheduler.formatDate(meal.startDate!, 'YYYY-MM-DD')}.`);
+                break;
+            case RepeatType.WEEKLY:
+                //First check if the day of week matches
+                const requestDayOfWeek = requestDate.getDay();
+                if (!(repeatConfiguration.daysOfWeek!.includes(requestDayOfWeek))) {
+                    throw new BadRequestException(
+                        `The date ${scheduler.formatDate(requestDate, 'YYYY-MM-DD')} which is equivalent to ${requestDate.getDay()} is not valid for this meal which is scheduled on days [${repeatConfiguration.daysOfWeek}] of the week.`
+                    );
+                };
+
+                //Then check if within start and end dates
+                start = scheduler.buildDate({
+                    date: meal.startDate!,
+                });
+                endDate = meal.endDate || meal.diet.endDate;
+                end = scheduler.buildDate({
+                    date: endDate!,
+                    endOfDay: true
+                });
+                isValid = scheduler.isBetween({
+                    start,
+                    end,
+                    target: requestDate,
+                });
+
+                if (!isValid) {
+                    throw new BadRequestException(
+                        `The date ${scheduler.formatDate(requestDate, 'YYYY-MM-DD')} is not within the scheduled range for this meal which is between ${scheduler.formatDate(start, 'YYYY-MM-DD')} and ${scheduler.formatDate(end, 'YYYY-MM-DD')}.`
+                    );
+                }
+
+                //Finally check the weekly interval
+                const weeksFromMealStart = scheduler.getWeeksDifference(
+                    start,
+                    requestDate
+                );
+                const weeklyInterval = repeatConfiguration.repeatTarget!;
+                if (!((weeksFromMealStart % weeklyInterval) === 0))
+                    throw new BadRequestException(
+                        `The date ${scheduler.formatDate(requestDate, 'YYYY-MM-DD')} is not valid for this meal which repeats every ${weeklyInterval} week(s) starting from ${scheduler.formatDate(meal.startDate!, 'YYYY-MM-DD')}.`
+                    );
+                break;
+            case RepeatType.MONTHLY:
+                //First check if the day of month matches
+                const requestDayOfMonth = scheduler.buildDate({
+                    date: requestDate,
+                    endOfDay: true
+                }).getDate();
+
+                if (!(repeatConfiguration.daysOfMonth!.includes(requestDayOfMonth))) {
+                    throw new BadRequestException(
+                        `The date ${scheduler.formatDate(requestDate, 'YYYY-MM-DD')} which is day ${requestDayOfMonth} of the month is not valid for this meal which is scheduled on days [${repeatConfiguration.daysOfMonth}] of the month.`
+                    );
+                };
+                //Then check if within start and end dates
+                start = scheduler.buildDate({
+                    date: meal.startDate!,
+                });
+                const monthEndDate = meal.endDate || meal.diet.endDate;
+                end = scheduler.buildDate({
+                    date: monthEndDate!,
+                    endOfDay: true
+                });
+                isValid = scheduler.isBetween({
+                    start,
+                    end,
+                    target: requestDate,
+                });
+
+                if (!isValid) {
+                    throw new BadRequestException(
+                        `The date ${scheduler.formatDate(requestDate, 'YYYY-MM-DD')} is not within the scheduled range for this meal which is between ${scheduler.formatDate(start, 'YYYY-MM-DD')} and ${scheduler.formatDate(end, 'YYYY-MM-DD')}.`
+                    );
+                }
+
+                //Finally check the monthly interval
+                const monthsFromMealStart = scheduler.getMonthsDifference(
+                    start,
+                    requestDate
+                );
+                const monthlyInterval = repeatConfiguration.repeatTarget!;
+                if (!((monthsFromMealStart % monthlyInterval) === 0)) {
+                    throw new BadRequestException(
+                        `The date ${scheduler.formatDate(requestDate, 'YYYY-MM-DD')} is not valid for this meal which repeats every ${monthlyInterval} month(s) starting from ${scheduler.formatDate(meal.startDate!, 'YYYY-MM-DD')}.`
+                    );
+                }
+                break;
+        }
+        const createdRecord = this.mealRecordRepository.create({
+            mealId: meal.id,
+            patientId: meal.diet.patientId,
+            dietId: meal.diet.id,
+            nutritionistId: meal.diet.nutritionistId,
+            isCompleted: true,
+            mealRelativeDate: scheduler.buildDate({ date: requestDate, startOfDay: true, offset: { day: -1 } })
+        });
+
+        return await this.mealRecordRepository.save(createdRecord);
     }
 
     // Enhanced method for patient meal record creation with meal service integration

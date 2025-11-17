@@ -5,13 +5,17 @@ import { dbConnection } from '../database/db-connection';
 import { DietModule } from '../diet/diet.module';
 import { FoodService } from '../food/food.service';
 import { ALIMENT_SERVICE_PROXY_NAME, provideProxyService } from '@backend-evolved/shared';
+import { MealProxyController } from './controllers/meal-proxy.controller';
 
 @Module({
 	imports: [
 		dbConnection(),
 		forwardRef(() => DietModule)
 	],
-	controllers: [MealController],
+	controllers: [
+		MealController,
+		MealProxyController
+	],
 	providers: [
 		MealService,
 		FoodService,

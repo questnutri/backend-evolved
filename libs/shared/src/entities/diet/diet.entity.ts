@@ -25,6 +25,9 @@ export class Diet {
     @OneToMany(() => Meal, (meal) => meal.diet)
     meals: Meal[];
 
+    @Column({ type: 'int', default: -3 })
+    timeZone: number;
+
     @CreateDateColumn()
     createdAt: Date;
 

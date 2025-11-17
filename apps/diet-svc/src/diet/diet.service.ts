@@ -1,4 +1,4 @@
-import { Diet, PATIENT_SERVICE_PROXY_NAME, RECORD_SERVICE_PROXY_NAME, ALIMENT_SERVICE_PROXY_NAME, ProxyMessage, ServiceContract, MealRecord, Aliment, Food, MealRepeatCalculator, RepeatType } from '@backend-evolved/shared';
+import { Diet, PATIENT_SERVICE_PROXY_NAME, RECORD_SERVICE_PROXY_NAME, ALIMENT_SERVICE_PROXY_NAME, ProxyMessage, ServiceContract, MealRecord, Aliment, Food, MealRepeatCalculator, RepeatType, SchedulerHelper, sendProxyMessage, proxyPattern } from '@backend-evolved/shared';
 import { DietPlan, DietDayPlan, MealPlan, CleanedMealRecord } from '@backend-evolved/shared';
 import { Injectable, NotFoundException, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -24,17 +24,28 @@ export class DietService implements ServiceContract<Diet> {
     }
 
     async createOne(data: Partial<Diet>): Promise<Diet> {
-        const isNutritionistRelated = await firstValueFrom(
-            this.patientProxyService.send<ProxyMessage<boolean>, { nutritionistId: string, patientId: string }>('patient.isRelatedToNutritionist', {
-                patientId: data.patientId!,
-                nutritionistId: data.nutritionistId!
-            })
-        );
-        if (isNutritionistRelated && 'error' in isNutritionistRelated) {
-            throw new RpcException(isNutritionistRelated);
-        }
-        if (isNutritionistRelated.payload) {
-            const diet = this.dietRepository.create(data);
+        const scheduler = new SchedulerHelper(data.timeZone);
+        const isRelatedToNutritionist = await sendProxyMessage<
+            typeof proxyPattern.patient.isRelatedToNutritionist.receive,
+            typeof proxyPattern.patient.isRelatedToNutritionist.send
+        >({
+            proxy: this.patientProxyService,
+            pattern: proxyPattern.patient.isRelatedToNutritionist.key,
+            data: { patientId: data.patientId!, nutritionistId: data.nutritionistId! }
+        })
+
+        if (isRelatedToNutritionist) {
+            const diet = this.dietRepository.create({
+                ...data,
+                startDate: scheduler.buildDate({
+                    date: data.startDate, 
+                    startOfDay: true,
+                }),
+                endDate: data.endDate ? scheduler.buildDate({
+                    date: data.endDate, 
+                    endOfDay: true,
+                }) : null
+            });
             return await this.dietRepository.save(diet);
         }
         throw new NotFoundException('Patient not found or not related to the nutritionist');
@@ -217,7 +228,7 @@ export class DietService implements ServiceContract<Diet> {
                 mealRepeatConfig = {
                     type: RepeatType.DAILY,
                     startDate: normalizedDietStartDate,
-                    interval: 1
+                    repeatTarget: 1
                 };
             }
 

@@ -25,4 +25,5 @@ export class PatientRestController {
     ) {
         return await this.patientService.findOneWhere({id: ctxUser.id});
     }
+
 }

@@ -76,7 +76,7 @@ export class DietRestController {
         return { active: true };
     }
 
-    @Post()
+    @Get()
     @ApiOperation({ summary: 'Get all diets', description: 'Retrieve all diets filtered by patientId and/or nutritionistId. Returns date-only startDate/endDate fields (YYYY-MM-DD, UTC).' })
     @ApiBody({
         type: DietRequestBody,
@@ -108,7 +108,7 @@ export class DietRestController {
     @UseGuards(
         JwtRoleGuard(['nutritionist', 'patient']),
         IsRelatedGuard({
-            on: 'body',
+            on: 'query',
             withKeys: ['patientId', 'nutritionistId'],
             errorMessage: (role: UserRole) => {
                 if (role === 'patient') {
@@ -120,9 +120,10 @@ export class DietRestController {
     )
     @UseFilters(ControllerExceptionFilter)
     async getAllDiets(
-        @Body() body: DietRequestBody,
+        @Query('patientId') patientId: string,
+        @Query('nutritionistId') nutritionistId: string,
     ): Promise<Diet[]> {
-        const diets = await this.dietService.findAll({...body});
+        const diets = await this.dietService.findAll({patientId, nutritionistId});
         return diets.map(diet => this.mapDietDates(diet));
     }
 
@@ -313,7 +314,7 @@ export class DietRestController {
         return this.mapDietPlanDates(rawPlans);
     }
 
-    @Post('new')
+    @Post()
     @ApiOperation({
         summary: 'Create a new diet',
         description: 'Create a new diet for a given patient. If startDate is omitted, it defaults to today (UTC).'
@@ -325,11 +326,11 @@ export class DietRestController {
     @UseGuards(JwtRoleGuard(['nutritionist']))
     @UseFilters(ControllerExceptionFilter)
     async createDiet(
+        @Query('utc') utc: number,
         @Body() createDietDto: CreateDietDto,
         @ContextUser() ctxUser: ContextUser,
     ): Promise<Diet> {
-        if (!createDietDto.startDate) createDietDto.startDate = new Date();
-        return await this.dietService.createOne({ ...createDietDto, nutritionistId: ctxUser.id });
+        return await this.dietService.createOne({ ...createDietDto, nutritionistId: ctxUser.id, timeZone: utc ?? -3 });
     }
 
     @Get(':dietId')

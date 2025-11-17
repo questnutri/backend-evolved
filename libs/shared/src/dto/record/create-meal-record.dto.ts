@@ -56,19 +56,23 @@ export class CreatePatientMealRecordDto {
     @Field()
     @ApiProperty({
         description: 'The relative date when this meal should be consumed (only date part, time will be ignored)',
-        example: '2025-09-17T08:00:00.000Z',
+        examples: [
+            {
+                summary: 'Date only',
+                value: '2025-09-17'
+            },
+        ],
         required: true
     })
     @IsDateString()
-    mealRelativeDate: Date;
+    date: Date;
 
     @Field({ nullable: true })
     @ApiPropertyOptional({
-        description: 'Whether the meal has been completed by the patient',
-        example: false,
-        default: false
+        description: 'The time when this meal should be consumed (only time part, date will be ignored)',
+        example: '14:30:00'
     })
-    @IsBoolean()
+    @IsString()
     @IsOptional()
-    isCompleted?: boolean = false;
+    time?: string;
 }

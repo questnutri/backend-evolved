@@ -1,5 +1,5 @@
-import { CreateMealDto, KeysOf, Meal, ServiceContract, RepeatType, RepeatConfiguration, getUTCTodayStart, normalizeToStartOfDay, getUTCYesterdayEnd } from '@backend-evolved/shared';
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { CreateMealDto, KeysOf, Meal, ServiceContract, RepeatType, RepeatConfiguration, getUTCTodayStart, normalizeToStartOfDay, getUTCYesterdayEnd, SchedulerHelper } from '@backend-evolved/shared';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 
@@ -14,43 +14,111 @@ export class MealService implements ServiceContract<Meal> {
         return await this.mealRepository.find({ where: query });
     }
 
-    async findOneWhere(query?: Partial<KeysOf<Meal>>): Promise<Meal | null> {
-        if (!query) return null;
-        const where = { ...query, validTo: null } as any;
-        return await this.mealRepository.findOne({ where, relations: ['diet'] });
+    async findOneWhere(where: any = {}, relations: string[] = ['diet']): Promise<Meal> {
+        const foundMeal = await this.mealRepository.findOne({ where, relations });
+        if (!foundMeal) {
+            throw new NotFoundException('Meal not found');
+        }
+        return foundMeal;
     }
 
-    async createOne(data: Partial<Meal>): Promise<Meal> {
-        if (!data.repeatConfiguration) {
-            const defaultConfig: RepeatConfiguration = {
+    async createOne(data: any): Promise<Meal> {
+        const scheduler = new SchedulerHelper(data.diet.timeZone);
+        let validStartTargetDate = scheduler.buildDate({ startOfDay: true });
+        if (data.diet?.startDate! > validStartTargetDate) {
+            validStartTargetDate = data.diet!.startDate!;
+        }
+        let validEndTargetDate = null;
+        if (data.diet?.endDate) {
+            validEndTargetDate = scheduler.buildDate({
+                date: data.diet.endDate,
+                endOfDay: true
+            });
+        }
+
+        let repeatConfigurationPayload: any = {};
+        const repeatConfig = data.repeatConfiguration
+
+        //If no repeat configuration is provided, set default to ONCE starting today
+        if (!repeatConfig) {
+            console.log('No repeat configuration provided, setting default to ONCE');
+            repeatConfigurationPayload = {
                 type: RepeatType.ONCE,
-                startDate: normalizeToStartOfDay(new Date()),
+                targetDate: validStartTargetDate,
             };
-            data.repeatConfiguration = defaultConfig;
         } else {
-            data.repeatConfiguration = {
-                type: data.repeatConfiguration.type,
-                interval: data.repeatConfiguration.interval || 1,
-                daysOfWeek: data.repeatConfiguration.daysOfWeek || undefined,
-                dayOfMonth: data.repeatConfiguration.dayOfMonth || undefined,
-                startDate: data.repeatConfiguration.startDate
-                    ? normalizeToStartOfDay(new Date(data.repeatConfiguration.startDate))
-                    : undefined,
-                endDate: data.repeatConfiguration.endDate
-                    ? normalizeToStartOfDay(new Date(data.repeatConfiguration.endDate))
-                    : undefined,
-            };
+            switch (repeatConfig.type) {
+                case RepeatType.ONCE:
+                    repeatConfigurationPayload['type'] = RepeatType.ONCE;
+                    const configTargetDate = repeatConfig.targetDate;
+                    if (!configTargetDate) {
+                        repeatConfigurationPayload['targetDate'] = validEndTargetDate;
+                    } else {
+                        const scheduledDate = scheduler.buildDate({
+                            date: configTargetDate,
+                            startOfDay: true
+                        });
+                        if (scheduledDate < validStartTargetDate) {
+                            throw new BadRequestException(`Target date cannot be in the past compared to diet start date of: ${validStartTargetDate.toISOString()}`);
+                        } else if (validEndTargetDate && scheduledDate > validEndTargetDate) {
+                            throw new BadRequestException(`Target date cannot be after diet end date of: ${validEndTargetDate.toISOString()}`);
+                        } else {
+                            repeatConfigurationPayload['targetDate'] = scheduledDate;
+                        }
+                    }
+                    break;
+                //Read as: every X days. If X === 1, every day
+                case RepeatType.DAILY:
+                    repeatConfigurationPayload['type'] = RepeatType.DAILY;
+                    repeatConfigurationPayload['repeatTarget'] = repeatConfig.repeatTarget || 1;
+                    break;
+                //Read as every [day of week]
+                case RepeatType.WEEKLY:
+                    repeatConfigurationPayload['type'] = RepeatType.WEEKLY;
+                    const VALID_DAYS = [0, 1, 2, 3, 4, 5, 6];
+
+                    const originalDays = Array.isArray(repeatConfig.daysOfWeek) ? repeatConfig.daysOfWeek : [];
+                    const filteredDays = originalDays.filter((day: number) => VALID_DAYS.includes(day));
+                    const uniqueDaysSet = new Set(filteredDays);
+
+                    if (uniqueDaysSet.size === 0) {
+                        uniqueDaysSet.add(0);
+                    }
+
+                    repeatConfig.daysOfWeek = [...uniqueDaysSet];
+                    repeatConfigurationPayload['daysOfWeek'] = repeatConfig.daysOfWeek;
+                    repeatConfigurationPayload['repeatTarget'] = repeatConfig.repeatTarget || 1;
+                    break;
+                case RepeatType.MONTHLY:
+                    repeatConfigurationPayload['type'] = RepeatType.MONTHLY;
+                    const daysOfMonth = repeatConfig.daysOfMonth || [];
+                    if(daysOfMonth.length === 0) {
+                        daysOfMonth.push(validStartTargetDate.getDate());
+                    }
+                    repeatConfigurationPayload['daysOfMonth'] = daysOfMonth;
+                    repeatConfigurationPayload['repeatTarget'] = repeatConfig.repeatTarget || 1;
+                    break;
+                default:
+                    throw new NotFoundException('Invalid repeat configuration type');
+            }
         }
 
         if (!data.hour) {
             data.hour = '00:00';
         }
 
-        const newValidFrom = getUTCTodayStart();
-        const mealData = { ...data, validFrom: newValidFrom, validTo: null };
+        let newStartDate = scheduler.buildDate({
+            startOfDay: true
+        });
+
+        if (newStartDate < data.diet?.startDate!) {
+            newStartDate = data.diet!.startDate!;
+        }
+
+        const mealData = { ...data, startDate: newStartDate, endDate: null, repeatConfiguration: repeatConfigurationPayload };
 
         const meal = this.mealRepository.create(mealData);
-        const saved = await this.mealRepository.save(meal);
+        const saved: any = await this.mealRepository.save(meal);
         const reloaded = await this.mealRepository.findOne({ where: { id: saved.id }, relations: ['diet'] });
         if (reloaded && reloaded.diet) {
             // @ts-ignore
@@ -84,11 +152,11 @@ export class MealService implements ServiceContract<Meal> {
 
         if (!currentMeal) throw new NotFoundException('Meal not found');
         const newValidFrom = getUTCTodayStart();
-        if (newValidFrom.getTime() > currentMeal!.validFrom!.getTime()) {
+        if (newValidFrom.getTime() > currentMeal!.startDate!.getTime()) {
             const yesterdayEnd = getUTCYesterdayEnd(newValidFrom);
 
             // Close the current version's effective range
-            await this.mealRepository.update(currentMeal.id, { validTo: yesterdayEnd });
+            await this.mealRepository.update(currentMeal.id, { endDate: yesterdayEnd });
 
             // 4. Create a NEW version (temporal record)
             const newMealData = {
@@ -122,7 +190,7 @@ export class MealService implements ServiceContract<Meal> {
         const newValidFrom = getUTCTodayStart();
         const yesterdayEnd = getUTCYesterdayEnd(newValidFrom);
 
-        await this.mealRepository.update(currentMeal.id, { validTo: yesterdayEnd, isActive: false });
+        await this.mealRepository.update(currentMeal.id, { endDate: yesterdayEnd, isActive: false });
         return await this.findById(currentMeal.id);
     }
 

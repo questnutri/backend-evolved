@@ -3,8 +3,6 @@ export enum RepeatType {
     DAILY = 'DAILY',           // Every X days
     WEEKLY = 'WEEKLY',         // Every X weeks on specific days
     MONTHLY = 'MONTHLY',       // Every X months on specific day
-    WEEKDAYS = 'WEEKDAYS',     // Specific weekdays (Mon, Tue, etc.)
-    MONTHLY_DATE = 'MONTHLY_DATE' // Specific date of month (18th, 25th, etc.)
 }
 
 export enum DayOfWeek {
@@ -19,9 +17,8 @@ export enum DayOfWeek {
 
 export interface RepeatConfiguration {
     type: RepeatType;
-    interval?: number;         // Every X days/weeks/months (optional, defaults to 1)
+    repeatTarget?: number;         // Every X days/weeks/months (optional, defaults to 1)
+    targetDate?: Date;
     daysOfWeek?: DayOfWeek[];  // For WEEKLY and WEEKDAYS
-    dayOfMonth?: number;       // For MONTHLY_DATE (1-31)
-    startDate?: Date;          // When the repeat pattern starts
-    endDate?: Date;            // When the repeat pattern ends (optional)
+    daysOfMonth?: number[];       // For MONTHLY_DATE (1-31)
 }

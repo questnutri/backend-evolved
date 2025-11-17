@@ -1,5 +1,5 @@
-import { Aliment, ALIMENT_SERVICE_PROXY_NAME, Food, getUTCTodayStart, getUTCYesterdayEnd, ProxyMessage, ServiceContract } from '@backend-evolved/shared';
-import { Inject, Injectable, InternalServerErrorException } from '@nestjs/common';
+import { Aliment, ALIMENT_SERVICE_PROXY_NAME, Food, getUTCTodayStart, getUTCYesterdayEnd, ProxyMessage, SchedulerHelper, ServiceContract } from '@backend-evolved/shared';
+import { BadRequestException, Inject, Injectable, InternalServerErrorException } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { InjectRepository } from '@nestjs/typeorm';
 import { firstValueFrom } from 'rxjs';
@@ -43,8 +43,18 @@ export class FoodService implements ServiceContract<Food> {
     }
 
     async createOne(data: Partial<Food>): Promise<any> {
-        const newValidFrom = getUTCTodayStart();
-        const foodData = { ...data, validFrom: newValidFrom, validTo: null };
+        let validStartTargetDate = SchedulerHelper.buildDate({ startOfDay: true });
+        if(
+            (data.meal?.endDate && data.meal?.endDate < validStartTargetDate)
+            || 
+            (data.meal?.diet.endDate && data.meal?.diet.endDate < validStartTargetDate)
+        ) {
+            throw new BadRequestException('Cannot add food to a meal or diet that has ended');
+        }
+        if(validStartTargetDate < data.meal!.startDate!) {
+            validStartTargetDate = data.meal!.startDate!;
+        }
+        const foodData = { ...data, startDate: validStartTargetDate, endDate: null };
 
         const food = this.foodRepository.create(foodData);
         const saved = await this.foodRepository.save(food);
@@ -63,11 +73,11 @@ export class FoodService implements ServiceContract<Food> {
 
         const newValidFrom = getUTCTodayStart();
 
-        if (newValidFrom.getTime() > currentFood!.validFrom!.getTime()) {
+        if (newValidFrom.getTime() > currentFood!.startDate!.getTime()) {
             const yesterdayEnd = getUTCYesterdayEnd(newValidFrom);
 
             // Close the current version's effective range
-            await this.foodRepository.update(currentFood.id, { validTo: yesterdayEnd });
+            await this.foodRepository.update(currentFood.id, { endDate: yesterdayEnd });
 
             // 4. Create a NEW version (temporal record)
             const newFoodData = {
@@ -100,7 +110,7 @@ export class FoodService implements ServiceContract<Food> {
 
             // Close the current version (effectively "deleting" it from today onwards)
             const yesterdayEnd = getUTCYesterdayEnd(newValidFrom);
-            await this.foodRepository.update(currentFood.id, { validTo: yesterdayEnd });
+            await this.foodRepository.update(currentFood.id, { endDate: yesterdayEnd });
         }
     }
 }

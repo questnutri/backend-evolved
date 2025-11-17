@@ -1,0 +1,30 @@
+meta {
+  name: Create water record
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{HTTP_PROTOCOL}}://{{GATEWAY_URL}}/record/water/:waterGoalId
+  body: json
+  auth: bearer
+}
+
+params:path {
+  waterGoalId: {{WATER_GOAL_ID}}
+}
+
+auth:bearer {
+  token: {{PATIENT_ACCESS_TOKEN}}
+}
+
+body:json {
+  {
+    "amountInMl": 200
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

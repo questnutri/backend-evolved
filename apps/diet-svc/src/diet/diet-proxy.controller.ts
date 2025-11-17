@@ -50,8 +50,8 @@ export class DietRestController {
         @Payload() payload: DietRequestBody
     ): Promise<ProxyMessage<Diet[]>> {
         const diets = await this.dietService.findAll({ ...payload });
-        return { payload: diets.map(diet => this.mapDietDates(diet)) };
-        
+        return { payload: diets.map(diet => this.mapDietDates(diet)) };    
     }
+
 
 }

@@ -1,0 +1,24 @@
+meta {
+  name: Find current
+  type: http
+  seq: 2
+}
+
+get {
+  url: {{HTTP_PROTOCOL}}://{{GATEWAY_URL}}/nutritionist/patients/:patientId/water/current
+  body: none
+  auth: inherit
+}
+
+params:path {
+  patientId: {{PATIENT_ID}}
+}
+
+vars:post-response {
+  WATER_GOAL_ID: res("id")
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

@@ -15,10 +15,6 @@ export class MealRepeatCalculator {
         dietStartDate: Date,
         dietDays: number,
     ): boolean {
-        if (!repeatConfiguration) {
-            return false;
-        }
-
         const dietEndDate = new Date(dietStartDate);
         dietEndDate.setDate(dietStartDate.getDate() + dietDays - 1);
 
@@ -56,12 +52,6 @@ export class MealRepeatCalculator {
             case RepeatType.MONTHLY:
                 return this.checkMonthlyRepeat(config, relativeDate, configStartDate);
 
-            case RepeatType.WEEKDAYS:
-                return this.checkWeekdaysRepeat(config, relativeDate);
-
-            case RepeatType.MONTHLY_DATE:
-                return this.checkMonthlyDateRepeat(config, relativeDate);
-
             default:
                 return false;
         }
@@ -94,7 +84,7 @@ export class MealRepeatCalculator {
         startDate: Date,
     ): boolean {
         const daysDiff = Math.floor((relativeDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-        const interval = config.interval || 1;
+        const interval = config.repeatTarget || 1;
         const result = daysDiff >= 0 && daysDiff % interval === 0;
         return result;
     }
@@ -105,7 +95,7 @@ export class MealRepeatCalculator {
         startDate: Date,
     ): boolean {
         const weeksDiff = Math.floor((relativeDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24 * 7));
-        const isCorrectWeekInterval = weeksDiff >= 0 && weeksDiff % (config.interval || 1) === 0;
+        const isCorrectWeekInterval = weeksDiff >= 0 && weeksDiff % (config.repeatTarget || 1) === 0;
 
         if (!isCorrectWeekInterval) {
             return false;
@@ -127,7 +117,7 @@ export class MealRepeatCalculator {
         const monthsDiff = (relativeDate.getUTCFullYear() - startDate.getUTCFullYear()) * 12 +
             (relativeDate.getUTCMonth() - startDate.getUTCMonth());
 
-        const isCorrectMonthInterval = monthsDiff >= 0 && monthsDiff % (config.interval || 1) === 0;
+        const isCorrectMonthInterval = monthsDiff >= 0 && monthsDiff % (config.repeatTarget || 1) === 0;
 
         if (!isCorrectMonthInterval) {
             return false;
@@ -135,30 +125,6 @@ export class MealRepeatCalculator {
 
         // Check if it's the same day of the month as the start date
         return relativeDate.getUTCDate() === startDate.getUTCDate();
-    }
-
-    private static checkWeekdaysRepeat(
-        config: RepeatConfiguration,
-        relativeDate: Date,
-    ): boolean {
-        if (!config.daysOfWeek || config.daysOfWeek.length === 0) {
-            // Default to Monday-Friday if no specific days are specified
-            const dayOfWeek = relativeDate.getUTCDay();
-            return dayOfWeek >= DayOfWeek.MONDAY && dayOfWeek <= DayOfWeek.FRIDAY;
-        }
-
-        return config.daysOfWeek.includes(relativeDate.getUTCDay() as DayOfWeek);
-    }
-
-    private static checkMonthlyDateRepeat(
-        config: RepeatConfiguration,
-        relativeDate: Date,
-    ): boolean {
-        if (config.dayOfMonth === undefined) {
-            return false;
-        }
-
-        return relativeDate.getDate() === config.dayOfMonth;
     }
 
     /**

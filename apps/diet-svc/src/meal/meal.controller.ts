@@ -2,7 +2,7 @@ import { Body, Controller, Post, UseGuards, Headers, NotFoundException, Param, P
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { MealService } from './meal.service';
 import { ApiBearerAuth, ApiSecurity, ApiCreatedResponse, ApiNoContentResponse, ApiNotFoundResponse, ApiOkResponse, ApiOperation } from '@nestjs/swagger';
-import { CreateMealDto, Meal, JwtRoleGuard, ControllerContract, ControllerExceptionFilter, ProxyMessengerFilter } from '@backend-evolved/shared';
+import { CreateMealDto, Meal, JwtRoleGuard, ControllerContract, ControllerExceptionFilter, ProxyMessengerFilter, ContextUser } from '@backend-evolved/shared';
 import { FoodService } from '../food/food.service';
 import { DietService } from '../diet/diet.service';
 
@@ -178,7 +178,8 @@ When creating meal records, the system validates that the \`mealRelativeDate\` m
 	async postOne(
 		@Param('dietId') dietId: string,
 		@Body() createMealDto: CreateMealDto,
-		@Headers() headers: any
+		@Headers() headers: any,
+		@ContextUser() ctxUser: ContextUser
 	) {
 		const diet = await this.dietService.findOneWhere({ id: dietId });
 		if (!diet) throw new NotFoundException('Diet not found');

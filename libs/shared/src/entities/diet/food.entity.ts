@@ -24,13 +24,11 @@ export class Food {
     @Column({ nullable: true })
     description?: string;
 
-    // --- TEMPORAL VERSIONING FIELDS ---
-    @Column({ type: 'timestamp with time zone', default: () => 'CURRENT_TIMESTAMP' })
-    validFrom: Date | null; // The date this version becomes effective
+    @Column({ type: 'timestamp with time zone' })
+    startDate: Date;
 
     @Column({ type: 'timestamp with time zone', nullable: true })
-    validTo?: Date | null; // The date this version is superseded (exclusive end date)
-    // ----------------------------------
+    endDate?: Date | null;
 
     @CreateDateColumn()
     createdAt: Date;
@@ -48,3 +46,10 @@ export class Food {
         return this.meal.diet.nutritionistId === nutritionistId;
     }
 }
+
+
+/**
+ * Food startDate should be relative to Meal startDate
+ * Food endDate should be relative to Meal endDate or before, if deleted
+ * Diet can't be created on past dates
+ */

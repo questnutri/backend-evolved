@@ -1,13 +1,20 @@
-import { Controller, Get, Post, Body, Param, Headers, UseGuards, UseFilters, NotFoundException, Query } from '@nestjs/common';
-import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiSecurity, ApiQuery } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Param, Headers, UseGuards, UseFilters, NotFoundException, Query, Inject } from '@nestjs/common';
+import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiSecurity, ApiQuery, ApiParam, ApiNotFoundResponse, ApiUnauthorizedResponse, ApiBody } from '@nestjs/swagger';
 import { MealRecordService } from './meal-record.service';
-import { MealRecord, JwtRoleGuard, ControllerExceptionFilter, CreatePatientMealRecordDto } from '@backend-evolved/shared';
+import { MealRecord, JwtRoleGuard, ControllerExceptionFilter, CreatePatientMealRecordDto, ContextUser, DIET_SERVICE_PROXY_NAME, sendProxyMessage, Meal, proxyPattern, SchedulerHelper, ApiAccessResponses } from '@backend-evolved/shared';
+import { Context } from '@nestjs/graphql';
+import { ClientProxy } from '@nestjs/microservices';
+import { error, time } from 'console';
 
 @Controller('/meal')
 @ApiBearerAuth('bearer')
 @ApiSecurity('bearer')
 export class MealRecordController {
-    constructor(private readonly mealRecordService: MealRecordService) { }
+    constructor(
+        private readonly mealRecordService: MealRecordService,
+        @Inject(DIET_SERVICE_PROXY_NAME)
+        private readonly dietServiceProxy: ClientProxy
+    ) { }
 
     @Get()
     @ApiOperation({
@@ -137,34 +144,171 @@ export class MealRecordController {
         return await this.mealRecordService.findAll(query);
     }
 
-        @Post(':mealId')
+    @Post(':mealId')
+    @ApiBody({
+        description: 'Payload to create a new meal record. If no date/time is provided, date/time of the request will be used.',
+        schema: {
+            type: 'object',
+            properties: {
+                date: {
+                    type: 'string',
+                    description: 'The relative date when this meal should be consumed (only date part, time will be ignored). Format: "2025-09-17"',
+                    example: '2025-09-17'
+                },
+                time: {
+                    type: 'string',
+                    description: 'The time when this meal should be consumed (only time part, date will be ignored). Format: "14:30:00"',
+                    example: '12:30'
+                }
+            },
+        },
+        examples: {
+            withTimeAsProperty: {
+                summary: 'With time as separate property',
+                value: { date: '2025-09-17', time: '12:30' }
+            },
+            withTimeInDate: {
+                summary: 'With time included in date',
+                value: { date: '2025-09-17T12:30:00.000Z' }
+            },
+            onlyDate: {
+                summary: 'Only date',
+                value: { date: '2025-09-17' }
+            }
+        },
+        required: false
+    })
+    @ApiParam({ name: 'mealId', description: 'ID of the meal to create a new record' })
     @ApiOperation({
-        summary: 'Create a new meal record for a specific meal (simplified)',
+        summary: 'Create a new meal record for a specific meal',
         description: 'Create a new meal record when a patient consumes a meal. Only requires minimal information as meal details are fetched automatically.'
     })
     @ApiCreatedResponse({
-        description: 'The meal record has been successfully created.',
-        type: MealRecord
+        description: 'The meal record has been successfully created/updated. If a record for the same meal and date exists, property "isCompleted" will be updated instead.',
+        type: MealRecord,
+        example: {
+            id: 'record-id-123',
+            mealId: 'meal-id-456',
+            patientId: 'patient-id-789',
+            nutritionistId: 'nutritionist-id-101',
+            dietId: 'diet-id-112',
+            mealRelativeDate: '2025-09-17T12:00:00.000Z',
+            isCompleted: true,
+            createdAt: '2025-09-17T12:30:00.000Z',
+            updatedAt: '2025-09-17T12:45:00.000Z'
+        }
     })
+    @ApiAccessResponses()
     @UseGuards(JwtRoleGuard(['patient']))
     @UseFilters(ControllerExceptionFilter)
-    async createForMeal(
+    async trackMealRecord(
         @Param('mealId') mealId: string,
-        @Body() createPatientMealRecordDto: CreatePatientMealRecordDto,
-        @Headers() headers: any
-    ): Promise<MealRecord> {
-        const patientId = headers['user-id'];
-        return await this.mealRecordService.createPatientMealRecord(
-            mealId,
-            patientId,
-            createPatientMealRecordDto.mealRelativeDate,
+        @Body() body: { date: string, time?: string },
+        @ContextUser() ctxUser: ContextUser,
+    ): Promise<any> {
+        const foundMeal = await sendProxyMessage<
+            typeof proxyPattern.diet.meal.getOne.receive,
+            typeof proxyPattern.diet.meal.getOne.send
+        >({
+            proxy: this.dietServiceProxy,
+            pattern: proxyPattern.diet.meal.getOne.key,
+            data: {
+                mealId,
+                patientId: ctxUser.id
+            }
+        });
+
+        return await this.mealRecordService.createOrUpdate(
+            foundMeal,
+            body.date,
+            body.time
         );
     }
 
-    @Get('health')
-    healthCheck() {
-        return { active: true };
+    @Get(':mealId')
+    @ApiOperation({
+        summary: 'Retrieve meal records for a specific meal',
+        description: 'Retrieve all meal records associated with a specific meal ID. Optionally filter by meal relative date.'
+    })
+    @ApiParam({ name: 'mealId', description: 'ID of the meal to retrieve records for' })
+    @ApiQuery({ name: 'date', required: false, description: 'Filter by meal relative date. Format: "2025-09-17"' })
+    @ApiOkResponse({
+        description: 'The available meal records for this particular mealId.',
+        type: [MealRecord],
+        examples: {
+            multipleRecords: {
+                summary: 'Multiple Records',
+                value: [
+                    {
+                        id: 'record-id-1',
+                        mealId: 'meal-id-123',
+                        patientId: 'patient-id-456',
+                        nutritionistId: 'nutritionist-id-789',
+                        dietId: 'diet-id-101',
+                        mealRelativeDate: '2025-09-17T12:00:00.000Z',
+                        isCompleted: true,
+                        createdAt: '2025-09-17T12:30:00.000Z',
+                        updatedAt: '2025-09-17T12:45:00.000Z'
+                    },
+                    {
+                        id: 'record-id-2',
+                        mealId: 'meal-id-123',
+                        patientId: 'patient-id-456',
+                        nutritionistId: 'nutritionist-id-789',
+                        dietId: 'diet-id-101',
+                        mealRelativeDate: '2025-09-18T12:00:00.000Z',
+                        isCompleted: false,
+                        createdAt: '2025-09-18T12:30:00.000Z',
+                        updatedAt: '2025-09-18T12:45:00.000Z'
+                    }
+                ]
+            },
+            emptyRecords: {
+                summary: 'No Records',
+                value: []
+            }
+        }
+    })
+    @ApiNotFoundResponse({
+        description: 'Meal not found',
+        example: {
+            statusCode: 404,
+            message: 'Meal not found',
+            error: 'Not Found'
+        }
+    })
+    @ApiAccessResponses()
+    @UseGuards(JwtRoleGuard(['patient', 'nutritionist']))
+    @UseFilters(ControllerExceptionFilter)
+    async getMealRecord(
+        @Param('mealId') mealId: string,
+        @Query('date') date: string,
+        @ContextUser() ctxUser: ContextUser,
+    ) {
+        const foundMeal = await sendProxyMessage<
+            typeof proxyPattern.diet.meal.getOne.receive,
+            typeof proxyPattern.diet.meal.getOne.send
+        >({
+            proxy: this.dietServiceProxy,
+            pattern: proxyPattern.diet.meal.getOne.key,
+            data: {
+                mealId,
+                patientId: ctxUser.id
+            }
+        });
+        const scheduler = new SchedulerHelper(foundMeal.diet.timeZone);
+        const payload: any = {
+            mealId: foundMeal.id,
+        };
+
+        if (date) {
+            const targetDate = scheduler.buildDate({ date, startOfDay: true });
+            payload['mealRelativeDate'] = targetDate;
+        }
+
+        return await this.mealRecordService.findAll(payload);
     }
+
 
     // @Get(':id')
     // @ApiOperation({

@@ -15,9 +15,11 @@ export class PatientNutritionistController {
         return { payload: patients };
     }
 
-    @MessagePattern(proxyPattern.patient.isRelatedToNutritionist)
+    @MessagePattern(proxyPattern.patient.isRelatedToNutritionist.key)
     @UseFilters(ProxyMessengerFilter)
-    async isNutritionistRelated(data: { patientId: string, nutritionistId: string }): Promise<ProxyMessage<boolean>> {
+    async isNutritionistRelated(data: { patientId: string, nutritionistId: string }): 
+        Promise<ProxyMessage<typeof proxyPattern.patient.isRelatedToNutritionist.receive>> 
+    {
         return { payload: (await this.patientNutritionistService.findOneWhere(data)) !== null };
     }
 }
