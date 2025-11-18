@@ -12,7 +12,7 @@ import {
     ApiBody,
     ApiTags
 } from '@nestjs/swagger';
-import { DietService } from './diet.service';
+import { DietService } from '../diet.service';
 import {
     ControllerExceptionFilter,
     CreateDietDto, Diet,
@@ -28,8 +28,8 @@ import {
     ensureUserRelatedOrThrow,
     UserRole
 } from '@backend-evolved/shared';
-import { FoodService } from '../food/food.service';
-import { MealService } from '../meal/meal.service';
+import { FoodService } from '../../food/food.service';
+import { MealService } from '../../meal/meal.service';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 
 // Use a UTC-based date-only formatter here to avoid timezone shifts
@@ -373,6 +373,16 @@ export class DietRestController {
         return this.mapDietDates(publicDiet);
     }
 
+
+    @Get(':dietId/plan')
+    async getDietPlanById(
+        @Param('dietId') dietId: string
+    ) {
+        const diet = await this.dietService.findOneWhere({id: dietId});
+        if(diet) {
+            this.dietService.getDietPlan(diet);
+        }
+    }
 
 
     @Put(':dietId')

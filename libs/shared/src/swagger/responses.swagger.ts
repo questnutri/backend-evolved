@@ -1,11 +1,12 @@
 import { applyDecorators } from "@nestjs/common";
 import {
+    ApiBadRequestResponse,
     ApiForbiddenResponse,
     ApiInternalServerErrorResponse,
     ApiUnauthorizedResponse,
 } from "@nestjs/swagger";
 
-export function ApiAccessResponses() {
+export function GenerateAccessResponse() {
     return applyDecorators(
         ApiUnauthorizedResponse({
             description: "Unauthorized access",
@@ -51,3 +52,70 @@ export function ApiAccessResponses() {
         }),
     );
 }
+
+export function GenerateBadRequestResponse(options: GenerateBadRequestOptions) {
+    const dtoRequests = options.dto ? getValidationMessagesFromDto(options.dto) : {};
+    const combinedRequests = Object.assign({}, dtoRequests, options.requests ?? {});
+
+    const examples = [];
+    for (const [name, value] of Object.entries(combinedRequests)) {
+        const last = name.includes('.') ? name.split('.').pop() || name : name;
+        const underscored = last.replaceAll('_', ' ');
+        const spaced = underscored.replace(/([a-z0-9])([A-Z])/g, '$1 $2');
+        const formattedName = spaced.toLocaleLowerCase(); 
+        examples.push({
+            [name]: {
+                summary: `Invalid ${formattedName}`,
+                value: {
+                    message: value,
+                    error: "Bad Request",
+                    statusCode: 400
+                }
+            }
+        })
+    }
+
+    return applyDecorators(
+        ApiBadRequestResponse({
+            description: options.description,
+            examples: Object.assign({}, ...examples)
+        })
+    )
+}
+
+
+function getValidationMessagesFromDto(dtoType: any): { [key: string]: string[] } {
+    try {
+        const { validateSync } = require('class-validator');
+
+        const instance = new dtoType();
+        const errors = validateSync(instance, {
+            skipMissingProperties: false,
+            whitelist: false,
+            forbidUnknownValues: false,
+        });
+
+        const requests: { [key: string]: string[] } = {};
+
+        function handleError(err: any, propPrefix = '') {
+            const key = propPrefix ? `${propPrefix}.${err.property}` : err.property;
+            if (err.constraints) requests[key] = Object.values(err.constraints);
+            if (err.children && err.children.length) {
+                err.children.forEach((child: any) => handleError(child, key));
+            }
+        }
+
+        for (const err of errors) handleError(err);
+
+        return requests;
+    } catch (e) {
+        return {};
+    }
+}
+
+export interface GenerateBadRequestOptions {
+    description: string;
+    requests?: { [key: string]: any };
+    dto?: any;
+}
+

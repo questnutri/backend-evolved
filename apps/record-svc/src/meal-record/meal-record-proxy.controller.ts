@@ -62,4 +62,9 @@ export class MealRecordMessageController {
             return recordDate.getTime() === targetDate.getTime();
         }) || null;
     }
+
+    @MessagePattern()
+    async handleFindRecordsForMeal() {
+        
+    }
 }

@@ -1,4 +1,4 @@
-import { 
+import {
     Controller,
     Post,
     Body,
@@ -19,11 +19,17 @@ import {
     JwtRoleGuard,
     ResetPasswordResponse,
     ROOT_ADMIN_EMAIL,
+    GenerateAccessResponse,
 } from '@backend-evolved/shared';
 import {
     ApiAcceptedResponse,
+    ApiBadRequestResponse,
+    ApiBearerAuth,
+    ApiNotFoundResponse,
     ApiOkResponse,
-    ApiOperation
+    ApiOperation,
+    ApiSecurity,
+    ApiUnauthorizedResponse
 } from '@nestjs/swagger';
 
 import { AuthService } from '../services/auth.service';
@@ -39,20 +45,63 @@ export class AuthRestController {
     ) { }
 
     @Get('health')
+    @ApiOperation({
+        summary: 'Check the health status of the authentication service'
+    })
     healthCheck() {
         return { active: true };
     }
 
     @Get('jwks.json')
+    @ApiOperation({
+        summary: 'Get the JSON Web Key Set (JWKS) for token verification'
+    })
     async getJwks() {
         const jwk = await this.keyService.getJwk();
         return { keys: [jwk] };
     }
 
     @Post('login')
-    @ApiOperation({ summary: 'Login an user' })
-    @ApiOkResponse({ description: 'The user has been successfully logged in.' })
-    @ApiAcceptedResponse({ description: 'The user account have been created but an admin must activate it.' })
+    @ApiOperation({
+        summary: 'Login an user (patient or nutritionist)',
+        description: 'Logs in an user using email and password, returning authentication tokens. If user is a patient and is the first login, the reset token of the password is returned instead.'
+    })
+    @ApiOkResponse({
+        description: 'The user has been successfully logged in.',
+        examples: {
+            normalLogin: {
+                summary: 'Normal login response',
+                value: {
+                    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                    "id": "user-uuid",
+                    "role": "nutritionist"
+                }
+            },
+            firstLogin: {
+                summary: 'First login',
+                value: {
+                    "resetToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+                    "firstLogin": true
+                }
+            }
+        }
+    })
+    @ApiAcceptedResponse({
+        description: 'The user account for a nutritionist have been created but an admin must activate it.',
+        example: {
+            "statusCode": 202,
+            "message": "Your account has been successfully created, but it is currently under review. Please wait for approval to access all features."
+        }
+    })
+    @ApiNotFoundResponse({
+        description: 'Login was unsuccessfull',
+        example: {
+            "message": "Invalid password or email not found",
+            "error": "Not Found",
+            "statusCode": 404
+        }
+    })
     @UseFilters(ControllerExceptionFilter)
     async login(@Res() res: any, @Body() body: LoginUserDto): Promise<LoginResponse> {
         const result = await this.authService.generalLogin(body);
@@ -68,8 +117,27 @@ export class AuthRestController {
     }
 
     @Post('reset-password')
-    @ApiOperation({ summary: 'Reset user password using reset token' })
-    @ApiOkResponse({ description: 'Password reset and new tokens returned.' })
+    @ApiOperation({
+        summary: 'Reset user password using reset token',
+        description: ''
+    })
+    @ApiOkResponse({
+        description: 'The password was successfully changed, and a new access token was created.',
+        example: {
+            "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+            "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+            "id": "user-uuid",
+            "role": "nutritionist"
+        }
+    })
+    @ApiUnauthorizedResponse({
+        description: "Unauthorized access",
+        example: {
+            statusCode: 401,
+            message: 'Invalid or expired reset token',
+            error: "Unauthorized",
+        },
+    })
     @UseFilters(ControllerExceptionFilter)
     async resetPassword(@Body() body: ResetPasswordDto): Promise<LoginResponse> {
         return await this.authService.resetPassword(body);
@@ -80,12 +148,36 @@ export class AuthRestController {
     @ApiOkResponse({ description: 'Returns a password reset token to be sent to the user.' })
     @UseFilters(ControllerExceptionFilter)
     async forgotPassword(@Body() body: ForgotPasswordDto): Promise<ResetPasswordResponse> {
-        if(body.email === ROOT_ADMIN_EMAIL) return {}
+        if (body.email === ROOT_ADMIN_EMAIL) return {}
         return await this.authService.forgotPassword(body.email);
     }
 
     @Post('change-password')
-    @ApiOperation({ summary: 'Changes a logged user password' })
+    @ApiOperation({
+        summary: 'Changes a logged user password',
+        description: 'Unlike resetting a password, this requires both a valid access token and the current password to be provided.',
+        security: [{ bearer: [] }]
+    })
+    @ApiOkResponse({
+        description: 'The password was successfully changed, and a new access token was created.',
+        example: {
+            "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+            "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+            "id": "user-uuid",
+            "role": "nutritionist"
+        }
+    })
+    @ApiBadRequestResponse({
+        description: 'Current password is invalid',
+        example: {
+            "message": "Invalid password",
+            "error": "Bad Request",
+            "statusCode": 400
+        }
+    })
+    @ApiBearerAuth('bearer')
+    @ApiSecurity('bearer')
+    @GenerateAccessResponse()
     @UseFilters(ControllerExceptionFilter)
     @UseGuards(JwtRoleGuard(['admin', 'nutritionist', 'patient']))
     async changePassword(

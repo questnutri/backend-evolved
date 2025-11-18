@@ -9,11 +9,14 @@ import {
     ContextUser,
     sendProxyMessage,
     User,
-    IsRelatedGuard
+    IsRelatedGuard,
+    GenerateBadRequestResponse,
+    Nutritionist
 } from '@backend-evolved/shared';
-import { ApiOkResponse, ApiOperation, ApiConflictResponse, ApiBadRequestResponse, ApiBearerAuth, ApiSecurity, ApiCreatedResponse } from '@nestjs/swagger';
+import { ApiOkResponse, ApiOperation, ApiConflictResponse, ApiBadRequestResponse, ApiBearerAuth, ApiSecurity, ApiCreatedResponse, ApiExcludeEndpoint, ApiTags } from '@nestjs/swagger';
 import { ClientProxy } from '@nestjs/microservices';
 
+@ApiTags('Nutritionist')
 @Controller()
 export class NutritionistRestController {
     constructor(
@@ -24,11 +27,31 @@ export class NutritionistRestController {
 
 
     @Get('health')
+    @ApiExcludeEndpoint()
     healthCheck() {
         return { active: true };
     }
 
     @Get('me')
+    @ApiOperation({
+        summary: 'Get information about the logged nutritionist',
+        description: 'Retrieve the profile information of the currently logged-in nutritionist.'
+    })
+    @ApiBearerAuth('bearer')
+    @ApiSecurity('bearer')
+    @ApiOkResponse({
+        description: 'Nutritionist data retrieved successfully', example: {
+            "id": "012d3768-379c-4167-bc4a-56c99dc98a69",
+            "documentType": "cpf",
+            "documentNumber": "12345678901",
+            "name": "John Doe",
+            "email": "john.doe@example.com",
+            "phone": "+55 12 93456-7890",
+            "crn": "CRN-1/23456",
+            "createdAt": "2023-10-01T12:34:56.789Z",
+            "updatedAt": "2023-10-01T12:34:56.789Z"
+        }
+    })
     @UseGuards(JwtRoleGuard(['nutritionist']))
     @UseFilters(ControllerExceptionFilter)
     async getMe(@ContextUser() ctxUser: ContextUser): Promise<any> {
@@ -54,10 +77,38 @@ export class NutritionistRestController {
 
     @Post('register')
     @ApiOperation({ summary: 'Register a new nutritionist' })
-    @ApiCreatedResponse({ description: 'Nutritionist registered successfully' })
+    @ApiCreatedResponse({
+        description: 'Nutritionist registered successfully',
+        example: {
+            "message": "Nutritionist created successfully",
+            "success": true,
+            "id": "012d3768-379c-4167-bc4a-56c99dc98a69"
+        }
+    })
+    @ApiConflictResponse({
+        description: 'Data conflict on register',
+        examples: {
+            emailRegistered: {
+                summary: "Email already registered",
+                value: {
+                    "message": "An User with this email already exists",
+                    "error": "Conflict",
+                    "statusCode": 409
+                }
+            }
+        }
+    })
     @ApiConflictResponse({ description: 'Nutritionist with given email already exists' })
     @ApiConflictResponse({ description: 'Nutritionist with given document already exists' })
-    @ApiBadRequestResponse({ description: 'Invalid data' })
+    @GenerateBadRequestResponse({
+        description: 'Invalid data for request',
+        dto: CreateNutritionistDto,
+        requests: {
+            documentType: [
+                "document type must be a valid type: [cnpj, cpf]"
+            ],
+        }
+    })
     @UseFilters(ControllerExceptionFilter)
     async register(@Body() body: CreateNutritionistDto) {
         const registeredNutritionist = await this.nutritionistService.createOne(body);

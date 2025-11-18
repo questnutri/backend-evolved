@@ -1,5 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { DietRestController } from './diet-rest.controller';
+import { DietRestController } from './controllers/diet-rest.controller';
 import { DietService } from './diet.service';
 
 describe('DietController', () => {

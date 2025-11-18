@@ -28,10 +28,12 @@ import {
     ApiOperation,
     ApiBearerAuth,
     ApiSecurity,
-    ApiCreatedResponse
+    ApiCreatedResponse,
+    ApiTags
 } from '@nestjs/swagger';
 import { ClientProxy } from '@nestjs/microservices';
 
+@ApiTags('Nutritionist Patients')
 @Controller('patients')
 export class PatientRestController {
     constructor(

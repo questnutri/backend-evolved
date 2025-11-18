@@ -1,4 +1,4 @@
-import { ConflictException, ForbiddenException, HttpException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, HttpException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { ChangePasswordDto, ContextUser, FirstLoginResponse, LoginResponse, LoginUserDto, RefreshToken, ResetPasswordDto, ResetPasswordResponse, User, UserRole } from "@backend-evolved/shared";
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -21,9 +21,10 @@ export class AuthService {
 
     private async executeLogin(data: LoginUserDto): Promise<User> {
         const user = await this.userService.findOne({ email: data.email });
-        if (!user) throw new NotFoundException(`User with email ${data.email} not found`);
+        if (!user) throw new NotFoundException(`Invalid password or email not found`);
         const valid = await bcrypt.compare(data.password, user.passwordHash)
-        if (!valid) throw new UnauthorizedException(`Invalid password for user ${data.email}`);
+        // if (!valid) throw new UnauthorizedException(`Invalid password for user ${data.email}`);
+        if (!valid) throw new NotFoundException(`Invalid password or email not found`);
         return user;
     }
 
@@ -69,7 +70,7 @@ export class AuthService {
 
         const userId = payload?.resetFor;
         const firstLoginFlag = payload?.firstLogin === true;
-        if (!userId) throw new UnauthorizedException('Invalid reset token payload');
+        if (!userId) throw new UnauthorizedException('Invalid or expired reset token');
 
         const user = await this.userService.findOne({ id: userId });
 
@@ -100,7 +101,7 @@ export class AuthService {
         let foundUser = await this.userService.findOne({ id: user.id });
         if (!foundUser) throw new NotFoundException("User not found");
         const valid = await bcrypt.compare(data.currentPassword, foundUser.passwordHash);
-        if (!valid) throw new UnauthorizedException(`Invalid password`);
+        if (!valid) throw new BadRequestException(`Invalid password`);
         const newHashedPassword = await bcrypt.hash(data.newPassword, 10);
         foundUser.passwordHash = newHashedPassword;
         await this.userService.save(foundUser);

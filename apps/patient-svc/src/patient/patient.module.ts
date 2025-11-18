@@ -5,6 +5,9 @@ import { provideProxyService, AUTH_SERVICE_PROXY_NAME, NUTRITIONIST_SERVICE_PROX
 import { dbConnection } from '../database/db-connection';
 import { PatientProxyController } from './patient-proxy.controller';
 import { WaterGoalService } from '../water-goal/water-goal.service';
+import { 
+    PatientNutritionistRestController
+} from './nutritionist-controller/patient-nutritionist-rest.controller';
 
 @Module({
     imports: [
@@ -12,7 +15,7 @@ import { WaterGoalService } from '../water-goal/water-goal.service';
     ],
     controllers: [
         PatientRestController,
-        
+        PatientNutritionistRestController,
         PatientProxyController
     ],
     providers: [

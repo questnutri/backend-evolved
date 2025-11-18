@@ -1,9 +1,14 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { DietService } from './diet.service';
-import { DietRestController } from './diet-rest.controller';
+import { DietRestController } from './controllers/diet-rest.controller';
 import { dbConnection } from '../database/db-connection';
 import { MealModule } from '../meal/meal.module';
-import { ALIMENT_SERVICE_PROXY_NAME, PATIENT_SERVICE_PROXY_NAME, RECORD_SERVICE_PROXY_NAME, provideProxyService } from '@backend-evolved/shared';
+import { 
+    ALIMENT_SERVICE_PROXY_NAME,
+    PATIENT_SERVICE_PROXY_NAME,
+    RECORD_SERVICE_PROXY_NAME,
+    provideProxyService
+} from '@backend-evolved/shared';
 
 @Module({
     imports: [

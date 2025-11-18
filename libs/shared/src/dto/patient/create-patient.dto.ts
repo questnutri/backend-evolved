@@ -6,14 +6,6 @@ import {
 
 export class BodyCreatePatientDto {
     @ApiProperty({
-        description: 'ID of the nutritionist creating the patient',
-        required: true,
-        example: 'nutritionist-uuid-1234',
-    })
-    @IsString()
-    nutritionistId: string;
-
-    @ApiProperty({
         description: 'Name of the patient',
         required: true,
         example: 'John Doe Patient',

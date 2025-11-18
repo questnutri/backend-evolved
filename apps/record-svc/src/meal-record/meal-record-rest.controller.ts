@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Body, Param, Headers, UseGuards, UseFilters, NotFoundException, Query, Inject } from '@nestjs/common';
 import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiSecurity, ApiQuery, ApiParam, ApiNotFoundResponse, ApiUnauthorizedResponse, ApiBody } from '@nestjs/swagger';
 import { MealRecordService } from './meal-record.service';
-import { MealRecord, JwtRoleGuard, ControllerExceptionFilter, CreatePatientMealRecordDto, ContextUser, DIET_SERVICE_PROXY_NAME, sendProxyMessage, Meal, proxyPattern, SchedulerHelper, ApiAccessResponses } from '@backend-evolved/shared';
+import { MealRecord, JwtRoleGuard, ControllerExceptionFilter, CreatePatientMealRecordDto, ContextUser, DIET_SERVICE_PROXY_NAME, sendProxyMessage, Meal, proxyPattern, SchedulerHelper, GenerateAccessResponse } from '@backend-evolved/shared';
 import { Context } from '@nestjs/graphql';
 import { ClientProxy } from '@nestjs/microservices';
 import { error, time } from 'console';
@@ -198,7 +198,7 @@ export class MealRecordController {
             updatedAt: '2025-09-17T12:45:00.000Z'
         }
     })
-    @ApiAccessResponses()
+    @GenerateAccessResponse()
     @UseGuards(JwtRoleGuard(['patient']))
     @UseFilters(ControllerExceptionFilter)
     async trackMealRecord(
@@ -277,7 +277,7 @@ export class MealRecordController {
             error: 'Not Found'
         }
     })
-    @ApiAccessResponses()
+    @GenerateAccessResponse()
     @UseGuards(JwtRoleGuard(['patient', 'nutritionist']))
     @UseFilters(ControllerExceptionFilter)
     async getMealRecord(

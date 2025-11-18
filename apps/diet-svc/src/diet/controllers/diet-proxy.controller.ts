@@ -12,7 +12,7 @@ import {
     ApiBody,
     ApiTags
 } from '@nestjs/swagger';
-import { DietService } from './diet.service';
+import { DietService } from '../diet.service';
 import {
     ControllerExceptionFilter,
     CreateDietDto, Diet,

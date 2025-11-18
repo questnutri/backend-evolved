@@ -1,4 +1,4 @@
-import { Diet, PATIENT_SERVICE_PROXY_NAME, RECORD_SERVICE_PROXY_NAME, ALIMENT_SERVICE_PROXY_NAME, ProxyMessage, ServiceContract, MealRecord, Aliment, Food, MealRepeatCalculator, RepeatType, SchedulerHelper, sendProxyMessage, proxyPattern } from '@backend-evolved/shared';
+import { Diet, PATIENT_SERVICE_PROXY_NAME, RECORD_SERVICE_PROXY_NAME, ALIMENT_SERVICE_PROXY_NAME, ProxyMessage, ServiceContract, MealRecord, Aliment, Food, MealRepeatCalculator, RepeatType, SchedulerHelper, sendProxyMessage, proxyPattern, Meal } from '@backend-evolved/shared';
 import { DietPlan, DietDayPlan, MealPlan, CleanedMealRecord } from '@backend-evolved/shared';
 import { Injectable, NotFoundException, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -19,8 +19,8 @@ export class DietService implements ServiceContract<Diet> {
         return await this.dietRepository.find({ where: query });
     }
 
-    async findOneWhere(query: { [key in keyof Diet]?: any }): Promise<Diet | null> {
-        return await this.dietRepository.findOne({ where: query, relations: ['meals', 'meals.foods'] });
+    async findOneWhere(where: any, relations: string[] = ['meals', 'meals.foods']): Promise<Diet | null> {
+        return await this.dietRepository.findOne({ where, relations });
     }
 
     async createOne(data: Partial<Diet>): Promise<Diet> {
@@ -38,11 +38,11 @@ export class DietService implements ServiceContract<Diet> {
             const diet = this.dietRepository.create({
                 ...data,
                 startDate: scheduler.buildDate({
-                    date: data.startDate, 
+                    date: data.startDate,
                     startOfDay: true,
                 }),
                 endDate: data.endDate ? scheduler.buildDate({
-                    date: data.endDate, 
+                    date: data.endDate,
                     endOfDay: true,
                 }) : null
             });
@@ -63,6 +63,21 @@ export class DietService implements ServiceContract<Diet> {
     async deleteOne(query: any): Promise<void> {
         const result = await this.dietRepository.delete(query);
         if (result.affected === 0) throw new NotFoundException('Diet not found');
+    }
+
+    async getDietPlan(diet: Diet, date?: string, length: number = 1): Promise<any> {
+        const scheduler = new SchedulerHelper(diet.timeZone);
+        if(length === 0) length = 1;
+        else if(length < 0) length *= (-1);
+
+        const requestDate = scheduler.buildDate({ date, startOfDay: true });
+        const startDate = scheduler.buildDate({ date, startOfDay: true, offset: { month: -length } });
+        const endDate = scheduler.buildDate({ date, startOfDay: true, offset: { month: +length } });
+
+        console.log(`Request Date: ${requestDate}`);
+        console.log(`Start Date: ${startDate}`);
+        console.log(`End Date: ${endDate}`);
+
     }
 
     /**

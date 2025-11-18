@@ -43,6 +43,11 @@ export class ErrorMapper {
             throw new ForbiddenException(capturedError.original.response.message || 'Forbidden error occurred')
         }
 
+        if(ErrorMapper.isErrorOfType(NotFoundException, error)) {
+            const capturedError = captured || ErrorMapper.capture(error);
+            throw new NotFoundException(capturedError.original.response.message || 'Not found error occurred')
+        }
+
         if(ErrorMapper.isErrorOfType(HttpException, error)) {
             const capturedError = captured || ErrorMapper.capture(error);
             throw new HttpException(capturedError.original.message, capturedError.original.status);
@@ -96,10 +101,10 @@ export class ErrorMapper {
             }
         }
 
-        if (ErrorMapper.isErrorOfType(NotFoundException, error)) {
-            const detail = (error as NotFoundException).message || captured?.detail || 'Not found error';
-            throw new NotFoundException(detail);
-        }
+        // if (ErrorMapper.isErrorOfType(NotFoundException, error)) {
+        //     const detail = (error as NotFoundException).message || captured?.detail || 'Not found error';
+        //     throw new NotFoundException(detail);
+        // }
 
         if (error instanceof RpcException) {
             const rpcError = error.getError() as CapturedError
