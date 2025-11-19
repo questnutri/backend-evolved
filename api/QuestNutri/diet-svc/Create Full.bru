@@ -1,11 +1,11 @@
 meta {
-  name: [FULL] Create a new diet
+  name: Create Full
   type: http
   seq: 4
 }
 
 post {
-  url: {{HTTP_PROTOCOL}}://{{GATEWAY_URL}}/diet/full
+  url: {{HTTP_PROTOCOL}}://{{GATEWAY_URL}}/diet/diets/full
   body: json
   auth: bearer
 }

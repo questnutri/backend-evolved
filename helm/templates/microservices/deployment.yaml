@@ -20,6 +20,13 @@ spec:
           imagePullPolicy: Always
           ports:
             - containerPort: {{ default 3000 .port }}
+          {{- if .envVariables }}
+          env:
+            {{- range $idx, $env := .envVariables }}
+            - name: {{ $env.name | quote }}
+              value: {{ $env.value | quote }}
+            {{- end }}
+          {{- end }}
           {{- if .volumeMaps }}
           volumeMounts:
             {{- range $vm := .volumeMaps }}

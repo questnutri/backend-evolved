@@ -1,9 +1,18 @@
-import { IsOptional, IsString } from "class-validator";
+import { IsNotEmpty, IsOptional, IsString } from "class-validator";
 import { ApiProperty } from "@nestjs/swagger";
 import { ApiPropertyOptional } from "@nestjs/swagger";
 
 
 export class CreateFoodDto {
+    @ApiProperty({
+        description: 'Meal ID to which the food belongs',
+        example: 'uuid-of-meal',
+        required: true
+    })
+    @IsString()
+    @IsNotEmpty()
+    mealId: string;
+
     @ApiProperty({
         description: 'Aliment unique ID',
         example: '68c9e2b44e99ee1b27d8e3c1'

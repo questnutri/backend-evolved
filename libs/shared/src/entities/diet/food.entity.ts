@@ -6,9 +6,6 @@ export class Food {
     @PrimaryGeneratedColumn('uuid')
     id: string;
 
-    @Column()
-    isActive: boolean = true;
-
     @ManyToOne(() => Meal, (meal) => meal.foods)
     meal: Meal;
 

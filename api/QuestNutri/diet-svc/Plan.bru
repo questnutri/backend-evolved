@@ -1,11 +1,11 @@
 meta {
-  name: Diet plan
+  name: Plan
   type: http
   seq: 3
 }
 
 get {
-  url: {{HTTP_PROTOCOL}}://{{GATEWAY_URL}}/diet/plan?length=24
+  url: {{HTTP_PROTOCOL}}://{{GATEWAY_URL}}/diet/diets/plan?length=24
   body: json
   auth: bearer
 }

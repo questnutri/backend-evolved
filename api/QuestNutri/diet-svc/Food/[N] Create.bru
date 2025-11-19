@@ -1,17 +1,18 @@
 meta {
-  name: Create New Food
+  name: [N] Create
   type: http
   seq: 1
 }
 
 post {
-  url: {{HTTP_PROTOCOL}}://{{GATEWAY_URL}}/diet/{{createdDiet}}/meal/{{createdMeal}}/food
+  url: {{HTTP_PROTOCOL}}://{{GATEWAY_URL}}/diet/foods
   body: json
   auth: inherit
 }
 
 body:json {
   {
+    "mealId": "{{createdMeal}}",
     "alimentId": "{{choosedAlimentId}}"
   }
 }
@@ -40,4 +41,5 @@ script:post-response {
 
 settings {
   encodeUrl: true
+  timeout: 0
 }

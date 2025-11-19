@@ -17,24 +17,71 @@ export class MealService implements ServiceContract<Meal> {
     async findOneWhere(where: any = {}, relations: string[] = ['diet']): Promise<Meal> {
         const foundMeal = await this.mealRepository.findOne({ where, relations });
         if (!foundMeal) {
-            throw new NotFoundException('Meal not found');
+            throw new NotFoundException('Meal not found or user does not have access to this meal.');
         }
         return foundMeal;
     }
 
     async createOne(data: any): Promise<Meal> {
-        const scheduler = new SchedulerHelper(data.diet.timeZone);
-        let validStartTargetDate = scheduler.buildDate({ startOfDay: true });
-        if (data.diet?.startDate! > validStartTargetDate) {
-            validStartTargetDate = data.diet!.startDate!;
+        const { diet } = data;
+
+        const scheduler = new SchedulerHelper(diet.timeZone);
+        const requestDate = scheduler.buildDate({ startOfDay: true });
+        const disabledPastDateScheduling = process.env.DISABLE_PAST_DATE_SCHEDULING === 'true';
+
+        if (diet.endDate && diet.endDate < requestDate) {
+            throw new BadRequestException('Cannot add meal to a diet that has ended');
         }
+
+        let validStartTargetDate = scheduler.buildDate({
+            date: data.startDate, //if date is not provided, it will use request date 
+            startOfDay: true
+        });
+
+        if (
+            disabledPastDateScheduling && //set on .env
+            data.startDate && //has sent start date on body
+            diet.startDate < requestDate && //diet has already started
+            validStartTargetDate < requestDate //sent start date is in the past of request date
+        ) {
+            throw new BadRequestException('Meal start date cannot be in the past');
+        }
+
+        //Checking if request date can be used to schedule meal start
+        //otherwise will use diet start date
+        if (diet?.startDate! > validStartTargetDate) {
+            if (data.startDate) {
+                if (diet.endDate && diet.endDate < validStartTargetDate) {
+                    throw new BadRequestException(`Meal start date ${scheduler.formatDate(validStartTargetDate, 'YYYY-MM-DD HH:mm')} cannot be after diet end date ${scheduler.formatDate(diet.endDate, 'YYYY-MM-DD HH:mm')}`);
+                }
+                throw new BadRequestException(`Meal start date ${scheduler.formatDate(validStartTargetDate, 'YYYY-MM-DD HH:mm')} cannot be before diet start date ${scheduler.formatDate(diet.startDate, 'YYYY-MM-DD HH:mm')}`);
+            }
+            validStartTargetDate = diet!.startDate!;
+        }
+
         let validEndTargetDate = null;
-        if (data.diet?.endDate) {
-            validEndTargetDate = scheduler.buildDate({
-                date: data.diet.endDate,
-                endOfDay: true
-            });
+        if (data.endDate) {
+            if (diet?.endDate) {
+                validEndTargetDate = scheduler.buildDate({
+                    date: diet.endDate,
+                    endOfDay: true
+                });
+
+                const payloadEndDate = scheduler.buildDate({
+                    date: data.endDate,
+                    endOfDay: true
+                });
+                if (payloadEndDate > diet.endDate) {
+                    throw new BadRequestException(`Meal end date ${scheduler.formatDate(payloadEndDate, 'YYYY-MM-DD HH:mm')} cannot be after diet end date ${scheduler.formatDate(diet.endDate, 'YYYY-MM-DD HH:mm')}`);
+                }
+                if (payloadEndDate < validStartTargetDate) {
+                    throw new BadRequestException(`Meal end date ${scheduler.formatDate(payloadEndDate, 'YYYY-MM-DD HH:mm')} cannot be before meal start date ${scheduler.formatDate(validStartTargetDate, 'YYYY-MM-DD HH:mm')}`);
+                }
+                validEndTargetDate = payloadEndDate;
+            }
         }
+
+
 
         let repeatConfigurationPayload: any = {};
         const repeatConfig = data.repeatConfiguration
@@ -92,14 +139,14 @@ export class MealService implements ServiceContract<Meal> {
                 case RepeatType.MONTHLY:
                     repeatConfigurationPayload['type'] = RepeatType.MONTHLY;
                     const daysOfMonth = repeatConfig.daysOfMonth || [];
-                    if(daysOfMonth.length === 0) {
+                    if (daysOfMonth.length === 0) {
                         daysOfMonth.push(validStartTargetDate.getDate());
                     }
                     repeatConfigurationPayload['daysOfMonth'] = daysOfMonth;
                     repeatConfigurationPayload['repeatTarget'] = repeatConfig.repeatTarget || 1;
                     break;
                 default:
-                    throw new NotFoundException('Invalid repeat configuration type');
+                    throw new BadRequestException(`Invalid repeat configuration type for '${repeatConfig.type}' use only: ${Object.values(RepeatType).join(', ')}`);
             }
         }
 
@@ -107,15 +154,12 @@ export class MealService implements ServiceContract<Meal> {
             data.hour = '00:00';
         }
 
-        let newStartDate = scheduler.buildDate({
-            startOfDay: true
-        });
-
-        if (newStartDate < data.diet?.startDate!) {
-            newStartDate = data.diet!.startDate!;
-        }
-
-        const mealData = { ...data, startDate: newStartDate, endDate: null, repeatConfiguration: repeatConfigurationPayload };
+        const mealData = {
+            ...data,
+            startDate: validStartTargetDate,
+            endDate: validEndTargetDate,
+            repeatConfiguration: repeatConfigurationPayload
+        };
 
         const meal = this.mealRepository.create(mealData);
         const saved: any = await this.mealRepository.save(meal);

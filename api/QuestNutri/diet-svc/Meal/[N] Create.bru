@@ -1,11 +1,11 @@
 meta {
-  name: Create New Meal
+  name: [N] Create
   type: http
   seq: 1
 }
 
 post {
-  url: {{HTTP_PROTOCOL}}://{{GATEWAY_URL}}/diet/{{createdDiet}}/meal
+  url: {{HTTP_PROTOCOL}}://{{GATEWAY_URL}}/diet/meals
   body: json
   auth: inherit
 }

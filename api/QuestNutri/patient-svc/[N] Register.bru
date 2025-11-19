@@ -1,5 +1,5 @@
 meta {
-  name: Create Patient
+  name: [N] Register
   type: http
   seq: 4
 }
@@ -7,12 +7,15 @@ meta {
 post {
   url: {{HTTP_PROTOCOL}}://{{GATEWAY_URL}}/patient/register
   body: json
-  auth: inherit
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{NUTRITIONIST_ACCESS_TOKEN}}
 }
 
 body:json {
   {
-    "nutritionistId": "{{NUTRITIONIST_ID}}",
     "name": "{{$randomFirstName}}",
     "email": "test{{account_number}}@patient.com",
     "documentNumber": "00{{account_number}}"

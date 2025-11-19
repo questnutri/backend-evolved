@@ -30,6 +30,9 @@ microservices:
     image: questnutri/diet-svc:2.1.0
     database:
       type: postgres
+    envVariables:
+      - name: DISABLE_PAST_DATE_SCHEDULING
+        value: true
   - name: nutritionist
     image: questnutri/nutritionist-svc:2.1.0
     database:

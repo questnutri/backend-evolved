@@ -1,11 +1,11 @@
 meta {
-  name: Create new admin
+  name: JWKS
   type: http
-  seq: 1
+  seq: 5
 }
 
-post {
-  url: {{HTTP_PROTOCOL}}://{{GATEWAY_URL}}/admin/create
+get {
+  url: {{HTTP_PROTOCOL}}://{{GATEWAY_URL}}/auth/jwks.json
   body: none
   auth: inherit
 }

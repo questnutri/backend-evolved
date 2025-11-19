@@ -1,26 +1,51 @@
-import { Body, Controller, Post, UseGuards, Headers, NotFoundException, Param, Put, Delete, Get, UseFilters } from '@nestjs/common';
+import {
+	Body,
+	Controller,
+	Post,
+	UseGuards,
+	Headers,
+	NotFoundException,
+	Param,
+	Put,
+	Delete,
+	Get,
+	UseFilters
+} from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
-import { MealService } from './meal.service';
-import { ApiBearerAuth, ApiSecurity, ApiCreatedResponse, ApiNoContentResponse, ApiNotFoundResponse, ApiOkResponse, ApiOperation } from '@nestjs/swagger';
-import { CreateMealDto, Meal, JwtRoleGuard, ControllerContract, ControllerExceptionFilter, ProxyMessengerFilter, ContextUser } from '@backend-evolved/shared';
-import { FoodService } from '../food/food.service';
-import { DietService } from '../diet/diet.service';
+import { MealService } from '../meal.service';
+import {
+	ApiBearerAuth,
+	ApiSecurity,
+	ApiCreatedResponse,
+	ApiNoContentResponse,
+	ApiNotFoundResponse,
+	ApiOkResponse,
+	ApiOperation,
+	ApiTags,
+	ApiBody
+} from '@nestjs/swagger';
+import {
+	CreateMealDto,
+	Meal,
+	JwtRoleGuard, ControllerExceptionFilter,
+	ProxyMessengerFilter,
+	ContextUser,
+	CreateFoodDto
+} from '@backend-evolved/shared';
 
-@Controller(':dietId/meal')
+import { FoodService } from '../../food/food.service';
+import { DietService } from '../../diet/diet.service';
+
+@Controller('meals')
+@ApiTags('Meals')
 @ApiBearerAuth('bearer')
 @ApiSecurity('bearer')
-export class MealController implements ControllerContract<Meal> {
+export class MealRestController {
 	constructor(
 		private readonly mealService: MealService,
 		private readonly dietService: DietService,
 		private readonly foodService: FoodService,
 	) { }
-
-	// @Get()
-	// async getMealsByDietId(@Param('dietId') dietId: string) {
-	// 	return await this.mealService.findAll({ diet: { id: dietId } });
-	// }
-
 
 	@Post()
 	@ApiOperation({
@@ -31,143 +56,205 @@ export class MealController implements ControllerContract<Meal> {
 - **ONCE**: Meal occurs only once on a specific date
 - **DAILY**: Meal repeats every day or every X days
 - **WEEKLY**: Meal repeats on specific days of the week
-- **WEEKDAYS**: Meal repeats only on weekdays (Monday-Friday)
-- **MONTHLY**: Meal repeats on the same day of the month as the start date
-- **MONTHLY_DATE**: Meal repeats on a specific day of each month
+- **MONTHLY**: Meal repeats on specific days of the month
 
 **Note on Date Validation:** 
 When creating meal records, the system validates that the \`mealRelativeDate\` matches the meal's repeat configuration and falls within the diet's date range.`
 	})
-	@ApiCreatedResponse({
-		description: 'The meal has been successfully created.',
-		type: CreateMealDto,
+	@ApiBody({
+		description: 'CreateMealDto payload. Examples show repeatConfiguration for each RepeatType.',
+		required: true,
 		examples: {
-			// ONCE type - for special occasions or one-time meals
-			onceType: {
-				summary: 'ONCE - Special Birthday Meal (occurs only once on a specific date)',
+			once: {
+				summary: 'Once on a specific date',
 				value: {
-					name: 'Birthday Special Dinner',
-					description: 'Special birthday celebration meal with cake and favorite foods',
+					name: 'Birthday Dinner',
+					description: 'Special one-time meal',
 					hour: '19:00',
+					dietId: 'diet-uuid-1111',
 					repeatConfiguration: {
 						type: 'ONCE',
-						startDate: '2025-09-25'
+						targetDate: '2025-09-25'
 					}
 				}
 			},
-			// DAILY type - standard daily meals
-			dailyType: {
-				summary: 'DAILY - Regular Breakfast (repeats every day)',
+			daily_every_day: {
+				summary: 'Repeat daily - every day',
 				value: {
 					name: 'Daily Breakfast',
-					description: 'Healthy breakfast to start each day',
 					hour: '08:00',
+					dietId: 'diet-uuid-2222',
 					repeatConfiguration: {
 						type: 'DAILY',
-						interval: 1
+						repeatTarget: 1
 					}
 				}
 			},
-			// DAILY with interval - every few days
-			dailyInterval: {
-				summary: 'DAILY - Every 3 Days Protein Boost (repeats every 3 days)',
+			daily_interval: {
+				summary: 'Repeat daily - every 3 days',
 				value: {
 					name: 'Protein Boost Meal',
-					description: 'High-protein meal for muscle building, every 3 days',
 					hour: '15:00',
+					dietId: 'diet-uuid-3333',
 					repeatConfiguration: {
 						type: 'DAILY',
-						interval: 3
+						repeatTarget: 3
 					}
 				}
 			},
-			// WEEKLY type - specific days of the week
-			weeklyType: {
-				summary: 'WEEKLY - Monday, Wednesday, Friday Workout Meal (0=Sunday, 1=Monday, etc.)',
+			weekly: {
+				summary: 'Repeat weekly - specific weekdays (1=Monday, 3=Wednesday, 5=Friday)',
 				value: {
 					name: 'Pre-Workout Meal',
-					description: 'Energy-rich meal before workout sessions',
 					hour: '17:00',
+					dietId: 'diet-uuid-4444',
 					repeatConfiguration: {
 						type: 'WEEKLY',
-						interval: 1,
-						daysOfWeek: [1, 3, 5] // Monday, Wednesday, Friday
+						repeatTarget: 1,
+						daysOfWeek: [1, 3, 5]
 					}
 				}
 			},
-			// WEEKLY weekend meals
-			weeklyWeekend: {
-				summary: 'WEEKLY - Weekend Brunch (Saturday and Sunday only)',
+			monthly: {
+				summary: 'Repeat monthly - repeat on specific days of the month',
 				value: {
-					name: 'Weekend Brunch',
-					description: 'Relaxed brunch meal for Saturday and Sunday',
-					hour: '10:30',
-					repeatConfiguration: {
-						type: 'WEEKLY',
-						interval: 1,
-						daysOfWeek: [0, 6] // Sunday, Saturday
-					}
-				}
-			},
-			// WEEKDAYS type - Monday to Friday only
-			weekdaysType: {
-				summary: 'WEEKDAYS - Office Lunch (Monday-Friday only)',
-				value: {
-					name: 'Office Lunch',
-					description: 'Work day lunch meal with balanced nutrition',
-					hour: '12:30',
-					repeatConfiguration: {
-						type: 'WEEKDAYS'
-					}
-				}
-			},
-			// MONTHLY type - same day of month as start date
-			monthlyType: {
-				summary: 'MONTHLY - Monthly Health Check (repeats on same day of month as startDate)',
-				value: {
-					name: 'Monthly Health Check Meal',
-					description: 'Special nutritious meal on the same day each month as the start date (15th)',
-					hour: '14:00',
+					name: 'End-of-Month Review Meal',
+					hour: '18:00',
+					dietId: 'diet-uuid-6666',
 					repeatConfiguration: {
 						type: 'MONTHLY',
-						startDate: '2025-09-15'
+						daysOfMonth: [1, 15, 30]
 					}
 				}
 			},
-			// MONTHLY_DATE type - specific day of each month
-			monthlyDateType: {
-				summary: 'MONTHLY_DATE - 30th of Each Month (specific dayOfMonth)',
-				value: {
-					name: 'End-of-Month Review',
-					description: 'Special meal on the 30th of every month',
-					hour: '18:00',
-					repeatConfiguration: {
-						type: 'MONTHLY_DATE',
-						dayOfMonth: 30
-					}
-				}
-			},
-			// Simple meal without repeat configuration (defaults to ONCE)
-			simpleType: {
-				summary: 'Simple Meal (No Repeat Configuration - defaults to ONCE type)',
+			simple_no_repeat: {
+				summary: 'No repeatConfiguration (treated as ONCE on meal startDate)',
 				value: {
 					name: 'Simple Snack',
-					description: 'A simple snack without specific scheduling',
-					hour: '16:00'
+					hour: '16:00',
+					dietId: 'diet-uuid-7777',
+					startDate: '2025-09-20'
+				}
+			}
+		}
+	})
+	@ApiCreatedResponse({
+		description: 'The meal has been successfully created.',
+		type: Meal,
+		examples: {
+			onceType: {
+				summary: 'ONCE - One-time meal on a specific date',
+				value: {
+					id: 'meal-uuid-1111',
+					name: 'Birthday Special Dinner',
+					description: 'Special birthday celebration meal',
+					hour: '19:00',
+					dietId: 'diet-uuid-1111',
+					repeatConfiguration: {
+						type: 'ONCE',
+						targetDate: '2025-09-25'
+					},
+					foods: []
 				}
 			},
-			// Complex WEEKLY with interval - every 2 weeks
-			weeklyBiweekly: {
-				summary: 'WEEKLY - Bi-weekly Cheat Meal (every 2 weeks on Sunday)',
+			dailyType: {
+				summary: 'DAILY - Every day',
 				value: {
-					name: 'Bi-weekly Cheat Meal',
-					description: 'Allowed cheat meal every two weeks',
-					hour: '13:00',
+					id: 'meal-uuid-2222',
+					name: 'Daily Breakfast',
+					hour: '08:00',
+					dietId: 'diet-uuid-2222',
+					repeatConfiguration: {
+						type: 'DAILY',
+						repeatTarget: 1
+					},
+					foods: []
+				}
+			},
+			dailyInterval: {
+				summary: 'DAILY - Every 3 days',
+				value: {
+					id: 'meal-uuid-3333',
+					name: 'Protein Boost Meal',
+					hour: '15:00',
+					dietId: 'diet-uuid-3333',
+					repeatConfiguration: {
+						type: 'DAILY',
+						repeatTarget: 3
+					},
+					foods: []
+				}
+			},
+			weeklyType: {
+				summary: 'WEEKLY - Specific weekdays (1=Monday, 3=Wednesday, 5=Friday)',
+				value: {
+					"id": "meal-uuid-4444",
+					"name": "Pre-Workout Meal",
+					"repeatConfiguration": {
+						"type": "WEEKLY",
+						"daysOfWeek": [
+							1,
+							3,
+							5
+						],
+						"repeatTarget": 1
+					},
+					"hour": "17:00",
+					"startDate": "2025-11-19T03:00:00.000Z",
+					"endDate": null,
+					"createdAt": "2025-11-19T06:59:16.126Z",
+					"updatedAt": "2025-11-19T06:59:16.126Z",
+					"diet": {
+						"id": "diet-uuid-4444",
+						"name": "Muscle Gain Plan",
+						"description": "A diet plan focused on muscle gain.",
+						"patientId": "patient-uuid-4444",
+						"nutritionistId": "nutritionist-uuid-4444",
+						"timeZone": -3,
+						"createdAt": "2025-11-19T06:45:52.767Z",
+						"updatedAt": "2025-11-19T06:45:52.767Z",
+						"startDate": "2025-11-19T03:00:00.000Z",
+						"endDate": null
+					}
+				}
+			},
+			weeklyWeekend: {
+				summary: 'WEEKLY - Weekend meals (Saturday & Sunday)',
+				value: {
+					id: 'meal-uuid-5555',
+					name: 'Weekend Brunch',
+					hour: '10:30',
+					dietId: 'diet-uuid-5555',
 					repeatConfiguration: {
 						type: 'WEEKLY',
-						interval: 2,
-						daysOfWeek: [0] // Sunday only, every 2 weeks
-					}
+						repeatTarget: 1,
+						daysOfWeek: [6, 0]
+					},
+					foods: []
+				}
+			},
+			monthlyType: {
+				summary: 'MONTHLY - Repeat on specific days of month',
+				value: {
+					id: 'meal-uuid-6666',
+					name: 'End-of-Month Review Meal',
+					hour: '18:00',
+					dietId: 'diet-uuid-6666',
+					repeatConfiguration: {
+						type: 'MONTHLY',
+						daysOfMonth: [30]
+					},
+					foods: []
+				}
+			},
+			simpleType: {
+				summary: 'Simple Meal (no repeatConfiguration provided - treated as ONCE)',
+				value: {
+					id: 'meal-uuid-7777',
+					name: 'Simple Snack',
+					hour: '16:00',
+					dietId: 'diet-uuid-7777',
+					foods: []
 				}
 			}
 		}
@@ -176,15 +263,10 @@ When creating meal records, the system validates that the \`mealRelativeDate\` m
 	@UseGuards(JwtRoleGuard(['nutritionist']))
 	@UseFilters(ControllerExceptionFilter)
 	async postOne(
-		@Param('dietId') dietId: string,
 		@Body() createMealDto: CreateMealDto,
-		@Headers() headers: any,
 		@ContextUser() ctxUser: ContextUser
 	) {
-		const diet = await this.dietService.findOneWhere({ id: dietId });
-		if (!diet) throw new NotFoundException('Diet not found');
-		const isRelated = diet.nutritionistId === headers['user-id'] || diet.patientId === headers['user-id'];
-		if (!isRelated) throw new NotFoundException(`User doesn't have this diet`);
+		const diet = await this.dietService.findOneWhere({ id: createMealDto.dietId, nutritionistId: ctxUser.id });
 		return await this.mealService.createOne({ ...createMealDto, diet });
 	}
 
@@ -193,24 +275,23 @@ When creating meal records, the system validates that the \`mealRelativeDate\` m
 	 * Body may include an optional `foods` array with food payloads.
 	 */
 	@Post('full')
+	@ApiOperation({})
 	@UseGuards(JwtRoleGuard(['nutritionist']))
 	@UseFilters(ControllerExceptionFilter)
 	async postOneFull(
-		@Param('dietId') dietId: string,
-		@Body() createMealDto: any,
-		@Headers() headers: any
+		@Body() body: CreateMealDto & { foods?: CreateFoodDto[] },
+		@ContextUser() ctxUser: ContextUser,
 	) {
-		const diet = await this.dietService.findOneWhere({ id: dietId });
-		if (!diet) throw new NotFoundException('Diet not found');
-		const isRelated = diet.nutritionistId === headers['user-id'] || diet.patientId === headers['user-id'];
-		if (!isRelated) throw new NotFoundException(`User doesn't have this diet`);
+		const diet = await this.dietService.findOneWhere({ id: body.dietId });
+		const isRelated = diet.nutritionistId === ctxUser.id;
+		if (!isRelated) throw new NotFoundException('Diet not found or not related to user');
 
 		// Create the meal first
-		const createdMeal = await this.mealService.createOne({ ...createMealDto, diet });
+		const createdMeal = await this.mealService.createOne({ ...body, diet });
 
 		const createdFoods: any[] = [];
-		if (createMealDto.foods && Array.isArray(createMealDto.foods)) {
-			for (const f of createMealDto.foods) {
+		if (body.foods && Array.isArray(body.foods)) {
+			for (const f of body.foods) {
 				const payload: any = { ...f, meal: createdMeal };
 				const created = await this.foodService.createOne(payload as any);
 				createdFoods.push(created);

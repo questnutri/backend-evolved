@@ -5,7 +5,7 @@ meta {
 }
 
 post {
-  url: {{HTTP_PROTOCOL}}://{{GATEWAY_URL}}/auth/login
+  url: {{HTTP_PROTOCOL}}://{{GATEWAY_URL}}/admin/login
   body: json
   auth: none
 }
@@ -29,4 +29,5 @@ vars:post-response {
 
 settings {
   encodeUrl: true
+  timeout: 0
 }

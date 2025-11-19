@@ -1,6 +1,6 @@
 import { Module, forwardRef } from '@nestjs/common';
 import { MealService } from './meal.service';
-import { MealController } from './meal.controller';
+import { MealRestController } from './controllers/meal-rest.controller';
 import { dbConnection } from '../database/db-connection';
 import { DietModule } from '../diet/diet.module';
 import { FoodService } from '../food/food.service';
@@ -13,7 +13,7 @@ import { MealProxyController } from './controllers/meal-proxy.controller';
 		forwardRef(() => DietModule)
 	],
 	controllers: [
-		MealController,
+		MealRestController,
 		MealProxyController
 	],
 	providers: [

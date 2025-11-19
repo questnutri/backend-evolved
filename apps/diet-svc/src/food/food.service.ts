@@ -1,5 +1,5 @@
 import { Aliment, ALIMENT_SERVICE_PROXY_NAME, Food, getUTCTodayStart, getUTCYesterdayEnd, ProxyMessage, SchedulerHelper, ServiceContract } from '@backend-evolved/shared';
-import { BadRequestException, Inject, Injectable, InternalServerErrorException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { InjectRepository } from '@nestjs/typeorm';
 import { firstValueFrom } from 'rxjs';
@@ -35,15 +35,17 @@ export class FoodService implements ServiceContract<Food> {
         return Promise.all(foundValues.map(food => this.fetchAliment(food)));
     }
 
-    async findOneWhere(query: { [key in keyof Food]?: any }): Promise<Food | null> {
-        if (!query || Object.keys(query).length === 0) return null;
-        const where = { ...query, validTo: null } as any;
-        const found = await this.foodRepository.findOne({ where, relations: ['meal'] });
-        return found ? this.fetchAliment(found) : null;
+    async findOneWhere(where: any = {}, relations: string[] = ['meal']): Promise<Food> {
+        const foundFood = await this.foodRepository.findOne({where, relations});
+        if (!foundFood) {
+            throw new NotFoundException('Food not found or user does not have access to this food.');
+        }
+        return await this.fetchAliment(foundFood);
     }
 
-    async createOne(data: Partial<Food>): Promise<any> {
-        let validStartTargetDate = SchedulerHelper.buildDate({ startOfDay: true });
+    async createOne(data: Partial<Food>, reloadOptions?: {relations?: string[]}): Promise<any> {
+        const scheduler = new SchedulerHelper();
+        let validStartTargetDate = scheduler.buildDate({ startOfDay: true });
         if(
             (data.meal?.endDate && data.meal?.endDate < validStartTargetDate)
             || 
@@ -57,9 +59,12 @@ export class FoodService implements ServiceContract<Food> {
         const foodData = { ...data, startDate: validStartTargetDate, endDate: null };
 
         const food = this.foodRepository.create(foodData);
-        const saved = await this.foodRepository.save(food);
+        let saved = await this.foodRepository.save(food, { reload: true });
         if (saved) {
-            return this.fetchAliment(saved);
+            if (reloadOptions?.relations) {
+                return await this.findOneWhere({ id: saved.id }, reloadOptions.relations);
+            }
+            return await this.fetchAliment(saved);
         }
         throw new InternalServerErrorException('Failed to create food');
     }

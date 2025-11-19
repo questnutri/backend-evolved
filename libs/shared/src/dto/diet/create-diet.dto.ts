@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsOptional, IsString } from "class-validator";
+import { IsNumber, IsOptional, IsString } from "class-validator";
 
 export class CreateDietDto {
     @ApiPropertyOptional({
@@ -27,7 +27,7 @@ export class CreateDietDto {
     patientId: string;
 
     @ApiPropertyOptional({
-        description: 'Date that this date will start to be efective. If not provided, startDate will be equal to request\'s date.',
+        description: 'Date that this diet will start to be efective. If not provided, startDate will be equal to request\'s date.',
         example: '2025-09-17T01:44:54.245Z',
     })
     @IsString()
@@ -41,5 +41,13 @@ export class CreateDietDto {
     @IsString()
     @IsOptional()
     endDate: Date;
+
+    @ApiPropertyOptional({
+        description: 'Time zone offset in minutes from UTC. Used for date calculations.',
+        example: -3
+    })
+    @IsOptional()
+    @IsNumber()
+    timeZone?: number;
 
 }

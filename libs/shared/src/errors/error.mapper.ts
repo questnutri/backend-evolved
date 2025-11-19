@@ -27,7 +27,7 @@ export class ErrorMapper {
     }
 
     static handle(error: unknown, captured?: CapturedError): any {
-        console.log(`handling error:`, error);
+        console.error(`[ErrorMapper] Handling error:`, error);
         if(ErrorMapper.isErrorOfType(BadRequestException, error)) {
             const capturedError = captured || ErrorMapper.capture(error);
             throw new BadRequestException(capturedError.original.response.message || 'Bad request error occurred')

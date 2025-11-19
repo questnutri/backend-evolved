@@ -1,10 +1,11 @@
 import { UseFilters, Post, Body, Controller, Headers, NotFoundException, Get, Param, Put, Delete, UseGuards, ForbiddenException } from '@nestjs/common';
-import { FoodService } from './food.service';
-import { ControllerExceptionFilter, CreateFoodDto, Food, JwtRoleGuard } from '@backend-evolved/shared';
-import { MealService } from '../meal/meal.service';
-import { ApiBearerAuth, ApiSecurity, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiNotFoundResponse, ApiNoContentResponse, ApiForbiddenResponse } from '@nestjs/swagger';
+import { FoodService } from '../food.service';
+import { ContextUser, ControllerExceptionFilter, CreateFoodDto, Food, JwtRoleGuard } from '@backend-evolved/shared';
+import { MealService } from '../../meal/meal.service';
+import { ApiBearerAuth, ApiSecurity, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiNotFoundResponse, ApiNoContentResponse, ApiForbiddenResponse, ApiTags } from '@nestjs/swagger';
 
-@Controller(':dietId/meal/:mealId/food')
+@Controller('foods')
+@ApiTags('Foods')
 @ApiBearerAuth('bearer')
 @ApiSecurity('bearer')
 export class FoodController {
@@ -14,19 +15,75 @@ export class FoodController {
     ) { }
 
     @Post()
-    @ApiOperation({ summary: 'Create a new food', description: 'Create a new food for a given meal' })
-    @ApiCreatedResponse({ description: 'The food has been successfully created.', type: Food })
+    @ApiOperation({
+        summary: 'Create a new food',
+        description: 'Create a new food for a given meal'
+    })
+    @ApiCreatedResponse({
+        description: 'The food has been successfully created.',
+        type: Food,
+        example: {
+            "isActive": true,
+            "id": "9b4df02f-8c36-4110-b231-2306e94cd512",
+            "quantity": "1",
+            "portion": "100 grams",
+            "description": null,
+            "startDate": "2025-11-19T00:00:00.000Z",
+            "endDate": null,
+            "createdAt": "2025-11-19T04:46:43.429Z",
+            "updatedAt": "2025-11-19T04:46:43.429Z",
+            "aliment": {
+                "source": "taco",
+                "_id": "691d1de6632ad8acd0195557",
+                "name": "Abobrinha, italiana, refogada",
+                "availablePortions": [
+                    "100 grams"
+                ],
+                "portions": {
+                    "100 grams": {
+                        "alimentGroup": "Verduras, hortaliças e derivados",
+                        "kcal": "24,42960219",
+                        "kJ": "102,2134556",
+                        "carb": "4,186916667",
+                        "protein": "1,06875",
+                        "fat": "0,821333333",
+                        "humidity": "93,49166667",
+                        "dietaryFiber": "1,38",
+                        "cholesterol": "NA",
+                        "sodium": "2,209",
+                        "calcium": "20,672",
+                        "magnesium": "12,667",
+                        "manganese": "0,135333333",
+                        "phosphorus": "31,82833333",
+                        "iron": "0,358",
+                        "potassium": "193,6266667",
+                        "copper": "0,022666667",
+                        "zinc": "0,272",
+                        "retinol": "NA",
+                        "RE": "41,58333333",
+                        "RAE": "20,79166667",
+                        "thiamine": "0,043333333",
+                        "riboflavin": "Tr",
+                        "pyridoxine": "Tr",
+                        "niacin": "Tr",
+                        "vitaminC": "7,53",
+                        "ash": "0,431333333"
+                    }
+                }
+            }
+        }
+    })
     @ApiNotFoundResponse({ description: 'Meal not found or user does not have access to this meal.' })
     @UseGuards(JwtRoleGuard(['nutritionist']))
     @UseFilters(ControllerExceptionFilter)
-    async postOne(@Param('dietId') dietId: string, @Param('mealId') mealId: string, @Body() createFoodDto: CreateFoodDto, @Headers() headers: any) {
-        const meal = await this.mealService.findById(mealId);
-        if (!meal) {
-            throw new NotFoundException('Meal not found');
-        }
-        const isRelated = meal.diet.nutritionistId === headers['user-id'] || meal.diet.patientId === headers['user-id'];
-        if (!isRelated) throw new NotFoundException(`User doesn't have this diet`);
-        return await this.foodService.createOne({ ...createFoodDto, meal } as any);
+    async postOne(
+        @Body() body: CreateFoodDto,
+        @ContextUser() ctxUser: ContextUser
+    ) {
+        const meal = await this.mealService.findOneWhere({ id: body.mealId });
+        const isRelated = meal.diet.nutritionistId === ctxUser.id;
+        if (!isRelated) throw new NotFoundException(`Meal not found or user does not have access to this meal.`);
+        return await this.foodService.createOne({ ...body, meal } as Partial<Food>, { relations: [] });
     }
 
     @Get()

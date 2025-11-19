@@ -10,7 +10,8 @@ import {
     ApiSecurity,
     ApiQuery,
     ApiBody,
-    ApiTags
+    ApiTags,
+    ApiExcludeEndpoint
 } from '@nestjs/swagger';
 import { DietService } from '../diet.service';
 import {
@@ -26,11 +27,12 @@ import {
     ProxyMessage,
     IsRelatedGuard,
     ensureUserRelatedOrThrow,
-    UserRole
+    UserRole,
+    GenerateBadRequestResponse,
+    GenerateAccessResponse
 } from '@backend-evolved/shared';
 import { FoodService } from '../../food/food.service';
 import { MealService } from '../../meal/meal.service';
-import { MessagePattern, Payload } from '@nestjs/microservices';
 
 // Use a UTC-based date-only formatter here to avoid timezone shifts
 function toDateOnlyString(date: Date | string | number): string {
@@ -42,7 +44,7 @@ function toDateOnlyString(date: Date | string | number): string {
 }
 
 @Controller()
-@ApiTags('diets')
+@ApiTags('Diets')
 @ApiBearerAuth('bearer')
 @ApiSecurity('bearer')
 export class DietRestController {
@@ -72,12 +74,16 @@ export class DietRestController {
     }
 
     @Get('health')
+    @ApiExcludeEndpoint()
     healthCheck() {
         return { active: true };
     }
 
     @Get()
-    @ApiOperation({ summary: 'Get all diets', description: 'Retrieve all diets filtered by patientId and/or nutritionistId. Returns date-only startDate/endDate fields (YYYY-MM-DD, UTC).' })
+    @ApiOperation({
+        summary: 'Get all diets',
+        description: 'Retrieve all diets filtered by patientId and/or nutritionistId. Returns date-only startDate/endDate fields (YYYY-MM-DD, UTC).'
+    })
     @ApiBody({
         type: DietRequestBody,
         required: true,
@@ -123,7 +129,7 @@ export class DietRestController {
         @Query('patientId') patientId: string,
         @Query('nutritionistId') nutritionistId: string,
     ): Promise<Diet[]> {
-        const diets = await this.dietService.findAll({patientId, nutritionistId});
+        const diets = await this.dietService.findAll({ patientId, nutritionistId });
         return diets.map(diet => this.mapDietDates(diet));
     }
 
@@ -174,12 +180,12 @@ export class DietRestController {
     @UseFilters(ControllerExceptionFilter)
     async createFullDiet(
         @Body() payload: any,
-        @Headers() headers: any
+        @ContextUser() ctxUser: ContextUser,
     ): Promise<any> {
         // Ensure startDate default
         if (!payload.startDate) payload.startDate = new Date();
         // Attach nutritionistId from authenticated user
-        payload.nutritionistId = headers['user-id'];
+        payload.nutritionistId = ctxUser.id;
 
         const createdMeals: any[] = [];
         const createdFoods: any[] = [];
@@ -317,38 +323,115 @@ export class DietRestController {
     @Post()
     @ApiOperation({
         summary: 'Create a new diet',
-        description: 'Create a new diet for a given patient. If startDate is omitted, it defaults to today (UTC).'
+        description: `Create a new diet for a given patient.
+**Diet fallback description:**
+- **\`startDate\`**: If is omitted, it defaults to request date (UTC);
+
+- **\`timeZone\`**: If omitted, it defaults to -3 (UTC-3) Brasilia time zone.;
+
+- **\`endDate\`**: 
+    - If omitted, the diet will not expire (endDate = null);
+    - If provided, make sure that you provide a valid \`startDate\`, and if you don't provide \`startDate\`, \`endDate\` must be after request date (UTC).
+`
     })
     @ApiCreatedResponse({
         description: 'The diet has been successfully created.',
-        type: CreateDietDto
+        type: Diet,
+        examples: {
+            noEndDate: {
+                summary: 'Diet without endDate',
+                value: {
+                    id: 'diet-uuid-1111-2222-3333',
+                    name: 'Weight Gain Plan',
+                    patientId: 'patient-uuid-1111-2222-3333',
+                    nutritionistId: 'nutritionist-uuid-1111-2222-3333',
+                    startDate: '2025-12-01T03:00:00.000Z',
+                    endDate: null,
+                    timeZone: -3,
+                    description: "A diet plan focused on healthy weight gain.",
+                    createdAt: "2025-11-19T06:02:14.885Z",
+                    updatedAt: "2025-11-19T06:02:14.885Z"
+                }
+            },
+            withEndDate: {
+                summary: 'Diet with endDate',
+                value: {
+                    id: 'diet-uuid-1111-2222-3333',
+                    name: 'Weight Gain Plan',
+                    patientId: 'patient-uuid-1111-2222-3333',
+                    nutritionistId: 'nutritionist-uuid-1111-2222-3333',
+                    startDate: '2025-12-01T03:00:00.000Z',
+                    endDate: '2026-01-01T03:00:00.000Z',
+                    timeZone: -3,
+                    description: "A diet plan focused on healthy weight gain.",
+                    createdAt: "2025-11-19T06:02:14.885Z",
+                    updatedAt: "2025-11-19T06:02:14.885Z"
+                }
+            }
+        }
     })
+    @ApiNotFoundResponse({
+        description: 'Patient not found',
+        example: {
+            "message": "Patient not found or not related to the nutritionist",
+            "error": "Not Found",
+            "statusCode": 404
+        }
+    })
+    @GenerateBadRequestResponse({
+        description: 'Invalid body data',
+        requests: {
+            endDateBeforeStartDate: "Diet endDate (2025-11-18) cannot be before startDate (2025-11-19).",
+            startDateInPast: "Diet startDate (2025-11-15) cannot be in the past."
+        },
+        dto: CreateDietDto,
+        includeInvalidKeyword: {
+            onRequests: false,
+            onDto: true
+        }
+    })
+    @GenerateAccessResponse()
     @UseGuards(JwtRoleGuard(['nutritionist']))
     @UseFilters(ControllerExceptionFilter)
     async createDiet(
-        @Query('utc') utc: number,
         @Body() createDietDto: CreateDietDto,
         @ContextUser() ctxUser: ContextUser,
     ): Promise<Diet> {
-        return await this.dietService.createOne({ ...createDietDto, nutritionistId: ctxUser.id, timeZone: utc ?? -3 });
+        return await this.dietService.createOne({ ...createDietDto, nutritionistId: ctxUser.id, timeZone: createDietDto.timeZone ?? -3 });
     }
 
     @Get(':dietId')
     @ApiOperation({
         summary: 'Retrieve a specific diet by ID',
-        description: 'Retrieve a specific diet by ID. startDate and endDate are returned as date-only strings (YYYY-MM-DD, UTC).'
+        description: 'Retrieve a specific diet by ID if user (patient or nutritionist) is related to that diet.'
     })
     @ApiOkResponse({
         description: 'The diet has been successfully retrieved.',
-        type: Diet
-    })
-    @ApiForbiddenResponse({
-        description: 'User not allowed to access this diet',
+        type: Diet,
+        example: {
+            id: 'diet-uuid-1111-2222-3333',
+            name: 'Weight Gain Plan',
+            patientId: 'patient-uuid-1111-2222-3333',
+            nutritionistId: 'nutritionist-uuid-1111-2222-3333',
+            startDate: '2025-12-01T03:00:00.000Z',
+            endDate: '2026-01-01T02:59:59.000Z',
+            timeZone: -3,
+            description: "A diet plan focused on healthy weight gain.",
+            createdAt: "2025-11-19T06:02:14.885Z",
+            updatedAt: "2025-11-19T06:02:14.885Z",
+            meals: []
+        }
     })
     @ApiNotFoundResponse({
         description: 'Diet not found',
+        example: {
+            "message": "Diet not found or not related to user",
+            "error": "Not Found",
+            "statusCode": 404
+        }
     })
-    @UseGuards(JwtRoleGuard(['nutritionist', 'patient', 'admin']))
+    @GenerateAccessResponse()
+    @UseGuards(JwtRoleGuard(['nutritionist', 'patient']))
     @UseFilters(ControllerExceptionFilter)
     async findById(
         @Param('dietId') dietId: string,
@@ -367,10 +450,8 @@ export class DietRestController {
                 adminBypass: true
             }
         )
-        // this.checkLogicalAccess(ctxUser, {patientId: diet.patientId, nutritionistId: diet.nutritionistId})
 
-        const publicDiet = await this.dietService.fetchDietAlimentsPublic(diet);
-        return this.mapDietDates(publicDiet);
+        return await this.dietService.fetchDietAlimentsPublic(diet);
     }
 
 
@@ -378,8 +459,8 @@ export class DietRestController {
     async getDietPlanById(
         @Param('dietId') dietId: string
     ) {
-        const diet = await this.dietService.findOneWhere({id: dietId});
-        if(diet) {
+        const diet = await this.dietService.findOneWhere({ id: dietId });
+        if (diet) {
             this.dietService.getDietPlan(diet);
         }
     }
@@ -427,13 +508,4 @@ export class DietRestController {
         return await this.dietService.deleteOne({ id: dietId });
     }
 
-    @UseFilters(ControllerExceptionFilter)
-    private checkLogicalAccess(user: ContextUser, body: { patientId: string, nutritionistId: string }): void {
-        if (user.role === 'admin') return;
-        if (user.role === 'patient' && body.patientId !== user.id) {
-            throw new ForbiddenException("Patients can only access their own diets");
-        } else if (user.role === 'nutritionist' && body.nutritionistId !== user.id) {
-            throw new ForbiddenException("Nutritionists can only access diets that they've created");
-        }
-    }
 }

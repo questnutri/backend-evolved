@@ -1,9 +1,9 @@
-import { Diet, PATIENT_SERVICE_PROXY_NAME, RECORD_SERVICE_PROXY_NAME, ALIMENT_SERVICE_PROXY_NAME, ProxyMessage, ServiceContract, MealRecord, Aliment, Food, MealRepeatCalculator, RepeatType, SchedulerHelper, sendProxyMessage, proxyPattern, Meal } from '@backend-evolved/shared';
+import { Diet, PATIENT_SERVICE_PROXY_NAME, RECORD_SERVICE_PROXY_NAME, ALIMENT_SERVICE_PROXY_NAME, ServiceContract, MealRecord, Aliment, Food, MealRepeatCalculator, RepeatType, SchedulerHelper, sendProxyMessage, proxyPattern } from '@backend-evolved/shared';
 import { DietPlan, DietDayPlan, MealPlan, CleanedMealRecord } from '@backend-evolved/shared';
-import { Injectable, NotFoundException, Inject } from '@nestjs/common';
+import { Injectable, NotFoundException, Inject, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Between } from 'typeorm';
-import { ClientProxy, RpcException } from '@nestjs/microservices';
+import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 
 @Injectable()
@@ -19,12 +19,16 @@ export class DietService implements ServiceContract<Diet> {
         return await this.dietRepository.find({ where: query });
     }
 
-    async findOneWhere(where: any, relations: string[] = ['meals', 'meals.foods']): Promise<Diet | null> {
-        return await this.dietRepository.findOne({ where, relations });
+    async findOneWhere(where: any, relations: string[] = ['meals', 'meals.foods']): Promise<Diet> {
+        const foundDiet = await this.dietRepository.findOne({ where, relations });
+        if (!foundDiet) throw new NotFoundException('Diet not found or not related to user');
+        return foundDiet;
     }
 
     async createOne(data: Partial<Diet>): Promise<Diet> {
         const scheduler = new SchedulerHelper(data.timeZone);
+        const requestDate = scheduler.buildDate({ startOfDay: true });
+
         const isRelatedToNutritionist = await sendProxyMessage<
             typeof proxyPattern.patient.isRelatedToNutritionist.receive,
             typeof proxyPattern.patient.isRelatedToNutritionist.send
@@ -35,16 +39,36 @@ export class DietService implements ServiceContract<Diet> {
         })
 
         if (isRelatedToNutritionist) {
-            const diet = this.dietRepository.create({
-                ...data,
-                startDate: scheduler.buildDate({
-                    date: data.startDate,
-                    startOfDay: true,
-                }),
-                endDate: data.endDate ? scheduler.buildDate({
+            const disabledPastDateScheduling = process.env.DISABLE_PAST_DATE_SCHEDULING === 'true';
+            const validStartDate = scheduler.buildDate({
+                date: data.startDate,
+                startOfDay: true,
+            });
+            let validEndDate = null;
+            const formatter = (date: Date) => {
+                return scheduler.formatDate(date, 'YYYY-MM-DD');
+            }
+            if (disabledPastDateScheduling) {
+                if (data.startDate) {
+                    if (validStartDate < requestDate) {
+                        throw new BadRequestException(`Diet startDate (${formatter(validStartDate)}) cannot be in the past.`);
+                    }
+                }
+            }
+            if (data.endDate) {
+                validEndDate = scheduler.buildDate({
                     date: data.endDate,
                     endOfDay: true,
-                }) : null
+                });
+                if (validStartDate > validEndDate) {
+                    throw new BadRequestException(`Diet endDate (${formatter(validEndDate)}) cannot be before startDate (${formatter(validStartDate)}).`);
+                }
+            }
+
+            const diet = this.dietRepository.create({
+                ...data,
+                startDate: validStartDate,
+                endDate: validEndDate
             });
             return await this.dietRepository.save(diet);
         }
@@ -67,8 +91,8 @@ export class DietService implements ServiceContract<Diet> {
 
     async getDietPlan(diet: Diet, date?: string, length: number = 1): Promise<any> {
         const scheduler = new SchedulerHelper(diet.timeZone);
-        if(length === 0) length = 1;
-        else if(length < 0) length *= (-1);
+        if (length === 0) length = 1;
+        else if (length < 0) length *= (-1);
 
         const requestDate = scheduler.buildDate({ date, startOfDay: true });
         const startDate = scheduler.buildDate({ date, startOfDay: true, offset: { month: -length } });
