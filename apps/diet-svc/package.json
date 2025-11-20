@@ -78,6 +78,7 @@
     }
   },
   "dependencies": {
-    "@nestjs/mapped-types": "*"
+    "@nestjs/mapped-types": "*",
+    "pg": "^8.16.3"
   }
 }
