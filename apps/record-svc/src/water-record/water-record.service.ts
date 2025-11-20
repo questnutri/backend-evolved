@@ -18,7 +18,7 @@ export class WaterRecordService {
 		const { patientId, waterGoalId, amountInMl } = createWaterRecordDto;
 		const foundWaterGoal = await sendProxyMessage<
 			typeof proxyPattern.patient.water.getById.receive,
-			typeof proxyPattern.patient.water.getById.send
+			typeof proxyPattern.patient.water.getById.payload
 		>({
 			proxy: this.patientServiceProxy,
 			pattern: proxyPattern.patient.water.getById.key,
@@ -39,7 +39,7 @@ export class WaterRecordService {
 	async findAllFromWaterGoal({ waterGoalId, patientId, relativeDate }: { waterGoalId: string; patientId: string; relativeDate: Date }) {
 		const foundWaterGoal = await sendProxyMessage<
 			typeof proxyPattern.patient.water.getById.receive,
-			typeof proxyPattern.patient.water.getById.send
+			typeof proxyPattern.patient.water.getById.payload
 		>({
 			proxy: this.patientServiceProxy,
 			pattern: proxyPattern.patient.water.getById.key,

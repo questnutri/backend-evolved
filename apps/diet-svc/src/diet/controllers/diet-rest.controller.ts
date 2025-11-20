@@ -29,7 +29,8 @@ import {
     ensureUserRelatedOrThrow,
     UserRole,
     GenerateBadRequestResponse,
-    GenerateAccessResponse
+    GenerateAccessResponse,
+    DietStatus
 } from '@backend-evolved/shared';
 import { FoodService } from '../../food/food.service';
 import { MealService } from '../../meal/meal.service';
@@ -79,22 +80,22 @@ export class DietRestController {
         return { active: true };
     }
 
-    @Get()
+    @Get('patients/:patientId')
     @ApiOperation({
         summary: 'Get all diets',
         description: 'Retrieve all diets filtered by patientId and/or nutritionistId. Returns date-only startDate/endDate fields (YYYY-MM-DD, UTC).'
     })
-    @ApiBody({
-        type: DietRequestBody,
-        required: true,
-        description: 'Filter object. Nutritionists must provide patientId; patients can omit patientId (will be inferred).',
-        schema: {
-            example: {
-                patientId: 'b6f9c2a4-1111-4444-aaaa-bb2c3d4e5f67',
-                nutritionistId: 'ntr-1234-5678-90ab-cdef'
-            }
-        }
-    })
+    // @ApiBody({
+    //     type: DietRequestBody,
+    //     required: true,
+    //     description: 'Filter object. Nutritionists must provide patientId; patients can omit patientId (will be inferred).',
+    //     schema: {
+    //         example: {
+    //             patientId: 'b6f9c2a4-1111-4444-aaaa-bb2c3d4e5f67',
+    //             nutritionistId: 'ntr-1234-5678-90ab-cdef'
+    //         }
+    //     }
+    // })
     @ApiOkResponse({
         description: 'Array of Diet objects with date-only startDate/endDate',
         schema: {
@@ -113,24 +114,33 @@ export class DietRestController {
     })
     @UseGuards(
         JwtRoleGuard(['nutritionist', 'patient']),
-        IsRelatedGuard({
-            on: 'query',
-            withKeys: ['patientId', 'nutritionistId'],
-            errorMessage: (role: UserRole) => {
-                if (role === 'patient') {
-                    return 'Patients can only access their own diets.';
-                }
-                return 'Nutritionists can only access diets of their patients.';
-            }
-        })
+        // IsRelatedGuard({
+        //     on: 'query',
+        //     withKeys: ['patientId', 'nutritionistId'],
+        //     errorMessage: (role: UserRole) => {
+        //         if (role === 'patient') {
+        //             return 'Patients can only access their own diets.';
+        //         }
+        //         return 'Nutritionists can only access diets of their patients.';
+        //     }
+        // })
     )
     @UseFilters(ControllerExceptionFilter)
     async getAllDiets(
-        @Query('patientId') patientId: string,
+        @Param('patientId') patientId: string,
         @Query('nutritionistId') nutritionistId: string,
+        @ContextUser() ctxUser: ContextUser,
     ): Promise<Diet[]> {
-        const diets = await this.dietService.findAll({ patientId, nutritionistId });
-        return diets.map(diet => this.mapDietDates(diet));
+        let query: any = {};
+        if(ctxUser.role === UserRole.PATIENT) {
+            query['patientId'] = ctxUser.id;
+            query['status'] = DietStatus.ACTIVE;
+            if(nutritionistId) query['nutritionistId'] = nutritionistId;
+        } else {
+            query['nutritionistId'] = ctxUser.id;
+            if(patientId) query['patientId'] = patientId;
+        }
+        return await this.dietService.findAll(query);
     }
 
     /**
@@ -225,7 +235,7 @@ export class DietRestController {
             }
             try {
                 for (const m of createdMeals) {
-                    if (m && m.id) await this.mealService.delete(m.id);
+                    if (m && m.id) await this.mealService.deleteById(m.id);
                 }
             } catch (e) {
                 // swallow
@@ -239,86 +249,86 @@ export class DietRestController {
         }
     }
 
-    @Post('plan')
-    @ApiOperation({
-        summary: 'Get complex diet plan for a patient',
-        description: 'Retrieve a comprehensive diet plan with calendar planning for a specific patient, including meal schedules and records. Dates are returned as YYYY-MM-DD (UTC) and meals include their configured hour separately.'
-    })
-    @ApiQuery({
-        name: 'length',
-        description: 'Number of months to include (default: 1 = current month + 1 back + 1 forward)',
-        required: false,
-        type: Number
-    })
-    @ApiBody({
-        type: DietRequestBody,
-        required: true,
-        description: 'Request must include patientId (nutritionists) or will be inferred (patients).',
-        schema: {
-            example: {
-                patientId: 'b6f9c2a4-1111-4444-aaaa-bb2c3d4e5f67'
-            }
-        }
-    })
-    @ApiOkResponse({
-        description: 'Diet plan has been successfully generated. relativeDate values are date-only strings (YYYY-MM-DD) and each meal includes its hour. Example truncated response:',
-        schema: {
-            example: [
-                {
-                    dietId: 'diet-1111-2222-3333',
-                    dayPlans: [
-                        {
-                            relativeDate: '2025-11-03', // Monday
-                            mealPlans: [
-                                {
-                                    meal: {
-                                        id: 'dcf11dca-bdd1-4426-8fa3-128bcc35880b',
-                                        name: 'Dinner',
-                                        hour: '19:00',
-                                        repeatConfiguration: { type: 'WEEKLY', interval: 1, daysOfWeek: [1, 2] },
-                                        foods: []
-                                    },
-                                    mealRecord: null
-                                }
-                            ]
-                        },
-                        {
-                            relativeDate: '2025-11-04', // Tuesday
-                            mealPlans: [ /* ... */]
-                        }
-                    ]
-                }
-            ]
-        }
-    })
-    @ApiForbiddenResponse({
-        description: 'User not allowed to access this diet plan',
-    })
-    @UseGuards(
-        JwtRoleGuard(['nutritionist', 'patient']),
-        IsRelatedGuard({
-            on: 'body',
-            withKeys: ['patientId', 'nutritionistId'],
-            errorMessage: (role: UserRole) => {
-                if (role === 'patient') {
-                    return 'Patients can only access their own diet plans.';
-                }
-                if (role === 'nutritionist') {
-                    return 'Nutritionists can only access diet plans of their patients.';
-                }
-                return 'Access denied.';
-            },
-        })
-    )
-    @UseFilters(ControllerExceptionFilter)
-    async getDietPlan(
-        @Body() body: DietRequestBody,
-        @Query('length') length?: number,
-    ): Promise<DietPlan[]> {
-        const planLength = length && length > 0 ? length : 1;
-        const rawPlans = await this.dietService.getDietPlanForPatient(body.patientId, body.nutritionistId, planLength);
-        return this.mapDietPlanDates(rawPlans);
-    }
+    // @Post('plan')
+    // @ApiOperation({
+    //     summary: 'Get complex diet plan for a patient',
+    //     description: 'Retrieve a comprehensive diet plan with calendar planning for a specific patient, including meal schedules and records. Dates are returned as YYYY-MM-DD (UTC) and meals include their configured hour separately.'
+    // })
+    // @ApiQuery({
+    //     name: 'length',
+    //     description: 'Number of months to include (default: 1 = current month + 1 back + 1 forward)',
+    //     required: false,
+    //     type: Number
+    // })
+    // @ApiBody({
+    //     type: DietRequestBody,
+    //     required: true,
+    //     description: 'Request must include patientId (nutritionists) or will be inferred (patients).',
+    //     schema: {
+    //         example: {
+    //             patientId: 'b6f9c2a4-1111-4444-aaaa-bb2c3d4e5f67'
+    //         }
+    //     }
+    // })
+    // @ApiOkResponse({
+    //     description: 'Diet plan has been successfully generated. relativeDate values are date-only strings (YYYY-MM-DD) and each meal includes its hour. Example truncated response:',
+    //     schema: {
+    //         example: [
+    //             {
+    //                 dietId: 'diet-1111-2222-3333',
+    //                 dayPlans: [
+    //                     {
+    //                         relativeDate: '2025-11-03', // Monday
+    //                         mealPlans: [
+    //                             {
+    //                                 meal: {
+    //                                     id: 'dcf11dca-bdd1-4426-8fa3-128bcc35880b',
+    //                                     name: 'Dinner',
+    //                                     hour: '19:00',
+    //                                     repeatConfiguration: { type: 'WEEKLY', interval: 1, daysOfWeek: [1, 2] },
+    //                                     foods: []
+    //                                 },
+    //                                 mealRecord: null
+    //                             }
+    //                         ]
+    //                     },
+    //                     {
+    //                         relativeDate: '2025-11-04', // Tuesday
+    //                         mealPlans: [ /* ... */]
+    //                     }
+    //                 ]
+    //             }
+    //         ]
+    //     }
+    // })
+    // @ApiForbiddenResponse({
+    //     description: 'User not allowed to access this diet plan',
+    // })
+    // @UseGuards(
+    //     JwtRoleGuard(['nutritionist', 'patient']),
+    //     IsRelatedGuard({
+    //         on: 'body',
+    //         withKeys: ['patientId', 'nutritionistId'],
+    //         errorMessage: (role: UserRole) => {
+    //             if (role === 'patient') {
+    //                 return 'Patients can only access their own diet plans.';
+    //             }
+    //             if (role === 'nutritionist') {
+    //                 return 'Nutritionists can only access diet plans of their patients.';
+    //             }
+    //             return 'Access denied.';
+    //         },
+    //     })
+    // )
+    // @UseFilters(ControllerExceptionFilter)
+    // async getDietPlan(
+    //     @Body() body: DietRequestBody,
+    //     @Query('length') length?: number,
+    // ): Promise<DietPlan[]> {
+    //     const planLength = length && length > 0 ? length : 1;
+    //     const rawPlans = await this.dietService.getDietPlanForPatient(body.patientId, body.nutritionistId, planLength);
+    //     return this.mapDietPlanDates(rawPlans);
+    // }
 
     @Post()
     @ApiOperation({
@@ -437,9 +447,11 @@ export class DietRestController {
         @Param('dietId') dietId: string,
         @ContextUser() ctxUser: ContextUser,
     ): Promise<Diet> {
-        const diet = await this.dietService.findOneWhere({ id: dietId });
-        if (!diet) {
-            throw new NotFoundException("Diet not found");
+        let diet: Diet;
+        if(ctxUser.role === UserRole.PATIENT) {
+            diet = await this.dietService.findOneWhere({ id: dietId, status: DietStatus.ACTIVE });
+        } else {
+            diet = await this.dietService.findOneWhere({ id: dietId });
         }
 
         ensureUserRelatedOrThrow(
@@ -454,7 +466,6 @@ export class DietRestController {
         return await this.dietService.fetchDietAlimentsPublic(diet);
     }
 
-
     @Get(':dietId/plan')
     async getDietPlanById(
         @Param('dietId') dietId: string
@@ -465,6 +476,46 @@ export class DietRestController {
         }
     }
 
+    @Post(':dietId/activate')
+    @ApiOperation({
+        summary: 'Activate a specific diet by ID',
+        description: 'Set the diet status to ACTIVE. Only nutritionists who created the diet can activate it.'
+    })
+    @UseGuards(JwtRoleGuard(['nutritionist']))
+    @UseFilters(ControllerExceptionFilter)
+    async activateDiet(
+        @Param('dietId') dietId: string,
+        @ContextUser() ctxUser: ContextUser,
+    ) {
+        return await this.dietService.updateOne({ id: dietId, nutritionistId: ctxUser.id }, { status: DietStatus.ACTIVE });
+    }
+
+    @Post(':dietId/clone')
+    @ApiOperation({
+        summary: 'Clone a specific diet by ID',
+        description: 'Clone a specific diet. Only nutritionists who created the diet can clone it. Use query parameters to include meals and/or foods in the clone.'
+    })
+    @ApiQuery({
+        name: 'includeMeals',
+        required: false,
+        type: Boolean,
+    })
+    @ApiQuery({
+        name: 'includeFoods',
+        required: false,
+        type: Boolean,
+    })
+    @UseGuards(JwtRoleGuard(['nutritionist']))
+    @UseFilters(ControllerExceptionFilter)
+    async cloneDiet(
+        @Query('includeMeals') includeMeals: boolean = false,
+        @Query('includeFoods') includeFoods: boolean = false,
+        @Param('dietId') dietId: string,
+        @ContextUser() ctxUser: ContextUser,
+    ) {
+        const diet = await this.dietService.findOneWhere({ id: dietId, nutritionistId: ctxUser.id });
+        return await this.dietService.clone(diet, { includeMeals, includeFoods });
+    }
 
     @Put(':dietId')
     @ApiOperation({

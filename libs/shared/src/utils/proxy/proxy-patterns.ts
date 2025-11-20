@@ -5,7 +5,7 @@ import { ProxyMessage } from "../../types";
 const pattern = <SEND = any, RECEIVE = any>(key: string) => {
     return {
         key,
-        send: {} as SEND,
+        payload: {} as SEND,
         receive: {} as RECEIVE
     };
 };

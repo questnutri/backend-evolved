@@ -1,0 +1,28 @@
+meta {
+  name: Get All
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{HTTP_PROTOCOL}}://{{GATEWAY_URL}}/diet/patients/:patientId
+  body: none
+  auth: bearer
+}
+
+params:query {
+  ~nutritionistId: {{NUTRITIONIST_ID}}
+}
+
+params:path {
+  patientId: {{PATIENT_ID}}
+}
+
+auth:bearer {
+  token: {{NUTRITIONIST_ACCESS_TOKEN}}
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

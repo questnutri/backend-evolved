@@ -1,13 +1,15 @@
-import { CreateMealDto, KeysOf, Meal, ServiceContract, RepeatType, RepeatConfiguration, getUTCTodayStart, normalizeToStartOfDay, getUTCYesterdayEnd, SchedulerHelper } from '@backend-evolved/shared';
+import { CreateMealDto, KeysOf, Meal, ServiceContract, RepeatType, RepeatConfiguration, getUTCTodayStart, normalizeToStartOfDay, getUTCYesterdayEnd, SchedulerHelper, errorMessagePattern, DietStatus } from '@backend-evolved/shared';
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { FoodService } from '../food/food.service';
 
 @Injectable()
 export class MealService implements ServiceContract<Meal> {
     constructor(
         @InjectRepository(Meal)
-        private readonly mealRepository: Repository<Meal>
+        private readonly mealRepository: Repository<Meal>,
+        private readonly foodService: FoodService
     ) { }
 
     async findAll(query: { [key in keyof Meal]?: any } = {}) {
@@ -17,7 +19,7 @@ export class MealService implements ServiceContract<Meal> {
     async findOneWhere(where: any = {}, relations: string[] = ['diet']): Promise<Meal> {
         const foundMeal = await this.mealRepository.findOne({ where, relations });
         if (!foundMeal) {
-            throw new NotFoundException('Meal not found or user does not have access to this meal.');
+            throw new NotFoundException(errorMessagePattern.diet.meal.notFound.key);
         }
         return foundMeal;
     }
@@ -47,14 +49,28 @@ export class MealService implements ServiceContract<Meal> {
             throw new BadRequestException('Meal start date cannot be in the past');
         }
 
+        const formatter = (date: Date) => {
+            return scheduler.formatDate(date, 'YYYY-MM-DD HH:mm');
+        }
+
         //Checking if request date can be used to schedule meal start
         //otherwise will use diet start date
         if (diet?.startDate! > validStartTargetDate) {
             if (data.startDate) {
                 if (diet.endDate && diet.endDate < validStartTargetDate) {
-                    throw new BadRequestException(`Meal start date ${scheduler.formatDate(validStartTargetDate, 'YYYY-MM-DD HH:mm')} cannot be after diet end date ${scheduler.formatDate(diet.endDate, 'YYYY-MM-DD HH:mm')}`);
+                    throw new BadRequestException(
+                        errorMessagePattern
+                            .diet
+                            .meal
+                            .startDateAfterDietEndDate
+                            .fn(formatter(validStartTargetDate), formatter(diet.endDate)));
                 }
-                throw new BadRequestException(`Meal start date ${scheduler.formatDate(validStartTargetDate, 'YYYY-MM-DD HH:mm')} cannot be before diet start date ${scheduler.formatDate(diet.startDate, 'YYYY-MM-DD HH:mm')}`);
+                throw new BadRequestException(
+                    errorMessagePattern
+                        .diet
+                        .meal
+                        .startDateBeforeDietStartDate
+                        .fn(formatter(validStartTargetDate), formatter(diet.startDate!)));
             }
             validStartTargetDate = diet!.startDate!;
         }
@@ -72,10 +88,20 @@ export class MealService implements ServiceContract<Meal> {
                     endOfDay: true
                 });
                 if (payloadEndDate > diet.endDate) {
-                    throw new BadRequestException(`Meal end date ${scheduler.formatDate(payloadEndDate, 'YYYY-MM-DD HH:mm')} cannot be after diet end date ${scheduler.formatDate(diet.endDate, 'YYYY-MM-DD HH:mm')}`);
+                    throw new BadRequestException(
+                        errorMessagePattern
+                            .diet
+                            .meal
+                            .endDateAfterDietEndDate
+                            .fn(formatter(payloadEndDate), formatter(diet.endDate)));
                 }
                 if (payloadEndDate < validStartTargetDate) {
-                    throw new BadRequestException(`Meal end date ${scheduler.formatDate(payloadEndDate, 'YYYY-MM-DD HH:mm')} cannot be before meal start date ${scheduler.formatDate(validStartTargetDate, 'YYYY-MM-DD HH:mm')}`);
+                    throw new BadRequestException(
+                        errorMessagePattern
+                            .diet
+                            .meal
+                            .endDateBeforeMealStartDate
+                            .fn(formatter(payloadEndDate), formatter(validStartTargetDate)));
                 }
                 validEndTargetDate = payloadEndDate;
             }
@@ -88,7 +114,6 @@ export class MealService implements ServiceContract<Meal> {
 
         //If no repeat configuration is provided, set default to ONCE starting today
         if (!repeatConfig) {
-            console.log('No repeat configuration provided, setting default to ONCE');
             repeatConfigurationPayload = {
                 type: RepeatType.ONCE,
                 targetDate: validStartTargetDate,
@@ -106,9 +131,21 @@ export class MealService implements ServiceContract<Meal> {
                             startOfDay: true
                         });
                         if (scheduledDate < validStartTargetDate) {
-                            throw new BadRequestException(`Target date cannot be in the past compared to diet start date of: ${validStartTargetDate.toISOString()}`);
+                            throw new BadRequestException(
+                                errorMessagePattern
+                                    .diet
+                                    .meal
+                                    .targetDateBeforeDietStartDate
+                                    .fn(formatter(validStartTargetDate))
+                            );
                         } else if (validEndTargetDate && scheduledDate > validEndTargetDate) {
-                            throw new BadRequestException(`Target date cannot be after diet end date of: ${validEndTargetDate.toISOString()}`);
+                            throw new BadRequestException(
+                                errorMessagePattern
+                                    .diet
+                                    .meal
+                                    .targetDateAfterDietEndDate
+                                    .fn(formatter(validEndTargetDate))
+                            );
                         } else {
                             repeatConfigurationPayload['targetDate'] = scheduledDate;
                         }
@@ -146,7 +183,13 @@ export class MealService implements ServiceContract<Meal> {
                     repeatConfigurationPayload['repeatTarget'] = repeatConfig.repeatTarget || 1;
                     break;
                 default:
-                    throw new BadRequestException(`Invalid repeat configuration type for '${repeatConfig.type}' use only: ${Object.values(RepeatType).join(', ')}`);
+                    throw new BadRequestException(
+                        errorMessagePattern
+                            .diet
+                            .meal
+                            .invalidRepeatConfiguration
+                            .fn(repeatConfig.type)
+                    );
             }
         }
 
@@ -171,128 +214,79 @@ export class MealService implements ServiceContract<Meal> {
         return reloaded as Meal;
     }
 
-
-    async updateOne(query: Partial<KeysOf<Meal>>, data: Partial<Meal>): Promise<Meal | null> {
-        const meal = await this.mealRepository.findOne({ where: query as any });
-        if (!meal) return null;
-        await this.mealRepository.update(meal.id, data);
-        return await this.mealRepository.findOne({ where: { id: meal.id } });
+    async clone(meal: Meal, cloneOptions: {
+            includeFoods?: boolean,
+            overrideProperties?: Partial<Meal>
+        }): Promise<Meal> {
+        const { id, startDate, endDate, createdAt, updatedAt, foods, ...rest } = meal;
+        const clonedMeal = this.mealRepository.create({ ...rest, ...(cloneOptions.overrideProperties || {}) });
+        const savedClonedMeal = await this.mealRepository.save(clonedMeal, { reload: true });
+        if (cloneOptions.includeFoods && foods && foods.length > 0) {
+            const clonedFoods = await this.foodService.cloneMany(foods, { meal: savedClonedMeal });
+            savedClonedMeal.foods = clonedFoods as any;
+        }
+        return savedClonedMeal;
     }
 
-    async deleteOne(query: Partial<KeysOf<Meal>>): Promise<void> {
-        const meal = await this.mealRepository.findOne({ where: query as any });
-        if (!meal) throw new NotFoundException('Meal not found');
-        await this.mealRepository.delete(meal.id);
+    async cloneMany(
+        meals: Meal[],
+        cloneOptions: {
+            includeFoods?: boolean,
+            overrideProperties?: Partial<Meal>
+        }
+    ): Promise<Meal[]> {
+        if (!meals || meals.length === 0) return [];
+
+        const tasks = meals.map(async meal => {
+            const { id, startDate, endDate, createdAt, updatedAt, foods, ...rest } = meal;
+            const clonedMeal = this.mealRepository.create({ ...rest, ...(cloneOptions.overrideProperties || {}) });
+            const savedClonedMeal = await this.mealRepository.save(clonedMeal, { reload: true });
+            if (cloneOptions.includeFoods && foods && foods.length > 0) {
+                const clonedFoods = await this.foodService.cloneMany(foods, { meal: savedClonedMeal });
+                savedClonedMeal.foods = clonedFoods as any;
+            }
+            return savedClonedMeal;
+        });
+
+        const results = await Promise.all(tasks);
+        return results;
     }
 
     async findById(id: string) {
         return await this.mealRepository.findOne({ where: { id, validTo: null } as any, relations: ['diet'] });
     }
 
-    async update(id: string, data: Partial<CreateMealDto>) {
-        const currentMeal = await this.mealRepository.findOne({
-            where: { id, validTo: null } as any
-        });
+    async update(meal: Meal, data: Partial<Meal>): Promise<Meal> {
+        let directUpdate = false;
+        if (
+            meal.diet.status === DietStatus.DEFINITION
+        ) directUpdate = true;
 
-        if (!currentMeal) throw new NotFoundException('Meal not found');
-        const newValidFrom = getUTCTodayStart();
-        if (newValidFrom.getTime() > currentMeal!.startDate!.getTime()) {
-            const yesterdayEnd = getUTCYesterdayEnd(newValidFrom);
-
-            // Close the current version's effective range
-            await this.mealRepository.update(currentMeal.id, { endDate: yesterdayEnd });
-
-            // 4. Create a NEW version (temporal record)
-            const newMealData = {
-                ...currentMeal,
-                ...data, // new data overrides old
-                validFrom: newValidFrom,
-                validTo: null,
-                diet: currentMeal.diet,
-            };
-
-            const newMeal = this.mealRepository.create(newMealData);
-            const saved = await this.mealRepository.save(newMeal);
-
-            // Re-fetch with relations for the return value
-            return await this.mealRepository.findOne({ where: { id: saved.id }, relations: ['diet'] });
-        } else {
-            // Same day update - update existing record
-            await this.mealRepository.update(currentMeal.id, data);
-            return await this.findById(currentMeal.id);
-        }
+        this.mealRepository.merge(meal, data);
+        return await this.mealRepository.save(meal);
     }
 
-
-    async delete(id: string) {
-        const currentMeal = await this.mealRepository.findOne({
-            where: { id, validTo: null } as any
-        });
-
-        if (!currentMeal) throw new NotFoundException('Meal not found');
-
-        const newValidFrom = getUTCTodayStart();
-        const yesterdayEnd = getUTCYesterdayEnd(newValidFrom);
-
-        await this.mealRepository.update(currentMeal.id, { endDate: yesterdayEnd, isActive: false });
-        return await this.findById(currentMeal.id);
+    async updateOneWhere(where: any, data: Partial<Meal>): Promise<Meal> {
+        const meal = await this.findOneWhere(where);
+        return await this.update(meal, data);
     }
 
-    // Method for meal record service to get meal information with patient validation
-    async getMealInfo(mealId: string, patientId?: string): Promise<{ dietId: string, nutritionistId: string } | null> {
-        const meal = await this.mealRepository.findOne({
-            where: { id: mealId },
-            relations: ['diet']
-        });
-
-        if (!meal || !meal.diet) {
-            return null;
-        }
-
-        // If patientId is provided, validate that the patient is assigned to this diet
-        if (patientId && meal.diet.patientId !== patientId) {
-            return null; // Patient is not assigned to this diet
-        }
-
-        return {
-            dietId: meal.diet.id,
-            nutritionistId: meal.diet.nutritionistId
-        };
+    async updateById(id: string, data: Partial<Meal>): Promise<Meal> {
+        const foundMeal = await this.findOneWhere({ id });
+        return await this.update(foundMeal, data);
     }
 
-    // Method for meal record service to get detailed meal information with patient validation
-    async getMealDetailedInfo(mealId: string, patientId?: string): Promise<{ dietId: string, nutritionistId: string, meal: any, diet: any } | null> {
-        const meal = await this.mealRepository.findOne({
-            where: { id: mealId },
-            relations: ['diet']
-        });
+    async delete(meal: Meal | Meal[]) {
+        await this.mealRepository.remove(Array.isArray(meal) ? meal : [meal]);
+    }
 
-        if (!meal || !meal.diet) {
-            return null;
-        }
+    async deleteOneWhere(where: any): Promise<void> {
+        const foundMeal = await this.findOneWhere(where);
+        await this.delete(foundMeal);
+    }
 
-        // If patientId is provided, validate that the patient is assigned to this diet
-        if (patientId && meal.diet.patientId !== patientId) {
-            return null; // Patient is not assigned to this diet
-        }
-
-        return {
-            dietId: meal.diet.id,
-            nutritionistId: meal.diet.nutritionistId,
-            meal: {
-                id: meal.id,
-                name: meal.name,
-                repeatConfiguration: meal.repeatConfiguration,
-                hour: meal.hour,
-                isActive: meal.isActive
-            },
-            diet: {
-                id: meal.diet.id,
-                startDate: meal.diet.startDate,
-                endDate: meal.diet.endDate,
-                patientId: meal.diet.patientId,
-                nutritionistId: meal.diet.nutritionistId
-            }
-        };
+    async deleteById(id: string): Promise<void> {
+        const foundMeal = await this.findOneWhere({ id });
+        await this.delete(foundMeal);
     }
 }

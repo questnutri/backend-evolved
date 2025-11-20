@@ -1,4 +1,4 @@
-import { Aliment, ALIMENT_SERVICE_PROXY_NAME, Food, getUTCTodayStart, getUTCYesterdayEnd, ProxyMessage, SchedulerHelper, ServiceContract } from '@backend-evolved/shared';
+import { Aliment, ALIMENT_SERVICE_PROXY_NAME, errorMessagePattern, Food, getUTCTodayStart, getUTCYesterdayEnd, ProxyMessage, SchedulerHelper, ServiceContract } from '@backend-evolved/shared';
 import { BadRequestException, Inject, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -36,24 +36,24 @@ export class FoodService implements ServiceContract<Food> {
     }
 
     async findOneWhere(where: any = {}, relations: string[] = ['meal']): Promise<Food> {
-        const foundFood = await this.foodRepository.findOne({where, relations});
+        const foundFood = await this.foodRepository.findOne({ where, relations });
         if (!foundFood) {
-            throw new NotFoundException('Food not found or user does not have access to this food.');
+            throw new NotFoundException(errorMessagePattern.diet.food.notFound.key);
         }
         return await this.fetchAliment(foundFood);
     }
 
-    async createOne(data: Partial<Food>, reloadOptions?: {relations?: string[]}): Promise<any> {
+    async createOne(data: Partial<Food>, reloadOptions?: { relations?: string[] }): Promise<any> {
         const scheduler = new SchedulerHelper();
         let validStartTargetDate = scheduler.buildDate({ startOfDay: true });
-        if(
+        if (
             (data.meal?.endDate && data.meal?.endDate < validStartTargetDate)
-            || 
+            ||
             (data.meal?.diet.endDate && data.meal?.diet.endDate < validStartTargetDate)
         ) {
             throw new BadRequestException('Cannot add food to a meal or diet that has ended');
         }
-        if(validStartTargetDate < data.meal!.startDate!) {
+        if (validStartTargetDate < data.meal!.startDate!) {
             validStartTargetDate = data.meal!.startDate!;
         }
         const foodData = { ...data, startDate: validStartTargetDate, endDate: null };
@@ -67,6 +67,32 @@ export class FoodService implements ServiceContract<Food> {
             return await this.fetchAliment(saved);
         }
         throw new InternalServerErrorException('Failed to create food');
+    }
+
+    async clone(food: Food, overrideProperty?: Partial<Food>): Promise<Food> {
+        const { id, createdAt, updatedAt, ...rest } = food;
+        const clonedFood = this.foodRepository.create({ ...rest, ...(overrideProperty || {}) });
+        const savedClonedFood = await this.foodRepository.save(clonedFood, { reload: true });
+        return savedClonedFood;
+    }
+
+    async cloneMany(foods: Food[], overrideProperty?: Partial<Food>): Promise<Food[]> {
+        if (!foods || foods.length === 0) return [];
+
+        const tasks = foods.map(async food => {
+            const { id, createdAt, updatedAt, ...rest } = food;
+            const cloned = this.foodRepository.create({ ...rest, ...(overrideProperty || {}) });
+            return await this.foodRepository.save(cloned, { reload: true });
+        });
+
+        const results = await Promise.all(tasks);
+        return results;
+    }
+
+    async update(food: Food, data: Partial<Food>): Promise<Food> {
+        const updatedFood = this.foodRepository.merge(food, data);
+        const saved = await this.foodRepository.save(updatedFood);
+        return await this.fetchAliment(saved);
     }
 
     async updateOne(query: { [key in keyof Food]?: any }, data: Partial<Food>): Promise<Food | null> {
@@ -103,6 +129,10 @@ export class FoodService implements ServiceContract<Food> {
             const updated = await this.foodRepository.findOne({ where: { id: currentFood.id } });
             return updated ? this.fetchAliment(updated) : null;
         }
+    }
+
+    async delete(food: Food | Food[]) {
+        await this.foodRepository.remove(Array.isArray(food) ? food : [food]);
     }
 
     async deleteOne(query: { [key in keyof Food]?: any }): Promise<void> {

@@ -1,6 +1,7 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn } from 'typeorm';
 import { Exclude } from 'class-transformer';
 import { Meal } from './meal.entity';
+import { DietStatus } from '../../enums';
 
 @Entity('diets')
 export class Diet {
@@ -27,6 +28,13 @@ export class Diet {
 
     @Column({ type: 'int', default: -3 })
     timeZone: number;
+
+    @Column({ 
+        type: "enum",
+        enum: DietStatus,
+        default: DietStatus.DEFINITION 
+    })
+    status: DietStatus = DietStatus.DEFINITION;
 
     @CreateDateColumn()
     createdAt: Date;

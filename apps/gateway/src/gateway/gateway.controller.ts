@@ -45,7 +45,7 @@ export class GatewayController {
                     // console.log(`Health check response for ${serviceUrl}: ${res.statusCode}`);
                     resolve(res.statusCode === 200);
                 });
-                console.log(req);
+                // console.log(req);
 
                 req.on('error', (err) => {
                     // console.log(`Health check error for ${serviceUrl}:`, err.message);
@@ -89,7 +89,7 @@ export class GatewayController {
                 return acc;
             }, {} as { [key: string]: boolean });
 
-        console.log('Final service status:', sortedServiceStatus);
+        // console.log('Final service status:', sortedServiceStatus);
 
         return {
             'services-status': sortedServiceStatus

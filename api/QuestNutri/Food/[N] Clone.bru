@@ -1,0 +1,24 @@
+meta {
+  name: [N] Clone
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{HTTP_PROTOCOL}}://{{GATEWAY_URL}}/diet/foods/:foodId/clone
+  body: none
+  auth: bearer
+}
+
+params:path {
+  foodId: {{createdFood}}
+}
+
+auth:bearer {
+  token: {{NUTRITIONIST_ACCESS_TOKEN}}
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

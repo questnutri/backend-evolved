@@ -1,0 +1,24 @@
+meta {
+  name: [N] Delete
+  type: http
+  seq: 4
+}
+
+delete {
+  url: {{HTTP_PROTOCOL}}://{{GATEWAY_URL}}/diet/foods/:foodId
+  body: none
+  auth: bearer
+}
+
+params:path {
+  foodId: {{createdFood}}
+}
+
+auth:bearer {
+  token: {{NUTRITIONIST_ACCESS_TOKEN}}
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

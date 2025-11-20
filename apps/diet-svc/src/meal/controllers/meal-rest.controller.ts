@@ -9,7 +9,9 @@ import {
 	Put,
 	Delete,
 	Get,
-	UseFilters
+	UseFilters,
+	HttpCode,
+	Query
 } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { MealService } from '../meal.service';
@@ -22,7 +24,8 @@ import {
 	ApiOkResponse,
 	ApiOperation,
 	ApiTags,
-	ApiBody
+	ApiBody,
+	ApiQuery
 } from '@nestjs/swagger';
 import {
 	CreateMealDto,
@@ -30,7 +33,12 @@ import {
 	JwtRoleGuard, ControllerExceptionFilter,
 	ProxyMessengerFilter,
 	ContextUser,
-	CreateFoodDto
+	CreateFoodDto,
+	DietStatus,
+	SchedulerHelper,
+	GenerateAccessResponse,
+	proxyPattern,
+	errorMessagePattern
 } from '@backend-evolved/shared';
 
 import { FoodService } from '../../food/food.service';
@@ -59,10 +67,10 @@ export class MealRestController {
 - **MONTHLY**: Meal repeats on specific days of the month
 
 **Note on Date Validation:** 
-When creating meal records, the system validates that the \`mealRelativeDate\` matches the meal's repeat configuration and falls within the diet's date range.`
+When creating meal records, the system validates that the \`date\` matches the meal's repeat configuration and falls within the diet's date range.`
 	})
 	@ApiBody({
-		description: 'CreateMealDto payload. Examples show repeatConfiguration for each RepeatType.',
+		description: 'Examples for each RepeatType.',
 		required: true,
 		examples: {
 			once: {
@@ -282,10 +290,7 @@ When creating meal records, the system validates that the \`mealRelativeDate\` m
 		@Body() body: CreateMealDto & { foods?: CreateFoodDto[] },
 		@ContextUser() ctxUser: ContextUser,
 	) {
-		const diet = await this.dietService.findOneWhere({ id: body.dietId });
-		const isRelated = diet.nutritionistId === ctxUser.id;
-		if (!isRelated) throw new NotFoundException('Diet not found or not related to user');
-
+		const diet = await this.dietService.findOneWhere({ id: body.dietId, nutritionistId: ctxUser.id });
 		// Create the meal first
 		const createdMeal = await this.mealService.createOne({ ...body, diet });
 
@@ -322,51 +327,128 @@ When creating meal records, the system validates that the \`mealRelativeDate\` m
 
 	}
 
-	@Put(':mealId')
+	@Post(':mealId/clone')
 	@ApiOperation({
-		summary: 'Update a specific meal',
-		description: 'Update the details of a specific meal'
+		summary: 'Clones a specific meal',
+		description: 'Create a duplicate of a specific meal by its ID'
 	})
-	@ApiOkResponse({ description: 'The meal has been successfully updated.', type: Meal })
-	@ApiNotFoundResponse({ description: 'Meal not found or user does not have access to this meal.' })
+	@ApiCreatedResponse({
+		description: 'The meal has been successfully cloned.',
+		type: Meal
+	})
+	@ApiNotFoundResponse({
+		description: errorMessagePattern.diet.meal.notFound.key
+	})
+	@ApiQuery({
+		name: 'includeFoods',
+		required: false,
+		type: Boolean,
+	})
+	@ApiQuery({
+		name: 'targetDietId',
+		required: false,
+		type: String,
+	})
 	@UseGuards(JwtRoleGuard(['nutritionist']))
-	async updateOneById(@Param('mealId') mealId: string, @Body() updateMealDto: Partial<CreateMealDto>, @Headers() headers: any) {
-		const meal = await this.mealService.findById(mealId);
-		if (!meal) throw new NotFoundException('Meal not found');
-		const isRelated = meal.diet.nutritionistId === headers['user-id'] || meal.diet.patientId === headers['user-id'];
-		if (!isRelated) throw new NotFoundException(`User doesn't have this diet`);
-		return await this.mealService.update(mealId, updateMealDto);
+	@UseFilters(ControllerExceptionFilter)
+	async cloneOneById(
+		@Param('mealId') mealId: string,
+		@Query('includeFoods') includeFoods: boolean = false,
+		@Query('targetDietId') targetDietId: string,
+		@ContextUser() ctxUser: ContextUser,
+	) {
+		const foundMeal = await this.mealService.findOneWhere({ id: mealId }, ['diet', 'foods']);
+		const copyPayload: any = {
+			includeFoods
+		};
+		if (foundMeal.diet.nutritionistId !== ctxUser.id) {
+			throw new NotFoundException(errorMessagePattern.diet.meal.notFound.key);
+		}
+		if (targetDietId) {
+			const targetDiet = await this.dietService.findOneWhere({ id: targetDietId, nutritionistId: ctxUser.id });
+			if(targetDiet.nutritionistId !== ctxUser.id) {
+				throw new NotFoundException(errorMessagePattern.diet.notFound.key);
+			}
+			copyPayload['diet'] = targetDiet;
+		}
+		return await this.mealService.clone(foundMeal, copyPayload);
 	}
 
 	@Delete(':mealId')
+	@HttpCode(204)
 	@ApiOperation({
 		summary: 'Delete a specific meal by ID',
-		description: 'Remove a specific meal from the diet'
+		description: `If the diet status is DEFINITION, then it removes a specific meal from the diet. 
+		If the diet status is ACTIVE and the diet already started, it checks if this meal startDate already happend.
+		If the meal date already happend, it sets the meal endDate as current request date.
+		If the meal date didn't happen yet, it removes the meal from the diet.`
 	})
 	@ApiNoContentResponse({
 		description: 'The meal has been successfully deleted.'
 	})
-	@ApiNotFoundResponse({ description: 'Meal not found or user does not have access to this meal.' })
+	@ApiNotFoundResponse({
+		description: 'Meal not found or user does not have access to this meal.',
+		example: {
+			statusCode: 404,
+			message: 'Meal not found or user does not have access to this meal.',
+			error: 'Not Found'
+		}
+	})
+	@GenerateAccessResponse()
 	@UseGuards(JwtRoleGuard(['nutritionist']))
-	async deleteOneById(@Param('mealId') mealId: string, @Headers() headers: any) {
-		const meal = await this.mealService.findById(mealId);
-		if (!meal) throw new NotFoundException('Meal not found');
-		const isRelated = meal.diet.nutritionistId === headers['user-id'] || meal.diet.patientId === headers['user-id'];
-		if (!isRelated) throw new NotFoundException(`User doesn't have this diet`);
-		return await this.mealService.delete(mealId);
+	@UseFilters(ControllerExceptionFilter)
+	async deleteOneById(
+		@Param('mealId') mealId: string,
+		@ContextUser() ctxUser: ContextUser,
+	) {
+		const foundMeal = await this.mealService.findOneWhere({ id: mealId }, ['diet', 'foods']);
+		if (foundMeal.diet.nutritionistId !== ctxUser.id) {
+			throw new NotFoundException('Meal not found or user does not have access to this meal.');
+		}
+		const scheduler = new SchedulerHelper(foundMeal.diet.timeZone);
+		const requestDate = scheduler.buildDate({ startOfDay: true });
+
+		let directDelete = false;
+
+		if (
+			foundMeal.diet.status === DietStatus.DEFINITION || //Check if diet is in DEFINITION status
+			( //Check if diet is in ACTIVE status AND Check if meal startDate is in the future
+				foundMeal.diet.status === DietStatus.ACTIVE &&
+				foundMeal.startDate! >= requestDate
+			)
+		) directDelete = true;
+
+		if (directDelete) {
+			await this.foodService.delete(foundMeal.foods); //Deletes all foods related to the meal
+			return await this.mealService.delete(foundMeal);
+		} else {
+			return await this.mealService.update(foundMeal, {
+				endDate: scheduler.buildDate({
+					endOfDay: true
+				})
+			});
+		}
 	}
 
-	@MessagePattern('meal.getInfo')
+	@MessagePattern(proxyPattern.diet.meal.getOne.key)
 	@UseFilters(ProxyMessengerFilter)
-	async getMealInfo(@Payload() data: { mealId: string, patientId?: string }) {
-		const mealInfo = await this.mealService.getMealInfo(data.mealId, data.patientId);
-		return { payload: mealInfo };
+	async getMealInfo(
+		@Payload() payload: typeof proxyPattern.diet.meal.getOne.payload
+	) {
+		const foundMeal = await this.mealService.findOneWhere({ id: payload.mealId });
+		if (
+			(payload.patientId && foundMeal.diet.patientId !== payload.patientId) ||
+			(payload.nutritionistId && foundMeal.diet.nutritionistId !== payload.nutritionistId)
+		) {
+			throw new NotFoundException(errorMessagePattern.diet.meal.notFound);
+		}
+		return { payload: await this.mealService.findOneWhere({ id: payload.mealId }) };
 	}
 
 	@MessagePattern('meal.getDetailedInfo')
 	@UseFilters(ProxyMessengerFilter)
 	async getMealDetailedInfo(@Payload() data: { mealId: string, patientId?: string }) {
-		const mealDetailedInfo = await this.mealService.getMealDetailedInfo(data.mealId, data.patientId);
+		const mealDetailedInfo = await this.mealService.findOneWhere({ id: data.mealId, patientId: data.patientId });
 		return { payload: mealDetailedInfo };
 	}
 

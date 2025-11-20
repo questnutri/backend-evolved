@@ -1,8 +1,8 @@
-import { UseFilters, Post, Body, Controller, Headers, NotFoundException, Get, Param, Put, Delete, UseGuards, ForbiddenException } from '@nestjs/common';
+import { UseFilters, Post, Body, Controller, Headers, NotFoundException, Get, Param, Put, Delete, UseGuards, ForbiddenException, HttpCode, Query } from '@nestjs/common';
 import { FoodService } from '../food.service';
-import { ContextUser, ControllerExceptionFilter, CreateFoodDto, Food, JwtRoleGuard } from '@backend-evolved/shared';
+import { ContextUser, ControllerExceptionFilter, CreateFoodDto, DietStatus, errorMessagePattern, Food, JwtRoleGuard, SchedulerHelper } from '@backend-evolved/shared';
 import { MealService } from '../../meal/meal.service';
-import { ApiBearerAuth, ApiSecurity, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiNotFoundResponse, ApiNoContentResponse, ApiForbiddenResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiSecurity, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiNotFoundResponse, ApiNoContentResponse, ApiForbiddenResponse, ApiTags, ApiQuery } from '@nestjs/swagger';
 
 @Controller('foods')
 @ApiTags('Foods')
@@ -103,7 +103,7 @@ export class FoodController {
     @Get(':foodId')
     @ApiOperation({ summary: 'Get a specific food by ID', description: 'Retrieve details of a specific food using its ID' })
     @ApiOkResponse({ description: 'The food has been successfully retrieved.', type: Food })
-    @ApiNotFoundResponse({ description: 'Food not found or user does not have access to this food.' })
+    @ApiNotFoundResponse({ description: errorMessagePattern.diet.food.notFound.key })
     @UseGuards(JwtRoleGuard(['nutritionist', 'patient']))
     @UseFilters(ControllerExceptionFilter)
     async getOneById(@Param('mealId') mealId: string, @Param('foodId') foodId: string, @Headers() headers: any) {
@@ -118,10 +118,49 @@ export class FoodController {
         return food;
     }
 
+    @Post(':foodId/clone')
+    @ApiOperation({
+        summary: 'Clones a specific food',
+        description: 'Create a duplicate of a specific food by its ID'
+    })
+    @ApiCreatedResponse({
+        description: 'The food has been successfully cloned.',
+        type: Food
+    })
+    @ApiNotFoundResponse({
+        description: errorMessagePattern.diet.food.notFound.key
+    })
+    @ApiQuery({
+        name: 'targetMealId',
+        required: false,
+        type: String,
+    })
+    @UseGuards(JwtRoleGuard(['nutritionist']))
+    @UseFilters(ControllerExceptionFilter)
+    async cloneOneById(
+        @Param('foodId') foodId: string,
+        @Query('targetMealId') targetMealId: string,
+        @ContextUser() ctxUser: ContextUser,
+    ) {
+        const foundFood = await this.foodService.findOneWhere({ id: foodId }, ['meal', 'meal.diet']);
+        if (foundFood.meal.diet.nutritionistId !== ctxUser.id) {
+            throw new NotFoundException(errorMessagePattern.diet.food.notFound.key);
+        }
+        const clonePayload: any = {}
+        if(targetMealId) {
+            const targetMeal = await this.mealService.findOneWhere({ id: targetMealId }, ['diet']);
+            if(targetMeal.diet.nutritionistId !== ctxUser.id) {
+                throw new NotFoundException(errorMessagePattern.diet.meal.notFound.key);
+            }
+            clonePayload.meal = targetMeal;
+        }
+        return await this.foodService.clone(foundFood, clonePayload);
+    }
+
     @Put(':foodId')
     @ApiOperation({ summary: 'Update a specific food', description: 'Update the details of a specific food' })
     @ApiOkResponse({ description: 'The food has been successfully updated.', type: Food })
-    @ApiNotFoundResponse({ description: 'Food not found or user does not have access to this food.' })
+    @ApiNotFoundResponse({ description: errorMessagePattern.diet.food.notFound.key })
     @UseGuards(JwtRoleGuard(['nutritionist']))
     @UseFilters(ControllerExceptionFilter)
     async updateOneById(@Param('mealId') mealId: string, @Param('foodId') foodId: string, @Body() update: Partial<CreateFoodDto>, @Headers() headers: any) {
@@ -138,17 +177,42 @@ export class FoodController {
     }
 
     @Delete(':foodId')
+    @HttpCode(204)
     @ApiOperation({ summary: 'Delete a specific food by ID', description: 'Remove a specific food from the meal' })
     @ApiNoContentResponse({ description: 'The food has been successfully deleted.' })
-    @ApiNotFoundResponse({ description: 'Food not found or user does not have access to this food.' })
+    @ApiNotFoundResponse({ description: errorMessagePattern.diet.food.notFound.key })
     @UseGuards(JwtRoleGuard(['nutritionist']))
     @UseFilters(ControllerExceptionFilter)
-    async deleteOneById(@Param('mealId') mealId: string, @Param('foodId') foodId: string, @Headers() headers: any) {
-        const meal = await this.mealService.findOneWhere({ id: mealId });
-        if (!meal) throw new NotFoundException('Meal not found');
-        const isRelated = meal.diet.nutritionistId === headers['user-id'] || meal.diet.patientId === headers['user-id'];
-        if (!isRelated) throw new NotFoundException(`User doesn't have this diet`);
-        return await this.foodService.deleteOne({ id: foodId });
+    async deleteOneById(
+        @Param('foodId') foodId: string,
+        @ContextUser() ctxUser: ContextUser
+    ) {
+        const foundFood = await this.foodService.findOneWhere({ id: foodId }, ['meal', 'meal.diet']);
+        if (foundFood.meal.diet.nutritionistId !== ctxUser.id) {
+            throw new NotFoundException(errorMessagePattern.diet.food.notFound.key);
+        };
+
+        const scheduler = new SchedulerHelper(foundFood.meal.diet.timeZone);
+        const requestDate = scheduler.buildDate({ startOfDay: true });
+        let directDelete = false;
+
+        if (
+            foundFood.meal.diet.status === DietStatus.DEFINITION ||
+            (
+                foundFood.meal.diet.status === DietStatus.ACTIVE &&
+                foundFood.meal.startDate! >= requestDate
+            ) ||
+            (
+                foundFood.meal.diet.status === DietStatus.ACTIVE &&
+                foundFood.startDate! >= requestDate
+            )
+        ) directDelete = true;
+
+        if (directDelete) {
+            return await this.foodService.delete(foundFood);
+        } else {
+            return await this.foodService.update(foundFood, { endDate: requestDate });
+        }
     }
 
 }

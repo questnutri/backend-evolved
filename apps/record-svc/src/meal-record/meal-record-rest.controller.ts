@@ -208,7 +208,7 @@ export class MealRecordController {
     ): Promise<any> {
         const foundMeal = await sendProxyMessage<
             typeof proxyPattern.diet.meal.getOne.receive,
-            typeof proxyPattern.diet.meal.getOne.send
+            typeof proxyPattern.diet.meal.getOne.payload
         >({
             proxy: this.dietServiceProxy,
             pattern: proxyPattern.diet.meal.getOne.key,
@@ -287,7 +287,7 @@ export class MealRecordController {
     ) {
         const foundMeal = await sendProxyMessage<
             typeof proxyPattern.diet.meal.getOne.receive,
-            typeof proxyPattern.diet.meal.getOne.send
+            typeof proxyPattern.diet.meal.getOne.payload
         >({
             proxy: this.dietServiceProxy,
             pattern: proxyPattern.diet.meal.getOne.key,
