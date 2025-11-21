@@ -164,21 +164,10 @@ export class NutritionistController {
         }
         return { message: 'Failed to delete nutritionist', success: false };
     }
-
-    @Get(':id/patients')
-    @UseGuards(
-        JwtRoleGuard(['admin']),
-        ManagementGuard(NutritionistManagementLevel, "canViewNutritionistPatients")
-    )
-    @UseFilters(ControllerExceptionFilter)
-    async getNutritionistAllPatients(@Param('id') id: string) {
-        return await sendProxyMessage<Patient[]>({
-            proxy: this.patientProxy,
-            pattern: proxyPattern.patient.findAllFromNutritionist,
-            data: { nutritionistId: id }
-        });
-    }
-
+    
+    //FIXME THIS ENDPOINT SHOULD BE CHANGED TO PATIENT.CONTROLLER
+    //TODO ADD TO BRUNO
+    //TODO ADD TO ADMIN-PANEL
     @Post(':id/patients')
     @UseGuards(
         JwtRoleGuard(['admin']),

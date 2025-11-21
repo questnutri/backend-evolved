@@ -5,6 +5,7 @@ import { TacoService } from '../taco/taco.service';
 import { HomeMeasureService } from '../home-measure/home-measure.service';
 import { SecretAlimentService } from '../secret-aliment/secret-aliment.service';
 import { ObjectId } from 'mongodb';
+import { ApiExcludeEndpoint } from '@nestjs/swagger';
 
 @Controller()
 export class AlimentController {
@@ -15,6 +16,7 @@ export class AlimentController {
     ) { }
 
     @Get('health')
+    @ApiExcludeEndpoint()
     getHealthCheck() {
         return { active: true };
     }

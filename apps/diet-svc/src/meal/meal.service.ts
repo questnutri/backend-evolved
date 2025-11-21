@@ -1,5 +1,16 @@
-import { CreateMealDto, KeysOf, Meal, ServiceContract, RepeatType, RepeatConfiguration, getUTCTodayStart, normalizeToStartOfDay, getUTCYesterdayEnd, SchedulerHelper, errorMessagePattern, DietStatus } from '@backend-evolved/shared';
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { 
+    Meal,
+    ServiceContract,
+    RepeatType,
+    SchedulerHelper,
+    errorMessagePattern,
+    DietStatus
+} from '@backend-evolved/shared';
+import {
+    BadRequestException,
+    Injectable,
+    NotFoundException
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { FoodService } from '../food/food.service';
@@ -19,7 +30,7 @@ export class MealService implements ServiceContract<Meal> {
     async findOneWhere(where: any = {}, relations: string[] = ['diet']): Promise<Meal> {
         const foundMeal = await this.mealRepository.findOne({ where, relations });
         if (!foundMeal) {
-            throw new NotFoundException(errorMessagePattern.diet.meal.notFound.key);
+            throw new NotFoundException(errorMessagePattern.meal.notFound.key);
         }
         return foundMeal;
     }
@@ -28,11 +39,18 @@ export class MealService implements ServiceContract<Meal> {
         const { diet } = data;
 
         const scheduler = new SchedulerHelper(diet.timeZone);
+        scheduler.setFormat('YYYY-MM-DD HH:mm')
+
         const requestDate = scheduler.buildDate({ startOfDay: true });
         const disabledPastDateScheduling = process.env.DISABLE_PAST_DATE_SCHEDULING === 'true';
 
         if (diet.endDate && diet.endDate < requestDate) {
-            throw new BadRequestException('Cannot add meal to a diet that has ended');
+            throw new BadRequestException(
+                errorMessagePattern
+                    .meal
+                    .cannotAddToEndedDiet
+                    .key
+            );
         }
 
         let validStartTargetDate = scheduler.buildDate({
@@ -46,31 +64,30 @@ export class MealService implements ServiceContract<Meal> {
             diet.startDate < requestDate && //diet has already started
             validStartTargetDate < requestDate //sent start date is in the past of request date
         ) {
-            throw new BadRequestException('Meal start date cannot be in the past');
-        }
-
-        const formatter = (date: Date) => {
-            return scheduler.formatDate(date, 'YYYY-MM-DD HH:mm');
+            throw new BadRequestException(
+                errorMessagePattern
+                    .meal
+                    .startDateCannotBeInPast
+                    .fn(scheduler.format(requestDate))
+            );
         }
 
         //Checking if request date can be used to schedule meal start
-        //otherwise will use diet start date
+        //Otherwise will use diet start date
         if (diet?.startDate! > validStartTargetDate) {
             if (data.startDate) {
                 if (diet.endDate && diet.endDate < validStartTargetDate) {
                     throw new BadRequestException(
                         errorMessagePattern
-                            .diet
                             .meal
                             .startDateAfterDietEndDate
-                            .fn(formatter(validStartTargetDate), formatter(diet.endDate)));
+                            .fn(scheduler.format(validStartTargetDate), scheduler.format(diet.endDate)));
                 }
                 throw new BadRequestException(
                     errorMessagePattern
-                        .diet
                         .meal
                         .startDateBeforeDietStartDate
-                        .fn(formatter(validStartTargetDate), formatter(diet.startDate!)));
+                        .fn(scheduler.format(validStartTargetDate), scheduler.format(diet.startDate!)));
             }
             validStartTargetDate = diet!.startDate!;
         }
@@ -90,24 +107,22 @@ export class MealService implements ServiceContract<Meal> {
                 if (payloadEndDate > diet.endDate) {
                     throw new BadRequestException(
                         errorMessagePattern
-                            .diet
                             .meal
                             .endDateAfterDietEndDate
-                            .fn(formatter(payloadEndDate), formatter(diet.endDate)));
+                            .fn(scheduler.format(payloadEndDate), scheduler.format(diet.endDate)));
                 }
                 if (payloadEndDate < validStartTargetDate) {
                     throw new BadRequestException(
                         errorMessagePattern
-                            .diet
                             .meal
                             .endDateBeforeMealStartDate
-                            .fn(formatter(payloadEndDate), formatter(validStartTargetDate)));
+                            .fn(scheduler.format(payloadEndDate), scheduler.format(validStartTargetDate)));
                 }
                 validEndTargetDate = payloadEndDate;
             }
         }
 
-
+        //FIXME: CREATE NEW CHECK IN ORDER TO SEE IF VALID START DATE IS <= DIET END DATE
 
         let repeatConfigurationPayload: any = {};
         const repeatConfig = data.repeatConfiguration
@@ -133,18 +148,16 @@ export class MealService implements ServiceContract<Meal> {
                         if (scheduledDate < validStartTargetDate) {
                             throw new BadRequestException(
                                 errorMessagePattern
-                                    .diet
                                     .meal
                                     .targetDateBeforeDietStartDate
-                                    .fn(formatter(validStartTargetDate))
+                                    .fn(scheduler.format(validStartTargetDate))
                             );
                         } else if (validEndTargetDate && scheduledDate > validEndTargetDate) {
                             throw new BadRequestException(
                                 errorMessagePattern
-                                    .diet
                                     .meal
                                     .targetDateAfterDietEndDate
-                                    .fn(formatter(validEndTargetDate))
+                                    .fn(scheduler.format(validEndTargetDate))
                             );
                         } else {
                             repeatConfigurationPayload['targetDate'] = scheduledDate;
@@ -185,7 +198,6 @@ export class MealService implements ServiceContract<Meal> {
                 default:
                     throw new BadRequestException(
                         errorMessagePattern
-                            .diet
                             .meal
                             .invalidRepeatConfiguration
                             .fn(repeatConfig.type)
@@ -215,9 +227,9 @@ export class MealService implements ServiceContract<Meal> {
     }
 
     async clone(meal: Meal, cloneOptions: {
-            includeFoods?: boolean,
-            overrideProperties?: Partial<Meal>
-        }): Promise<Meal> {
+        includeFoods?: boolean,
+        overrideProperties?: Partial<Meal>
+    }): Promise<Meal> {
         const { id, startDate, endDate, createdAt, updatedAt, foods, ...rest } = meal;
         const clonedMeal = this.mealRepository.create({ ...rest, ...(cloneOptions.overrideProperties || {}) });
         const savedClonedMeal = await this.mealRepository.save(clonedMeal, { reload: true });
@@ -260,7 +272,7 @@ export class MealService implements ServiceContract<Meal> {
         let directUpdate = false;
         if (
             meal.diet.status === DietStatus.DEFINITION
-        ) directUpdate = true;
+        ) directUpdate = true; //TODO: CHECK UPDATE CONDITIONS
 
         this.mealRepository.merge(meal, data);
         return await this.mealRepository.save(meal);
@@ -277,6 +289,7 @@ export class MealService implements ServiceContract<Meal> {
     }
 
     async delete(meal: Meal | Meal[]) {
+        await this.foodService.delete(Array.isArray(meal) ? meal.flatMap(m => m.foods || []) : meal.foods || []);
         await this.mealRepository.remove(Array.isArray(meal) ? meal : [meal]);
     }
 

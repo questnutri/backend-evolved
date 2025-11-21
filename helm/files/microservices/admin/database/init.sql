@@ -36,6 +36,7 @@ CREATE TABLE IF NOT EXISTS patient_management_level (
     id uuid PRIMARY KEY,
     "canViewPatients" boolean DEFAULT false,
     "canViewPatientProfile" boolean DEFAULT false,
+    "canViewPatientNutritionists" boolean DEFAULT false,
     "canCreatePatient" boolean DEFAULT false,
     "canUpdatePatient" boolean DEFAULT false,
     "canDeletePatient" boolean DEFAULT false,
@@ -131,12 +132,14 @@ INSERT INTO patient_management_level (
     id,
     "canViewPatients",
     "canViewPatientProfile",
+    "canViewPatientNutritionists",
     "canCreatePatient",
     "canUpdatePatient",
     "canDeletePatient"
 )
 VALUES (
     '7d6e9968-b4db-4b35-8e67-75134632b9f9',
+    true,
     true,
     true,
     true,

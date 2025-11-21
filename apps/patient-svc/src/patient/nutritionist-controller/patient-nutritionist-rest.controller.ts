@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, UseFilters, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, NotFoundException, Param, Post, UseFilters, UseGuards } from '@nestjs/common';
 import { PatientService } from '../patient.service';
 import {
     JwtRoleGuard,
@@ -8,7 +8,8 @@ import {
     IsRelatedGuard,
     Patient,
     proxyPattern,
-    sendProxyMessage
+    sendProxyMessage,
+    errorMessagePattern
 } from '@backend-evolved/shared';
 import { ApiOperation, ApiBearerAuth, ApiSecurity, ApiCreatedResponse, ApiTags } from '@nestjs/swagger';
 
@@ -30,7 +31,30 @@ export class PatientNutritionistRestController {
         @ContextUser() ctxUser: ContextUser,
         @Body() body: BodyCreatePatientDto
     ): Promise<Patient> {
-        return await this.patientService.createOne({...body, nutritionistId: ctxUser.id});
+        return await this.patientService.createOne({ ...body, nutritionistId: ctxUser.id });
+    }
+
+    @Get(':patientId')
+    @ApiOperation({ summary: 'Get patient details by ID for logged nutritionist' })
+    @ApiBearerAuth('bearer')
+    @ApiSecurity('bearer')
+    @UseGuards(JwtRoleGuard(['nutritionist']))
+    @UseFilters(ControllerExceptionFilter)
+    async getPatientById(
+        @Param('patientId') patientId: string,
+        @ContextUser() ctxUser: ContextUser,
+    ): Promise<Patient> {
+        const foundPatient = await this.patientService.findOneWhere({ id: patientId });
+        if (foundPatient.hasNutritionist(ctxUser.id)) {
+            return foundPatient;
+        }
+        throw new NotFoundException(
+            errorMessagePattern
+                .patient
+                .notFound
+                .key
+        );
+
     }
 
 }

@@ -1,5 +1,6 @@
 export class SchedulerHelper {
     private timeZone: number
+    private formatter: string;
 
     constructor(timeZone: number = 0) {
         this.timeZone = timeZone
@@ -7,6 +8,10 @@ export class SchedulerHelper {
 
     setTimeZone(tz: number) {
         this.timeZone = tz
+    }
+
+    setFormat(formatter: string) {
+        this.formatter = formatter;
     }
 
     private tzForCall(timeZone?: number) {
@@ -208,6 +213,14 @@ export class SchedulerHelper {
         return result
     }
 
+    endOfDay() {
+        return this.buildDate({ endOfDay: true });
+    }
+
+    startOfDay() {
+        return this.buildDate({ startOfDay: true });
+    }
+
     normalizeToStartOfDay(date: Date, timeZone?: number): Date {
         const tz = this.tzForCall(timeZone)
         const p = this.localPartsFromInstant(date, tz)
@@ -235,7 +248,7 @@ export class SchedulerHelper {
         return (e.year - s.year) * 12 + (e.month - s.month)
     }
 
-    formatDate(date: Date | string, format: string = 'YYYY-MM-DDTHH:mm:ssZ', timeZone?: number): string {
+    format(date: Date | string, format?: string, timeZone?: number): string {
         const tz = timeZone !== undefined ? timeZone : this.timeZone
         const d = typeof date === 'string' ? new Date(date) : date
         const parts = this.localPartsFromInstant(d, tz)
@@ -252,7 +265,7 @@ export class SchedulerHelper {
             Z: (tz >= 0 ? '+' : '') + pad(tz) + ':00'
         }
 
-        let formatted = format
+        let formatted = format || this.formatter || 'YYYY-MM-DDTHH:mm:ssZ'
         for (const token in tokens) {
             formatted = formatted.replace(token, tokens[token])
         }

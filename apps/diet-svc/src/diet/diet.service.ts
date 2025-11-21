@@ -1,4 +1,4 @@
-import { Diet, PATIENT_SERVICE_PROXY_NAME, RECORD_SERVICE_PROXY_NAME, ALIMENT_SERVICE_PROXY_NAME, ServiceContract, MealRecord, Aliment, Food, MealRepeatCalculator, RepeatType, SchedulerHelper, sendProxyMessage, proxyPattern, DietStatus } from '@backend-evolved/shared';
+import { Diet, PATIENT_SERVICE_PROXY_NAME, RECORD_SERVICE_PROXY_NAME, ALIMENT_SERVICE_PROXY_NAME, ServiceContract, MealRecord, Aliment, Food, MealRepeatCalculator, RepeatType, SchedulerHelper, sendProxyMessage, proxyPattern, DietStatus, errorMessagePattern } from '@backend-evolved/shared';
 import { DietPlan, DietDayPlan, MealPlan, CleanedMealRecord } from '@backend-evolved/shared';
 import { Injectable, NotFoundException, Inject, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -23,7 +23,7 @@ export class DietService implements ServiceContract<Diet> {
 
     async findOneWhere(where: any, relations: string[] = ['meals', 'meals.foods']): Promise<Diet> {
         const foundDiet = await this.dietRepository.findOne({ where, relations });
-        if (!foundDiet) throw new NotFoundException('Diet not found or not related to user');
+        if (!foundDiet) throw new NotFoundException(errorMessagePattern.diet.notFound.key);
         return foundDiet;
     }
 
@@ -48,7 +48,7 @@ export class DietService implements ServiceContract<Diet> {
             });
             let validEndDate = null;
             const formatter = (date: Date) => {
-                return scheduler.formatDate(date, 'YYYY-MM-DD');
+                return scheduler.format(date, 'YYYY-MM-DD');
             }
             if (disabledPastDateScheduling) {
                 if (data.startDate) {
@@ -102,14 +102,68 @@ export class DietService implements ServiceContract<Diet> {
         return savedDiet;
     }
 
-    async updateOne(query: any, data: Partial<Diet>): Promise<Diet> {
-        console.log(query);
-        const diet = await this.dietRepository.findOne({ where: query });
-        if (!diet) {
-            throw new NotFoundException('Diet not found');
-        }
+    async update(diet: Diet, data: Partial<Diet>): Promise<Diet> {
         this.dietRepository.merge(diet, data);
         return await this.dietRepository.save(diet);
+    }
+
+    async updateOne(query: any, payload: Partial<Diet>): Promise<Diet> {
+        const foundDiet = await this.findOneWhere(query);
+        const scheduler = new SchedulerHelper(foundDiet.timeZone);
+        const DISABLE_PAST_DATE_SCHEDULING = process.env.DISABLE_PAST_DATE_SCHEDULING === 'true';
+        const requestDate = scheduler.startOfDay();
+
+        //Removing unupdatable fields
+        const { id, patientId, nutritionistId, meals, createdAt, updatedAt, ...rest} = payload;
+        const updatePayload = { ...rest } as Partial<Diet>;
+
+        if (updatePayload.startDate) {
+            const sentStartDate = scheduler.buildDate({ date: updatePayload.startDate, startOfDay: true });
+            if ( //Checks if diet is active and already started or if set end is before sent date
+                foundDiet.status === DietStatus.ACTIVE &&
+                (
+                    (
+                        foundDiet.startDate < requestDate //Diet already started
+                    ) ||
+                    (
+                        //Diet hasn't started but already has a ended date definied. 
+                        //This checks if the new start date is after the already set end.   
+                        //It's a really rare scenario, but it's possible.
+                        foundDiet.endDate && foundDiet.endDate < sentStartDate
+                    )
+                )
+            ) {
+                throw new BadRequestException(
+                    errorMessagePattern
+                        .diet
+                        .cannotChangeStartDateOfActiveOrEndedDiet
+                        .key
+                );
+            };
+            if ( //Here diet HAVE NOT started yet, and sent date is not after a possible end date
+                foundDiet.status === DietStatus.ACTIVE &&
+                (
+                    sentStartDate < requestDate && //New date is in the PAST
+                    DISABLE_PAST_DATE_SCHEDULING //Past date scheduling is disabled
+                )
+            ) {
+                throw new BadRequestException(
+                    errorMessagePattern
+                        .meal
+                        .startDateCannotBeInPast
+                        .fn(scheduler.format(requestDate, 'YYYY-MM-DD'))
+                );
+            };
+        }
+        //TODO: Validate endDate changes too
+
+        this.dietRepository.merge(foundDiet, updatePayload);
+        return await this.dietRepository.save(foundDiet);
+    }
+
+    async delete(diet: Diet): Promise<void> {
+        await this.mealService.delete(diet.meals);
+        await this.dietRepository.remove(diet);
     }
 
     async deleteOne(query: any): Promise<void> {

@@ -10,18 +10,15 @@ export class PatientNutritionistService implements ServiceContract<PatientNutrit
         private readonly patientNutritionistRepository: Repository<PatientNutritionist>,
     ) { }
 
-    async findAll(query: { [key: string]: any } = {}) {
+    async findAll(where: any) {
         return await this.patientNutritionistRepository.find({
-            where: query,
+            where,
             relations: ['patient']
         });
     }
 
-    async findOneWhere(query: Partial<KeysOf<PatientNutritionist>>): Promise<PatientNutritionist | null> {
-        const patient = await this.patientNutritionistRepository.findOne({
-            where: query
-        });
-        return patient;
+    async findOneWhere(where: Partial<KeysOf<PatientNutritionist>>): Promise<PatientNutritionist | null> {
+        return await this.patientNutritionistRepository.findOne({ where });
     }
 
     async createOne(data: Partial<PatientNutritionist>): Promise<PatientNutritionist> {

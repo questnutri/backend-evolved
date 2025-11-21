@@ -5,15 +5,12 @@ import {
 	UseGuards,
 	Headers,
 	NotFoundException,
-	Param,
-	Put,
-	Delete,
+	Param, Delete,
 	Get,
 	UseFilters,
 	HttpCode,
 	Query
 } from '@nestjs/common';
-import { MessagePattern, Payload } from '@nestjs/microservices';
 import { MealService } from '../meal.service';
 import {
 	ApiBearerAuth,
@@ -30,15 +27,11 @@ import {
 import {
 	CreateMealDto,
 	Meal,
-	JwtRoleGuard, ControllerExceptionFilter,
-	ProxyMessengerFilter,
-	ContextUser,
+	JwtRoleGuard, ControllerExceptionFilter, ContextUser,
 	CreateFoodDto,
 	DietStatus,
 	SchedulerHelper,
-	GenerateAccessResponse,
-	proxyPattern,
-	errorMessagePattern
+	GenerateAccessResponse, errorMessagePattern
 } from '@backend-evolved/shared';
 
 import { FoodService } from '../../food/food.service';
@@ -317,14 +310,15 @@ When creating meal records, the system validates that the \`date\` matches the m
 	@ApiOkResponse({ description: 'The meal has been successfully retrieved.', type: Meal })
 	@ApiNotFoundResponse({ description: 'Meal not found or user does not have access to this meal.' })
 	@UseGuards(JwtRoleGuard(['nutritionist', 'patient']))
-	async getOneById(@Headers() headers: any, @Param('mealId') mealId: string) {
-		const meal = await this.mealService.findById(mealId);
-		if (!meal) throw new NotFoundException('Meal not found');
-		console.log(meal);
-		const isRelated = meal.diet.nutritionistId === headers['user-id'] || meal.diet.patientId === headers['user-id'];
-		if (!isRelated) throw new NotFoundException(`User doesn't have this diet`);
+	async getOneById(
+		@Param('mealId') mealId: string,
+		@ContextUser() ctxUser: ContextUser,
+	) {
+		const meal = await this.mealService.findOneWhere({ id: mealId }, ['diet']);
+		if (meal.diet.nutritionistId !== ctxUser.id) {
+			throw new NotFoundException(errorMessagePattern.meal.notFound.key);
+		};
 		return meal;
-
 	}
 
 	@Post(':mealId/clone')
@@ -337,7 +331,7 @@ When creating meal records, the system validates that the \`date\` matches the m
 		type: Meal
 	})
 	@ApiNotFoundResponse({
-		description: errorMessagePattern.diet.meal.notFound.key
+		description: errorMessagePattern.meal.notFound.key
 	})
 	@ApiQuery({
 		name: 'includeFoods',
@@ -362,14 +356,24 @@ When creating meal records, the system validates that the \`date\` matches the m
 			includeFoods
 		};
 		if (foundMeal.diet.nutritionistId !== ctxUser.id) {
-			throw new NotFoundException(errorMessagePattern.diet.meal.notFound.key);
+			throw new NotFoundException(
+				errorMessagePattern
+					.meal
+					.notFound
+					.key
+			);
 		}
 		if (targetDietId) {
 			const targetDiet = await this.dietService.findOneWhere({ id: targetDietId, nutritionistId: ctxUser.id });
-			if(targetDiet.nutritionistId !== ctxUser.id) {
+			if (targetDiet.nutritionistId !== ctxUser.id) {
 				throw new NotFoundException(errorMessagePattern.diet.notFound.key);
 			}
-			copyPayload['diet'] = targetDiet;
+			const scheduler = new SchedulerHelper(targetDiet.timeZone);
+			const requestDate = scheduler.buildDate({ startOfDay: true });
+			if (targetDiet.endDate && targetDiet.endDate < requestDate) {
+				throw new NotFoundException(errorMessagePattern.meal.cannotAddToEndedDiet.key);
+			}
+			copyPayload.diet = targetDiet;
 		}
 		return await this.mealService.clone(foundMeal, copyPayload);
 	}
@@ -403,7 +407,7 @@ When creating meal records, the system validates that the \`date\` matches the m
 	) {
 		const foundMeal = await this.mealService.findOneWhere({ id: mealId }, ['diet', 'foods']);
 		if (foundMeal.diet.nutritionistId !== ctxUser.id) {
-			throw new NotFoundException('Meal not found or user does not have access to this meal.');
+			throw new NotFoundException(errorMessagePattern.meal.notFound.key);
 		}
 		const scheduler = new SchedulerHelper(foundMeal.diet.timeZone);
 		const requestDate = scheduler.buildDate({ startOfDay: true });
@@ -429,27 +433,4 @@ When creating meal records, the system validates that the \`date\` matches the m
 			});
 		}
 	}
-
-	@MessagePattern(proxyPattern.diet.meal.getOne.key)
-	@UseFilters(ProxyMessengerFilter)
-	async getMealInfo(
-		@Payload() payload: typeof proxyPattern.diet.meal.getOne.payload
-	) {
-		const foundMeal = await this.mealService.findOneWhere({ id: payload.mealId });
-		if (
-			(payload.patientId && foundMeal.diet.patientId !== payload.patientId) ||
-			(payload.nutritionistId && foundMeal.diet.nutritionistId !== payload.nutritionistId)
-		) {
-			throw new NotFoundException(errorMessagePattern.diet.meal.notFound);
-		}
-		return { payload: await this.mealService.findOneWhere({ id: payload.mealId }) };
-	}
-
-	@MessagePattern('meal.getDetailedInfo')
-	@UseFilters(ProxyMessengerFilter)
-	async getMealDetailedInfo(@Payload() data: { mealId: string, patientId?: string }) {
-		const mealDetailedInfo = await this.mealService.findOneWhere({ id: data.mealId, patientId: data.patientId });
-		return { payload: mealDetailedInfo };
-	}
-
 }

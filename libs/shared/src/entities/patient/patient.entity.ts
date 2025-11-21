@@ -30,4 +30,5 @@ export class Patient {
         }
         return false;
     }
+    //TODO: Add => gender, date of birth, height, Medical Information, Allergies, Medical Conditions, Notes, Medications, Preferences, goal, Weight, level of activity
 }

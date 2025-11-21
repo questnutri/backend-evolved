@@ -13,6 +13,7 @@ import {
 } from '@backend-evolved/shared';
 import { ClientProxy } from '@nestjs/microservices';
 import { Admin } from 'typeorm';
+import { ApiExcludeEndpoint } from '@nestjs/swagger';
 
 @Controller()
 export class AdminController {
@@ -22,6 +23,7 @@ export class AdminController {
     ) { }
 
     @Get('health')
+    @ApiExcludeEndpoint()
     getHealthCheck() {
         return { active: true };
     }

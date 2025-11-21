@@ -25,6 +25,7 @@ import {
     ApiAcceptedResponse,
     ApiBadRequestResponse,
     ApiBearerAuth,
+    ApiExcludeEndpoint,
     ApiNotFoundResponse,
     ApiOkResponse,
     ApiOperation,
@@ -45,6 +46,7 @@ export class AuthRestController {
     ) { }
 
     @Get('health')
+    @ApiExcludeEndpoint()
     @ApiOperation({
         summary: 'Check the health status of the authentication service'
     })

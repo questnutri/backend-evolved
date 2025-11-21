@@ -36,3 +36,16 @@ export class BodyCreatePatientDto {
     })
     documentNumber: string;
 }
+
+export class ProxyBodyCreatePatientDto extends BodyCreatePatientDto {
+    @ApiProperty({
+        description: 'ID of the nutritionist responsible for the patient',
+        required: true,
+        example: 'nutritionist-uuid',
+    })
+    @IsString()
+    @IsNotEmpty({
+        message: 'Nutritionist ID must not be empty',
+    })
+    nutritionistId: string;
+}

@@ -13,24 +13,35 @@ import {
     FindCurrentWaterGoalDto,
 } from '@backend-evolved/shared';
 import { WaterGoalService } from '../water-goal/water-goal.service';
+import { PatientNutritionistService } from '../patient-nutritionist/patient-nutritionist.service';
 
+//FIXME: FIX THIS PROXY TO BE USED ON ADMIN-SVC
 @Controller()
 export class PatientProxyController {
     constructor(
         private readonly patientService: PatientService,
+        private readonly patientNutritionistService: PatientNutritionistService,
         private readonly waterGoalService: WaterGoalService,
     ) { }
 
-    @MessagePattern(proxyPattern.patient.creation)
+    @MessagePattern(proxyPattern.patient.creation.key)
     @UseFilters(ProxyMessengerFilter)
-    async createPatient(@Payload() data: BodyCreatePatientDto): Promise<ProxyMessage<Patient>> {
+    async createPatient(
+        @Payload() data: typeof proxyPattern.patient.creation.payload
+    ): Promise<ProxyMessage<typeof proxyPattern.patient.creation.receive>> {
         return { payload: await this.patientService.createOne(data) };
     }
 
-    @MessagePattern(proxyPattern.patient.getAll)
+    @MessagePattern(proxyPattern.patient.getAll.key)
     @UseFilters(ProxyMessengerFilter)
-    async getAll(): Promise<ProxyMessage<Patient[]>> {
-        return { payload: await this.patientService.findAll() };
+    async getAll(
+        @Payload() where: typeof proxyPattern.patient.getAll.payload
+    ): Promise<ProxyMessage<typeof proxyPattern.patient.getAll.receive>> {
+        let patients = await this.patientService.findAllWhere({}, ['nutritionists']);
+        if (where.nutritionistId) {
+            patients = patients.filter(patient => patient.hasNutritionist(where.nutritionistId!));
+        }
+        return { payload: patients };
     }
 
     @MessagePattern(proxyPattern.patient.getById)

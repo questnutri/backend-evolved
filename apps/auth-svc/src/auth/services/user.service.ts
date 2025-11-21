@@ -77,16 +77,19 @@ export class UserService {
 
     async deleteOneByEmail(email: string): Promise<void> {
         console.log("Received email for deletion: ", email);
+        if(!email) return;
         if (email === ROOT_ADMIN_EMAIL) {
             throw new ForbiddenException('You cannot delete this user.');
         }
-        const user = await this.userRepository.findOne({ where: { email } });
-        if (!user) throw new NotFoundException(`User with email ${email} not found`);
+        const foundUser = await this.userRepository.findOne({ where: { email } });
+        if (!foundUser) throw new NotFoundException(`User with email ${email} not found`);
 
-        console.log("Found user for deletion: ", user);
+        console.log("Found user for deletion: ", foundUser);
+        if(foundUser.email === ROOT_ADMIN_EMAIL) return;
+        if(foundUser.email !== email) return;
 
         const refreshTokens = await this.refreshRepository.find({
-            where: { user: { id: user.id } },
+            where: { user: { id: foundUser.id } },
             relations: ['user']
         });
 
@@ -94,7 +97,7 @@ export class UserService {
             await this.refreshRepository.remove(refreshTokens);
         }
 
-        await this.userRepository.remove(user);
+        await this.userRepository.remove(foundUser);
     }
 
     async save(user: User, reload: boolean = true): Promise<User> {

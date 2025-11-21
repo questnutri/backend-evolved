@@ -188,7 +188,7 @@ export class MealRecordService implements ServiceContract<MealRecord> {
                 });
 
                 if (!isValid) {
-                    throw new BadRequestException(`The date ${scheduler.formatDate(requestDate, 'YYYY-MM-DD')} is not valid for this meal which is scheduled once on ${scheduler.formatDate(repeatConfiguration.targetDate!, 'YYYY-MM-DD')}.`)
+                    throw new BadRequestException(`The date ${scheduler.format(requestDate, 'YYYY-MM-DD')} is not valid for this meal which is scheduled once on ${scheduler.format(repeatConfiguration.targetDate!, 'YYYY-MM-DD')}.`)
                 }
                 break;
             case RepeatType.DAILY:
@@ -207,7 +207,7 @@ export class MealRecordService implements ServiceContract<MealRecord> {
 
                 if (!isValid) {
                     throw new BadRequestException(
-                        `The date ${scheduler.formatDate(requestDate, 'YYYY-MM-DD')} is not within the scheduled range for this meal which is between ${scheduler.formatDate(start, 'YYYY-MM-DD')} and ${scheduler.formatDate(end, 'YYYY-MM-DD')}.`
+                        `The date ${scheduler.format(requestDate, 'YYYY-MM-DD')} is not within the scheduled range for this meal which is between ${scheduler.format(start, 'YYYY-MM-DD')} and ${scheduler.format(end, 'YYYY-MM-DD')}.`
                     );
                 }
 
@@ -218,14 +218,14 @@ export class MealRecordService implements ServiceContract<MealRecord> {
                 const interval = repeatConfiguration.repeatTarget!;
                 if ((daysFromMealStart % interval) !== 0)
                     throw new BadRequestException(
-                        `The date ${scheduler.formatDate(requestDate, 'YYYY-MM-DD')} is not valid for this meal which repeats every ${interval} day(s) starting from ${scheduler.formatDate(meal.startDate!, 'YYYY-MM-DD')}.`);
+                        `The date ${scheduler.format(requestDate, 'YYYY-MM-DD')} is not valid for this meal which repeats every ${interval} day(s) starting from ${scheduler.format(meal.startDate!, 'YYYY-MM-DD')}.`);
                 break;
             case RepeatType.WEEKLY:
                 //First check if the day of week matches
                 const requestDayOfWeek = requestDate.getDay();
                 if (!(repeatConfiguration.daysOfWeek!.includes(requestDayOfWeek))) {
                     throw new BadRequestException(
-                        `The date ${scheduler.formatDate(requestDate, 'YYYY-MM-DD')} which is equivalent to ${requestDate.getDay()} is not valid for this meal which is scheduled on days [${repeatConfiguration.daysOfWeek}] of the week.`
+                        `The date ${scheduler.format(requestDate, 'YYYY-MM-DD')} which is equivalent to ${requestDate.getDay()} is not valid for this meal which is scheduled on days [${repeatConfiguration.daysOfWeek}] of the week.`
                     );
                 };
 
@@ -246,7 +246,7 @@ export class MealRecordService implements ServiceContract<MealRecord> {
 
                 if (!isValid) {
                     throw new BadRequestException(
-                        `The date ${scheduler.formatDate(requestDate, 'YYYY-MM-DD')} is not within the scheduled range for this meal which is between ${scheduler.formatDate(start, 'YYYY-MM-DD')} and ${scheduler.formatDate(end, 'YYYY-MM-DD')}.`
+                        `The date ${scheduler.format(requestDate, 'YYYY-MM-DD')} is not within the scheduled range for this meal which is between ${scheduler.format(start, 'YYYY-MM-DD')} and ${scheduler.format(end, 'YYYY-MM-DD')}.`
                     );
                 }
 
@@ -258,7 +258,7 @@ export class MealRecordService implements ServiceContract<MealRecord> {
                 const weeklyInterval = repeatConfiguration.repeatTarget!;
                 if (!((weeksFromMealStart % weeklyInterval) === 0))
                     throw new BadRequestException(
-                        `The date ${scheduler.formatDate(requestDate, 'YYYY-MM-DD')} is not valid for this meal which repeats every ${weeklyInterval} week(s) starting from ${scheduler.formatDate(meal.startDate!, 'YYYY-MM-DD')}.`
+                        `The date ${scheduler.format(requestDate, 'YYYY-MM-DD')} is not valid for this meal which repeats every ${weeklyInterval} week(s) starting from ${scheduler.format(meal.startDate!, 'YYYY-MM-DD')}.`
                     );
                 break;
             case RepeatType.MONTHLY:
@@ -270,7 +270,7 @@ export class MealRecordService implements ServiceContract<MealRecord> {
 
                 if (!(repeatConfiguration.daysOfMonth!.includes(requestDayOfMonth))) {
                     throw new BadRequestException(
-                        `The date ${scheduler.formatDate(requestDate, 'YYYY-MM-DD')} which is day ${requestDayOfMonth} of the month is not valid for this meal which is scheduled on days [${repeatConfiguration.daysOfMonth}] of the month.`
+                        `The date ${scheduler.format(requestDate, 'YYYY-MM-DD')} which is day ${requestDayOfMonth} of the month is not valid for this meal which is scheduled on days [${repeatConfiguration.daysOfMonth}] of the month.`
                     );
                 };
                 //Then check if within start and end dates
@@ -290,7 +290,7 @@ export class MealRecordService implements ServiceContract<MealRecord> {
 
                 if (!isValid) {
                     throw new BadRequestException(
-                        `The date ${scheduler.formatDate(requestDate, 'YYYY-MM-DD')} is not within the scheduled range for this meal which is between ${scheduler.formatDate(start, 'YYYY-MM-DD')} and ${scheduler.formatDate(end, 'YYYY-MM-DD')}.`
+                        `The date ${scheduler.format(requestDate, 'YYYY-MM-DD')} is not within the scheduled range for this meal which is between ${scheduler.format(start, 'YYYY-MM-DD')} and ${scheduler.format(end, 'YYYY-MM-DD')}.`
                     );
                 }
 
@@ -302,7 +302,7 @@ export class MealRecordService implements ServiceContract<MealRecord> {
                 const monthlyInterval = repeatConfiguration.repeatTarget!;
                 if (!((monthsFromMealStart % monthlyInterval) === 0)) {
                     throw new BadRequestException(
-                        `The date ${scheduler.formatDate(requestDate, 'YYYY-MM-DD')} is not valid for this meal which repeats every ${monthlyInterval} month(s) starting from ${scheduler.formatDate(meal.startDate!, 'YYYY-MM-DD')}.`
+                        `The date ${scheduler.format(requestDate, 'YYYY-MM-DD')} is not valid for this meal which repeats every ${monthlyInterval} month(s) starting from ${scheduler.format(meal.startDate!, 'YYYY-MM-DD')}.`
                     );
                 }
                 break;

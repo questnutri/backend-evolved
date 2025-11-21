@@ -1,6 +1,6 @@
 microservices:
   - name:  auth
-    image: questnutri/auth-svc:2.1.1
+    image: questnutri/auth-svc:2.2.0
     volumeMaps:
       - name: auth-keys-config-map
         keys:
@@ -13,7 +13,7 @@ microservices:
           keys:
             - init.sql
   - name: aliment
-    image: questnutri/aliment-svc:2.1.1
+    image: questnutri/aliment-svc:2.2.0
     database: 
       type: mongodb
       volumeMaps:
@@ -27,26 +27,26 @@ microservices:
           keys:
             - import-databases.sh
   - name: diet
-    image: questnutri/diet-svc:2.1.1
+    image: questnutri/diet-svc:2.2.0
     database:
       type: postgres
     envVariables:
       - name: DISABLE_PAST_DATE_SCHEDULING
         value: true
   - name: nutritionist
-    image: questnutri/nutritionist-svc:2.1.1
+    image: questnutri/nutritionist-svc:2.2.0
     database:
       type: postgres
   - name: patient
-    image: questnutri/patient-svc:2.1.1 
+    image: questnutri/patient-svc:2.2.0 
     database:
       type: postgres
   - name: record
-    image: questnutri/record-svc:2.1.1
+    image: questnutri/record-svc:2.2.0
     database:
       type: postgres
   - name: admin
-    image: questnutri/admin-svc:2.1.1
+    image: questnutri/admin-svc:2.2.0
     database: 
       type: postgres
       volumeMaps:
@@ -54,7 +54,7 @@ microservices:
           keys:
             - init.sql
   - name: gateway
-    image: questnutri/gateway:2.1.0
+    image: questnutri/gateway:2.1.1
     port: 8181
     servicePort: 8080
     serviceType: LoadBalancer

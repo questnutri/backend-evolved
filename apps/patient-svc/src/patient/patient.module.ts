@@ -8,6 +8,7 @@ import { WaterGoalService } from '../water-goal/water-goal.service';
 import { 
     PatientNutritionistRestController
 } from './nutritionist-controller/patient-nutritionist-rest.controller';
+import { PatientNutritionistService } from '../patient-nutritionist/patient-nutritionist.service';
 
 @Module({
     imports: [
@@ -20,6 +21,7 @@ import {
     ],
     providers: [
         PatientService,
+        PatientNutritionistService,
         WaterGoalService,
         provideProxyService(AUTH_SERVICE_PROXY_NAME),
         provideProxyService(NUTRITIONIST_SERVICE_PROXY_NAME)

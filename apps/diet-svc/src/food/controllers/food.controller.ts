@@ -103,7 +103,7 @@ export class FoodController {
     @Get(':foodId')
     @ApiOperation({ summary: 'Get a specific food by ID', description: 'Retrieve details of a specific food using its ID' })
     @ApiOkResponse({ description: 'The food has been successfully retrieved.', type: Food })
-    @ApiNotFoundResponse({ description: errorMessagePattern.diet.food.notFound.key })
+    @ApiNotFoundResponse({ description: errorMessagePattern.food.notFound.key })
     @UseGuards(JwtRoleGuard(['nutritionist', 'patient']))
     @UseFilters(ControllerExceptionFilter)
     async getOneById(@Param('mealId') mealId: string, @Param('foodId') foodId: string, @Headers() headers: any) {
@@ -128,7 +128,7 @@ export class FoodController {
         type: Food
     })
     @ApiNotFoundResponse({
-        description: errorMessagePattern.diet.food.notFound.key
+        description: errorMessagePattern.food.notFound.key
     })
     @ApiQuery({
         name: 'targetMealId',
@@ -144,13 +144,13 @@ export class FoodController {
     ) {
         const foundFood = await this.foodService.findOneWhere({ id: foodId }, ['meal', 'meal.diet']);
         if (foundFood.meal.diet.nutritionistId !== ctxUser.id) {
-            throw new NotFoundException(errorMessagePattern.diet.food.notFound.key);
+            throw new NotFoundException(errorMessagePattern.food.notFound.key);
         }
         const clonePayload: any = {}
         if(targetMealId) {
             const targetMeal = await this.mealService.findOneWhere({ id: targetMealId }, ['diet']);
             if(targetMeal.diet.nutritionistId !== ctxUser.id) {
-                throw new NotFoundException(errorMessagePattern.diet.meal.notFound.key);
+                throw new NotFoundException(errorMessagePattern.meal.notFound.key);
             }
             clonePayload.meal = targetMeal;
         }
@@ -160,7 +160,7 @@ export class FoodController {
     @Put(':foodId')
     @ApiOperation({ summary: 'Update a specific food', description: 'Update the details of a specific food' })
     @ApiOkResponse({ description: 'The food has been successfully updated.', type: Food })
-    @ApiNotFoundResponse({ description: errorMessagePattern.diet.food.notFound.key })
+    @ApiNotFoundResponse({ description: errorMessagePattern.food.notFound.key })
     @UseGuards(JwtRoleGuard(['nutritionist']))
     @UseFilters(ControllerExceptionFilter)
     async updateOneById(@Param('mealId') mealId: string, @Param('foodId') foodId: string, @Body() update: Partial<CreateFoodDto>, @Headers() headers: any) {
@@ -180,7 +180,7 @@ export class FoodController {
     @HttpCode(204)
     @ApiOperation({ summary: 'Delete a specific food by ID', description: 'Remove a specific food from the meal' })
     @ApiNoContentResponse({ description: 'The food has been successfully deleted.' })
-    @ApiNotFoundResponse({ description: errorMessagePattern.diet.food.notFound.key })
+    @ApiNotFoundResponse({ description: errorMessagePattern.food.notFound.key })
     @UseGuards(JwtRoleGuard(['nutritionist']))
     @UseFilters(ControllerExceptionFilter)
     async deleteOneById(
@@ -189,7 +189,7 @@ export class FoodController {
     ) {
         const foundFood = await this.foodService.findOneWhere({ id: foodId }, ['meal', 'meal.diet']);
         if (foundFood.meal.diet.nutritionistId !== ctxUser.id) {
-            throw new NotFoundException(errorMessagePattern.diet.food.notFound.key);
+            throw new NotFoundException(errorMessagePattern.food.notFound.key);
         };
 
         const scheduler = new SchedulerHelper(foundFood.meal.diet.timeZone);

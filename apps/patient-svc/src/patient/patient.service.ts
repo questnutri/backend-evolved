@@ -1,7 +1,7 @@
 import { ConflictException, HttpException, Inject, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { InjectRepository } from '@nestjs/typeorm';
-import { UserRole, RegisterUserDto, Patient, AUTH_SERVICE_PROXY_NAME, PatientNutritionist, ServiceContract, KeysOf, ProxyMessage, proxyPattern, BodyCreatePatientDto, NUTRITIONIST_SERVICE_PROXY_NAME, Nutritionist, sendProxyMessage, LoginUserDto } from '@backend-evolved/shared';
+import { UserRole, RegisterUserDto, Patient, AUTH_SERVICE_PROXY_NAME, PatientNutritionist, ServiceContract, KeysOf, ProxyMessage, proxyPattern, BodyCreatePatientDto, NUTRITIONIST_SERVICE_PROXY_NAME, Nutritionist, sendProxyMessage, LoginUserDto, errorMessagePattern } from '@backend-evolved/shared';
 import { firstValueFrom } from 'rxjs';
 import { QueryFailedError, Repository } from 'typeorm';
 
@@ -20,9 +20,10 @@ export class PatientService implements ServiceContract<Patient> {
         // private readonly nutritionistRepository: Repository<Nutritionist>,
     ) { }
 
-    async findAll(query: { [key: string]: any } = {}) {
+    async findAllWhere(where: any, relations?: string[]) {
         return await this.patientRepository.find({
-            where: query
+            where,
+            relations
         });
     }
 
@@ -34,7 +35,14 @@ export class PatientService implements ServiceContract<Patient> {
             where: query,
             relations: ['nutritionists']
         });
-        if (!patient) throw new NotFoundException('Patient not found');
+        if (!patient) {
+            throw new NotFoundException(
+                errorMessagePattern
+                    .patient
+                    .notFound
+                    .key
+            );
+        }
         return patient;
     }
 
@@ -43,7 +51,7 @@ export class PatientService implements ServiceContract<Patient> {
         try {
             const payload = {
                 email: data.email,
-                password: data.documentNumber,
+                password: data.documentNumber!.replace(/[.\-\s]/g, ''),
                 role: UserRole.PATIENT
             };
             try {

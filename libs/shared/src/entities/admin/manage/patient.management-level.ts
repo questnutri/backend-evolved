@@ -24,6 +24,11 @@ export class PatientManagementLevel {
     @Column({
         default: false
     })
+    canViewPatientNutritionists: boolean;
+
+    @Column({
+        default: false
+    })
     canCreatePatient: boolean;
 
     @Column({
