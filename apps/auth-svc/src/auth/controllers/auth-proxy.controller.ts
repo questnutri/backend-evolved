@@ -1,13 +1,14 @@
 import { Controller, UseFilters } from '@nestjs/common';
 import { AuthService } from '../services/auth.service';
 import {
-    ProxyMessengerFilter, ProxyMessage, RegisterUserDto, LoginResponse,
-    userId,
-    User, KeysOf,
+    ProxyMessengerFilter,
+    ProxyMessage,
+    LoginResponse,
+    User,
     proxyPattern,
     LoginUserDto
 } from '@backend-evolved/shared';
-import { MessagePattern, Payload, RpcException } from '@nestjs/microservices';
+import { MessagePattern, Payload } from '@nestjs/microservices';
 import { instanceToPlain } from 'class-transformer';
 import { UserService } from '../services/user.service';
 
@@ -18,31 +19,38 @@ export class AuthProxyController {
         private readonly userService: UserService,
     ) { }
 
-    @MessagePattern(proxyPattern.user.creation)
+    @MessagePattern(proxyPattern.user.creation.key)
     @UseFilters(ProxyMessengerFilter)
-    async handleUserCreation(@Payload() data: RegisterUserDto): Promise<ProxyMessage<userId>> {
-        return { payload: (await this.userService.create(data)).id };
+    async handleUserCreation(
+        @Payload() data: typeof proxyPattern.user.creation.payload
+    ): Promise<ProxyMessage<
+        typeof proxyPattern.user.creation.response
+    >> {
+        const createdUser = await this.userService.create(data);
+        return { payload: createdUser };
     }
 
-    @MessagePattern(proxyPattern.user.deletionByEmail)
+    @MessagePattern(proxyPattern.user.deletionByEmail.key)
     @UseFilters(ProxyMessengerFilter)
-    async handleUserDeletionByEmail(@Payload() payload: { email: string }): Promise<ProxyMessage<{ result: boolean }>> {
-        try {
-            await this.userService.deleteOneByEmail(payload.email);
-            return { payload: { result: true } };
-        } catch (err: any) {
-            console.log('Error in user.deletion handler:', err);
-            throw new RpcException({
-                detail: err?.message ?? String(err),
-                source: err.constructor.name
-            });
-        }
+    async handleUserDeletionByEmail(
+        @Payload() payload: typeof proxyPattern.user.deletionByEmail.payload
+    ): Promise<ProxyMessage<
+        typeof proxyPattern.user.deletionByEmail.response
+    >> {
+        await this.userService.deleteOneByEmail(payload.email);
+        return { payload: { result: true } };
     }
 
-    @MessagePattern(proxyPattern.user.getAll)
+    @MessagePattern(proxyPattern.user.getAll.key)
     @UseFilters(ProxyMessengerFilter)
-    async handleGetAll(@Payload() data: { query: Partial<KeysOf<User>> }): Promise<ProxyMessage<User[]>> {
-        const users = await this.userService.findAll(data.query);
+    async handleGetAll(
+        @Payload() payload: typeof proxyPattern.user.getAll.payload
+    ): Promise<ProxyMessage<typeof proxyPattern.user.getAll.response>> {
+        const { removeKeys } = payload;
+        const users = await this.userService.findAll({
+            ...payload,
+            removeKeys: [...(removeKeys || []), 'passwordHash'] //Always remove passwordHash
+        });
         return { payload: users };
     }
 
@@ -80,9 +88,13 @@ export class AuthProxyController {
         }
     }
 
-    @MessagePattern(proxyPattern.user.deletionById)
+    @MessagePattern(proxyPattern.user.deletionById.key)
     @UseFilters(ProxyMessengerFilter)
-    async handleUserDeletion(@Payload() data: { id: string }): Promise<ProxyMessage<{ result: boolean }>> {
+    async handleUserDeletion(
+        @Payload() data: typeof proxyPattern.user.deletionById.payload
+    ): Promise<ProxyMessage<
+        typeof proxyPattern.user.deletionById.response
+    >> {
         await this.userService.deleteOneById(data.id);
         return { payload: { result: true } };
     }

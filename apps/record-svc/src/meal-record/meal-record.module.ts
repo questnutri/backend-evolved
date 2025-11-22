@@ -1,15 +1,20 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { MealRecordService } from './meal-record.service';
-import { MealRecordController } from './meal-record-rest.controller';
-import { MealRecordMessageController } from './meal-record-proxy.controller';
+import {
+    MealRecordProxyController
+} from './controllers/meal-record-proxy.controller';
 import { DIET_SERVICE_PROXY_NAME, MealRecord, provideProxyService } from '@backend-evolved/shared';
+import { MealRecordRestController } from './controllers/meal-record-rest.controller';
 
 @Module({
     imports: [
         TypeOrmModule.forFeature([MealRecord])
     ],
-    controllers: [MealRecordController, MealRecordMessageController],
+    controllers: [
+        MealRecordRestController,
+        MealRecordProxyController
+    ],
     providers: [MealRecordService,
         provideProxyService(DIET_SERVICE_PROXY_NAME)
     ],

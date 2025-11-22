@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { PatientNutritionist, ServiceContract, KeysOf } from '@backend-evolved/shared';
+import { PatientNutritionist, ServiceContract, KeysOf, errorMessagePattern, Patient, PaginationQuery, PatientFindOptions } from '@backend-evolved/shared';
 import { Repository } from 'typeorm';
 
 @Injectable()
@@ -10,15 +10,28 @@ export class PatientNutritionistService implements ServiceContract<PatientNutrit
         private readonly patientNutritionistRepository: Repository<PatientNutritionist>,
     ) { }
 
-    async findAll(where: any) {
+    async findAll(
+        options?: PatientFindOptions & PaginationQuery
+    ): Promise<PatientNutritionist[]> {
+        let page = options?.page || 1;
+        if(page < 1) page = 1;
+        let limit = options?.limit || 20;
+        if(limit < 1) limit = 1;
+
         return await this.patientNutritionistRepository.find({
-            where,
-            relations: ['patient']
+            where: options?.where,
+            relations: ['patient'],
+            skip: (page - 1) * limit,
+            take: limit,
         });
     }
 
-    async findOneWhere(where: Partial<KeysOf<PatientNutritionist>>): Promise<PatientNutritionist | null> {
-        return await this.patientNutritionistRepository.findOne({ where });
+    async findOneWhere(where: any): Promise<Patient> {
+        const foundPatient = await this.patientNutritionistRepository.findOne({ where, relations: ['patient'] });
+        if (!foundPatient) {
+            throw new NotFoundException(errorMessagePattern.patient.notFound.key);
+        }
+        return foundPatient.patient;
     }
 
     async createOne(data: Partial<PatientNutritionist>): Promise<PatientNutritionist> {

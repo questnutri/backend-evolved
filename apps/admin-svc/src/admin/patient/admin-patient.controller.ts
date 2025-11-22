@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Inject, Param, Post, Query, UseFilters, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Inject, Param, Post, Query, UseFilters, UseGuards } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import {
     AUTH_SERVICE_PROXY_NAME,
@@ -34,13 +34,18 @@ export class PatientController {
         @Query('nutritionistId') nutritionistId?: string
     ) {
         const patients = await sendProxyMessage<
-            typeof proxyPattern.patient.getAll.receive,
+            typeof proxyPattern.patient.getAll.response,
             typeof proxyPattern.patient.getAll.payload
         >({
             proxy: this.patientProxy,
             pattern: proxyPattern.patient.getAll.key,
             data: {
-                nutritionistId
+                where: {
+                    nutritionistId
+                },
+                options: {
+                    includeNutritionists: true
+                }
             }
         })
         return patients;
@@ -55,10 +60,19 @@ export class PatientController {
     async getOneById(
         @Param('id') id: string
     ): Promise<PatientUser> {
-        const patient = await sendProxyMessage<Patient>({
+        const patient = await sendProxyMessage<
+            typeof proxyPattern.patient.getById.response,
+            typeof proxyPattern.patient.getById.payload
+        >({
             proxy: this.patientProxy,
-            pattern: proxyPattern.patient.getById,
-            data: { id }
+            pattern: proxyPattern.patient.getById.key,
+            data: { 
+                id,
+                options: {
+                    includeDiets: true,
+                    includeNutritionists: true
+                }
+            }
         });
 
         const userPatient = await sendProxyMessage<User>({
@@ -74,6 +88,22 @@ export class PatientController {
             ...userPatient,
             ...patient
         } as any;
+    }
+
+    @Delete(':id')
+    @UseGuards(
+        JwtRoleGuard(['admin']),
+        ManagementGuard(PatientManagementLevel, "canDeletePatient")
+    )
+    @UseFilters(ControllerExceptionFilter)
+    async deleteOneById(
+        @Param('id') id: string
+    ) {
+        return await sendProxyMessage<void>({
+            proxy: this.patientProxy,
+            pattern: proxyPattern.patient.softDeletionById.key,
+            data: { id }
+        })
     }
 
     @Post()

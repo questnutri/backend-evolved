@@ -1,13 +1,8 @@
-import { RegisterUserDto } from "../auth/register-user.dto";
 import { IntersectionType, ApiProperty } from "@nestjs/swagger";
-import { 
-    IsEnum, 
-    IsNotEmpty, 
-    IsString, 
-    ValidatorConstraint, 
-    ValidatorConstraintInterface, 
-    ValidationArguments, 
-    Validate 
+import {
+    IsEnum,
+    IsNotEmpty,
+    IsString
 } from 'class-validator';
 import { DocumentType } from "../../enums/document-type.enum";
 import { LoginUserDto } from "../auth/login-user.dto";

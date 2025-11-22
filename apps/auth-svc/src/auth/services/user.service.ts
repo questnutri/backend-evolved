@@ -1,11 +1,15 @@
 import { ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import {
+    errorMessagePattern,
+    FindUserOptions,
     KeysOf,
+    PaginationQuery,
     RefreshToken,
     RegisterUserDto,
+    removeProperties,
     ROOT_ADMIN_EMAIL,
     ROOT_ADMIN_ID,
-    User
+    User,
 } from "@backend-evolved/shared";
 import { InjectRepository } from '@nestjs/typeorm';
 import { In, Repository } from 'typeorm';
@@ -21,14 +25,37 @@ export class UserService {
 
     async create(userData: RegisterUserDto): Promise<User> {
         const existing = await this.userRepository.findOne({ where: { email: userData.email } });
-        if (existing) throw new ConflictException('An User with this email already exists');
+        if (existing) throw new ConflictException(
+            errorMessagePattern
+                .auth
+                .emailAlreadyExists
+                .fn()
+        );
         const hash = await bcrypt.hash(userData.password, 10);
-        const user = this.userRepository.create({ email: userData.email, passwordHash: hash, role: userData.role });
+        const user = this.userRepository.create({
+            email: userData.email,
+            passwordHash: hash,
+            role: userData.role
+        });
         return await this.userRepository.save(user);
     }
 
-    async findAll(query?: Partial<KeysOf<User>>): Promise<User[]> {
-        return await this.userRepository.find({ where: query });
+    async findAll(find?: FindUserOptions & PaginationQuery): Promise<User[]> {
+        let page = find?.page || 1;
+        let limit = find?.limit || 20;
+        if (page < 1) page = 1;
+        if (limit < 1) limit = 1;
+
+        let users = await this.userRepository.find({
+            where: find?.where,
+            select: find?.select,
+            skip: (page && limit) ? (page - 1) * limit : undefined,
+            take: limit || undefined,
+        });
+
+        users = removeProperties(users, find?.removeKeys);
+
+        return users;
     }
 
     async findManyByIds(ids: string[]): Promise<User[]> {
@@ -40,13 +67,23 @@ export class UserService {
 
     async findOne(where: { [key in keyof User]?: any }) {
         const foundUser = await this.userRepository.findOneBy(where);
-        if (!foundUser) throw new NotFoundException('User not found');
+        if (!foundUser) throw new NotFoundException(
+            errorMessagePattern
+                .auth
+                .userNotFoundWithEmail
+                .fn()
+        );
         return foundUser;
     }
 
     async updateOneById(id: string, updateData: Partial<User>): Promise<User> {
         const user = await this.userRepository.findOne({ where: { id } });
-        if (!user) throw new NotFoundException(`User with id ${id} not found`);
+        if (!user) throw new NotFoundException(
+            errorMessagePattern
+                .auth
+                .userNotFoundWithId
+                .fn(id)
+        );
         const updatedUser = this.userRepository.merge(user, updateData);
         return await this.userRepository.save(updatedUser);
     }
@@ -56,9 +93,12 @@ export class UserService {
             throw new ForbiddenException('You cannot delete this user.');
         }
         const user = await this.userRepository.findOne({ where: { id } });
-        if (!user) throw new NotFoundException(`User with id ${id} not found`);
-
-        console.log("Received userId: ", id);
+        if (!user) throw new NotFoundException(
+            errorMessagePattern
+                .auth
+                .userNotFoundWithId
+                .fn(id)
+        );
 
         // Find all refresh tokens associated with this user and delete them
         const refreshTokens = await this.refreshRepository.find({
@@ -76,17 +116,17 @@ export class UserService {
 
 
     async deleteOneByEmail(email: string): Promise<void> {
-        console.log("Received email for deletion: ", email);
-        if(!email) return;
+        console.log("[Auth-Service] user.service.ts => Received email for deletion: ", email);
+        if (!email) return;
         if (email === ROOT_ADMIN_EMAIL) {
             throw new ForbiddenException('You cannot delete this user.');
         }
         const foundUser = await this.userRepository.findOne({ where: { email } });
         if (!foundUser) throw new NotFoundException(`User with email ${email} not found`);
 
-        console.log("Found user for deletion: ", foundUser);
-        if(foundUser.email === ROOT_ADMIN_EMAIL) return;
-        if(foundUser.email !== email) return;
+        console.log("[Auth-Service] user.service.ts => Found user for deletion: ", foundUser);
+        if (foundUser.email === ROOT_ADMIN_EMAIL) return;
+        if (foundUser.email !== email) return;
 
         const refreshTokens = await this.refreshRepository.find({
             where: { user: { id: foundUser.id } },

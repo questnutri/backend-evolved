@@ -101,6 +101,11 @@ export class ErrorMapper {
             }
         }
 
+        if (ErrorMapper.isErrorOfType(EntityPropertyNotFoundError, error)) {
+            const capturedError = captured || ErrorMapper.capture(error);
+            throw new BadRequestException(`Entity property not found error. ${capturedError.detail}`);
+        }
+
         // if (ErrorMapper.isErrorOfType(NotFoundException, error)) {
         //     const detail = (error as NotFoundException).message || captured?.detail || 'Not found error';
         //     throw new NotFoundException(detail);

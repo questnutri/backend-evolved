@@ -3,15 +3,19 @@ import {
     AUTH_SERVICE_PROXY_NAME,
     BodyCreatePatientDto,
     ControllerExceptionFilter,
+    FilterQuery,
     JwtRoleGuard,
     Nutritionist,
     NUTRITIONIST_SERVICE_PROXY_NAME,
+    NutritionistFindOptions,
     NutritionistManagementLevel,
+    PaginationQuery,
     Patient,
     PATIENT_SERVICE_PROXY_NAME,
     PatientManagementLevel,
     ProxyMessage,
     proxyPattern,
+    SelectQuery,
     sendProxyMessage,
     User,
     UserRole
@@ -51,13 +55,15 @@ export class NutritionistController {
     )
     @UseFilters(ControllerExceptionFilter)
     async getAll(
-        @Query('approved') approved?: boolean
+        @Query() query: PaginationQuery & NutritionistFindOptions,
+        @Query('select') select: string,
+        @Query('filter') filter: string,
     ): Promise<NutriUser[]> {
         const userNutritionists = await sendProxyMessage<User[]>(
             {
                 proxy: this.authServiceProxy,
-                pattern: proxyPattern.user.getAll,
-                data: approved !== undefined ? { role: UserRole.NUTRITIONIST, active: approved } : { role: UserRole.NUTRITIONIST },
+                pattern: proxyPattern.user.getAll.key,
+                data: { role: UserRole.NUTRITIONIST },
                 options: {
                     retry: { count: 5, delay: 50 }
                 }
@@ -66,11 +72,21 @@ export class NutritionistController {
 
         if (userNutritionists.length === 0) return [];
 
-        const nutritionists = await sendProxyMessage<Nutritionist[]>(
+        const nutritionists = await sendProxyMessage<
+            typeof proxyPattern.nutritionist.getManyByIds.response,
+            typeof proxyPattern.nutritionist.getManyByIds.payload
+        >(
             {
                 proxy: this.nutritionistServiceProxy,
-                pattern: proxyPattern.nutritionist.getManyByIds,
-                data: { ids: userNutritionists.map(u => u.id) },
+                pattern: proxyPattern.nutritionist.getManyByIds.key,
+                data: { 
+                    ids: userNutritionists.map(u => u.id),
+                    options: {
+                        ...query,
+                        ...SelectQuery.forClass(Nutritionist).select(select),
+                        ...FilterQuery.forClass(Nutritionist).filter(filter),
+                    }
+                },
                 options: {
                     retry: { count: 5, delay: 50 }
                 }
@@ -137,17 +153,16 @@ export class NutritionistController {
             }
         );
 
-        console.log('Found nutritionist for deletion:', foundNutritionist);
-
-        const userDeletion = await sendProxyMessage<{result: boolean}>(
+        const userDeletion = await sendProxyMessage<
+            typeof proxyPattern.user.deletionByEmail.response,
+            typeof proxyPattern.user.deletionByEmail.payload
+        >(
             {
                 proxy: this.authServiceProxy,
-                pattern: proxyPattern.user.deletionByEmail,
+                pattern: proxyPattern.user.deletionByEmail.key,
                 data: { email: foundNutritionist.email }
             }
         );
-
-        console.log('User deletion result:', userDeletion);
 
         if(userDeletion.result) {
             const nutritionistDeletion = await sendProxyMessage<{result: boolean}>(
@@ -164,25 +179,4 @@ export class NutritionistController {
         }
         return { message: 'Failed to delete nutritionist', success: false };
     }
-    
-    //FIXME THIS ENDPOINT SHOULD BE CHANGED TO PATIENT.CONTROLLER
-    //TODO ADD TO BRUNO
-    //TODO ADD TO ADMIN-PANEL
-    @Post(':id/patients')
-    @UseGuards(
-        JwtRoleGuard(['admin']),
-        ManagementGuard(PatientManagementLevel, "canCreatePatient")
-    )
-    @UseFilters(ControllerExceptionFilter)
-    async createNutritionistPatient(
-        @Param('id') id: string,
-        @Body() patientData: BodyCreatePatientDto
-    ) {
-        return await sendProxyMessage<Patient>({
-            proxy: this.patientProxy,
-            pattern: proxyPattern.patient.creation,
-            data: { ...patientData, nutritionistId: id }
-        });
-    }
-
 }

@@ -1,4 +1,4 @@
-import { Diet, PATIENT_SERVICE_PROXY_NAME, RECORD_SERVICE_PROXY_NAME, ALIMENT_SERVICE_PROXY_NAME, ServiceContract, MealRecord, Aliment, Food, MealRepeatCalculator, RepeatType, SchedulerHelper, sendProxyMessage, proxyPattern, DietStatus, errorMessagePattern } from '@backend-evolved/shared';
+import { Diet, PATIENT_SERVICE_PROXY_NAME, RECORD_SERVICE_PROXY_NAME, ALIMENT_SERVICE_PROXY_NAME, ServiceContract, MealRecord, Aliment, Food, MealRepeatCalculator, RepeatType, SchedulerHelper, sendProxyMessage, proxyPattern, DietStatus, errorMessagePattern, DietIncludeOptions } from '@backend-evolved/shared';
 import { DietPlan, DietDayPlan, MealPlan, CleanedMealRecord } from '@backend-evolved/shared';
 import { Injectable, NotFoundException, Inject, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -17,8 +17,21 @@ export class DietService implements ServiceContract<Diet> {
         private readonly mealService: MealService
     ) { }
 
-    async findAll(query: { [key in keyof Diet]?: any }): Promise<Diet[]> {
-        return await this.dietRepository.find({ where: query });
+    async findAll(where?: any, options?: {
+        includes?: DietIncludeOptions
+    }): Promise<Diet[]> {
+        const relations = [];
+        if (options?.includes?.includeMeals) relations.push('meals');
+        if (options?.includes?.includeFoods) relations.push('meals.foods');
+        const foundDiets = await this.dietRepository.find({ where, relations });
+        if( options?.includes?.includeFoods ) {
+            const fetchedDiets: Diet[] = [];
+            for(const diet of foundDiets) {
+                fetchedDiets.push(await this.fetchDietAliments(diet));
+            }
+            return fetchedDiets;
+        }
+        return foundDiets;
     }
 
     async findOneWhere(where: any, relations: string[] = ['meals', 'meals.foods']): Promise<Diet> {
@@ -32,7 +45,7 @@ export class DietService implements ServiceContract<Diet> {
         const requestDate = scheduler.buildDate({ startOfDay: true });
 
         const isRelatedToNutritionist = await sendProxyMessage<
-            typeof proxyPattern.patient.isRelatedToNutritionist.receive,
+            typeof proxyPattern.patient.isRelatedToNutritionist.response,
             typeof proxyPattern.patient.isRelatedToNutritionist.payload
         >({
             proxy: this.patientProxyService,

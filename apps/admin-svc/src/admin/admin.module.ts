@@ -7,7 +7,7 @@ import { NutritionistModule } from './nutritionist/nutritionist.module';
 import { StaffModule } from './staff/staff.module';
 import { PermissionService } from '../permission/permission.service';
 import { DietModule } from './diet/diet.module';
-import { PatientModule } from './patient/patient.module';
+import { PatientModule } from './patient/admin-patient.module';
 
 @Module({
     imports: [

@@ -1,10 +1,10 @@
 import { Controller } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
-import { MealRecordService } from './meal-record.service';
+import { MealRecordService } from '../meal-record.service';
 import { MealRecord, KeysOf } from '@backend-evolved/shared';
 
 @Controller()
-export class MealRecordMessageController {
+export class MealRecordProxyController {
     constructor(private readonly mealRecordService: MealRecordService) { }
 
     @MessagePattern('meal-record.findByPatientAndDateRange')

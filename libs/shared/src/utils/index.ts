@@ -14,5 +14,8 @@ export * from './available-grant-managements';
 
 export * from './context-user';
 
+export * from './search/search.decorator';
+export * from './search/build-filtering.function';
+
 export * from './helpers';
 export * from './root-admin';

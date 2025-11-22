@@ -1,5 +1,5 @@
 import { BadRequestException, ConflictException, ForbiddenException, HttpException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
-import { ChangePasswordDto, ContextUser, FirstLoginResponse, LoginResponse, LoginUserDto, RefreshToken, ResetPasswordDto, ResetPasswordResponse, User, UserRole } from "@backend-evolved/shared";
+import { ChangePasswordDto, ContextUser, errorMessagePattern, FirstLoginResponse, LoginResponse, LoginUserDto, RefreshToken, ResetPasswordDto, ResetPasswordResponse, User, UserRole } from "@backend-evolved/shared";
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { JwtService } from '@nestjs/jwt';
@@ -21,10 +21,10 @@ export class AuthService {
 
     private async executeLogin(data: LoginUserDto): Promise<User> {
         const user = await this.userService.findOne({ email: data.email });
-        if (!user) throw new NotFoundException(`Invalid password or email not found`);
+        if (!user) throw new NotFoundException(errorMessagePattern.auth.invalidCredentials.fn());
         const valid = await bcrypt.compare(data.password, user.passwordHash)
         // if (!valid) throw new UnauthorizedException(`Invalid password for user ${data.email}`);
-        if (!valid) throw new NotFoundException(`Invalid password or email not found`);
+        if (!valid) throw new NotFoundException(errorMessagePattern.auth.invalidCredentials.fn());
         return user;
     }
 
@@ -35,7 +35,13 @@ export class AuthService {
                 case UserRole.PATIENT:
                     return await this.tokenService.firstLoginTokenResponse(user);
                 case UserRole.NUTRITIONIST:
-                    throw new HttpException(`Your account has been successfully created, but it is currently under review. Please wait for approval to access all features.`, 202);
+                    throw new HttpException(
+                        errorMessagePattern
+                            .nutritionist
+                            .accountCreated
+                            .fn(),
+                        202
+                    );
             }
         }
         return await this.tokenService.loginTokenResponse(user);
@@ -43,19 +49,29 @@ export class AuthService {
 
     async adminLogin(payload: LoginUserDto): Promise<LoginResponse> {
         const user = await this.executeLogin(payload);
-        if (user.role !== UserRole.ADMIN) throw new ForbiddenException("The user is not an admin.");
+        if (user.role !== UserRole.ADMIN) throw new ForbiddenException(errorMessagePattern.admin.isNotAdmin.fn());
         return await this.tokenService.loginTokenResponse(user);
     }
 
     async approveNutritionist(email: string): Promise<User> {
         const user = await this.userService.findOne({ email });
-        if (user.active) throw new ConflictException(`Nutritionist with email ${email} is already active`);
+        if (user.active) throw new ConflictException(
+            errorMessagePattern
+                .admin
+                .nutritionistIsAlreadyActive
+                .fn(email)
+        );
         return await this.userService.updateOneById(user.id, { active: true });
     }
 
     async forgotPassword(email: string): Promise<ResetPasswordResponse> {
         const user = await this.userService.findOne({ email });
-        if (!user) throw new NotFoundException(`User with email ${email} not found`);
+        if (!user) throw new NotFoundException(
+            errorMessagePattern
+                .auth
+                .userNotFoundWithEmail
+                .fn(email)
+        );
         return await this.tokenService.generatePasswordResetToken(user);
     }
 
@@ -65,12 +81,22 @@ export class AuthService {
             const publicKey = this.keyService.getPublicKey();
             payload = this.jwtService.verify(data.resetPasswordToken, { publicKey, algorithms: ['RS256'] });
         } catch (err) {
-            throw new UnauthorizedException('Invalid or expired reset token');
+            throw new UnauthorizedException(
+                errorMessagePattern
+                    .auth
+                    .tokenInvalidOrExpired
+                    .fn()
+            );
         }
 
         const userId = payload?.resetFor;
         const firstLoginFlag = payload?.firstLogin === true;
-        if (!userId) throw new UnauthorizedException('Invalid or expired reset token');
+        if (!userId) throw new UnauthorizedException(
+            errorMessagePattern
+                .auth
+                .tokenInvalidOrExpired
+                .fn()
+        );
 
         const user = await this.userService.findOne({ id: userId });
 
@@ -99,9 +125,19 @@ export class AuthService {
 
     async changePassword(user: ContextUser, data: ChangePasswordDto): Promise<LoginResponse> {
         let foundUser = await this.userService.findOne({ id: user.id });
-        if (!foundUser) throw new NotFoundException("User not found");
+        if (!foundUser) throw new NotFoundException(
+            errorMessagePattern
+                .auth
+                .userNotFoundWithEmail
+                .fn()
+        );
         const valid = await bcrypt.compare(data.currentPassword, foundUser.passwordHash);
-        if (!valid) throw new BadRequestException(`Invalid password`);
+        if (!valid) throw new BadRequestException(
+            errorMessagePattern
+                .auth
+                .invalidPassword
+                .fn()
+        );
         const newHashedPassword = await bcrypt.hash(data.newPassword, 10);
         foundUser.passwordHash = newHashedPassword;
         await this.userService.save(foundUser);

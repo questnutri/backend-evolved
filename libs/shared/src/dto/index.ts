@@ -1,16 +1,12 @@
 export * from './auth';
 
-export * from "./nutritionist/create-nutritionist.dto";
+export * from "./nutritionist";
 
-export * from './patient/create-patient.dto';
-export * from './patient/water-goal.dto';
+export * from './patient';
 
-export * from './diet/create-diet.dto';
-export * from './diet/update-diet.dto';
-export * from './diet/access-diet.dto';
+export * from './diet';
 
-export * from './diet-plan.dto';
-
+export * from './search/search.dto';
 
 export * from './repeat-configuration.dto';
 
@@ -20,9 +16,11 @@ export * from './meal/update-meal.dto';
 export * from './food/create-food.dto';
 export * from './food/update-food.dto';
 
-export * from './record/create-meal-record.dto';
-export * from './record/update-meal-record.dto';
+
+export * from './record';
 
 export * from './response';
+
+export * from './queries';
 
 // export * from './proxy';

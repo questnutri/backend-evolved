@@ -9,13 +9,17 @@ import {
     RECORD_SERVICE_PROXY_NAME,
     provideProxyService
 } from '@backend-evolved/shared';
+import { DietProxyController } from './controllers/diet-proxy.controller';
 
 @Module({
     imports: [
         dbConnection(),
         forwardRef(() => MealModule)
     ],
-    controllers: [DietRestController],
+    controllers: [
+        DietRestController,
+        DietProxyController
+    ],
     providers: [
         provideProxyService(PATIENT_SERVICE_PROXY_NAME),
         provideProxyService(ALIMENT_SERVICE_PROXY_NAME),

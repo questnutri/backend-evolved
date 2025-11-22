@@ -34,7 +34,7 @@ microservices:
       - name: DISABLE_PAST_DATE_SCHEDULING
         value: true
   - name: nutritionist
-    image: questnutri/nutritionist-svc:2.2.0
+    image: questnutri/nutritionist-svc:test
     database:
       type: postgres
   - name: patient
@@ -54,7 +54,7 @@ microservices:
           keys:
             - init.sql
   - name: gateway
-    image: questnutri/gateway:2.1.1
+    image: questnutri/gateway:2.2.0
     port: 8181
     servicePort: 8080
     serviceType: LoadBalancer

@@ -540,7 +540,7 @@ export class DietRestController {
         const targetPatient = targetPatientId || overrideProperties.patientId;
         if (targetPatient && targetPatient !== diet.patientId) {
             const isRelatedToNutritionist = await sendProxyMessage<
-                typeof proxyPattern.patient.isRelatedToNutritionist.receive,
+                typeof proxyPattern.patient.isRelatedToNutritionist.response,
                 typeof proxyPattern.patient.isRelatedToNutritionist.payload
             >({
                 proxy: this.patientProxy,

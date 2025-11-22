@@ -13,10 +13,13 @@ export async function sendProxyMessage<TYPE_TO_RECEIVE, TYPE_TO_SEND={[key: stri
             count?: number,
             timeout?: number,
             delay?: number
-        }
+        },
+        rawResponse?: boolean,
+        dontThrowIfError?: boolean
     }
 }
 ): Promise<TYPE_TO_RECEIVE> {
+    // console.log('[SEND-PROXY-MESSAGE] Sending message with pattern:', config.pattern, 'and data:', config.data);
     let observable = config.proxy.send<ProxyMessage<TYPE_TO_RECEIVE>, TYPE_TO_SEND>(config.pattern, config?.data || {} as any);
 
     if(config.options?.retry) {
@@ -32,6 +35,10 @@ export async function sendProxyMessage<TYPE_TO_RECEIVE, TYPE_TO_SEND={[key: stri
     const result = await firstValueFrom(
         observable
     );
-    if (result && "error" in result) throw new RpcException(result);
+    if (result && "error" in result) {
+        if(config.options?.dontThrowIfError) return result as any;
+        throw new RpcException(result);
+    };
+    if(config.options?.rawResponse) return result as any;
     return result.payload;
 }

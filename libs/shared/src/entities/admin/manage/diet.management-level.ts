@@ -21,4 +21,68 @@ export class DietManagementLevel {
     })
     canViewDietDetails: boolean;
 
+    @Column({
+        default: false
+    })
+    canActivateDiet: boolean;
+
+    @Column({
+        default: false
+    })
+    canCreateDiet: boolean;
+
+    @Column({
+        default: false
+    })
+    canUpdateDiet: boolean;
+
+    @Column({
+        default: false
+    })
+    canDeleteDiet: boolean;
+
+    @Column({
+        default: false
+    })
+    canViewMeals: boolean;
+
+    @Column({
+        default: false
+    })
+    canCreateMeal: boolean;
+
+    @Column({
+        default: false
+    })
+    canUpdateMeal: boolean;
+
+    @Column({
+        default: false
+    })
+    canDeleteMeal: boolean;
+
+    @Column({
+        default: false
+    })
+    canViewFoods: boolean;
+
+    @Column({
+        default: false
+    })
+    canCreateFood: boolean;
+
+    @Column({
+        default: false
+    })
+    canUpdateFood: boolean;
+
+    @Column({
+        default: false
+    })
+    canDeleteFood: boolean;
+
+    @Column({
+        default: false
+    })
+    canViewDietPlan: boolean;
 }

@@ -1,18 +1,26 @@
-import { Diet, Meal, Patient, WaterGoal } from "../../entities";
+import { Diet, Meal, Nutritionist, Patient, User, WaterGoal, WeightRecord } from "../../entities";
 import { Payload_GetWaterGoalById } from "../../interfaces/proxy";
-import { ProxyBodyCreatePatientDto } from "../../dto";
+import {
+    ProxyBodyCreatePatientDto,
+    DietIncludeOptions,
+    PatientFindOptions,
+    PaginationQuery,
+    RegisterUserDto,
+    NutritionistFindOptions,
+    FindUserOptions,
+} from "../../dto";
 
 const pattern = <SEND = any, RECEIVE = any>(key: string) => {
     return {
         key,
         payload: {} as SEND,
-        receive: {} as RECEIVE
+        response: {} as RECEIVE
     };
 };
 
 export const proxyPattern = {
     nutritionist: {
-        getManyByIds: 'nutritionist.getManyByIds',
+        getManyByIds: pattern<{ ids: string[], options?: NutritionistFindOptions & PaginationQuery }, Nutritionist[]>('nutritionist.getManyByIds'),
         getById: 'nutritionist.getById',
         getAll: 'nutritionist.getAll',
         softDeletionById: 'nutritionist.softDeletionById',
@@ -20,10 +28,18 @@ export const proxyPattern = {
     },
     patient: {
         creation: pattern<ProxyBodyCreatePatientDto, Patient>('patient.creation'),
-        getById: 'patient.getById', //data: { id: string }
-        getManyByIds: 'patient.getManyByIds',
-        getAll: pattern<{ nutritionistId?: string }, Patient[]>('patient.getAll'),
-        softDeletionById: 'patient.softDeletionById',
+        getById: pattern<{
+            id: string,
+            options?: PatientFindOptions
+        }>('patient.getById'), //data: { id: string }
+        getManyByIds: pattern<{ ids: string[], options?: PatientFindOptions & PaginationQuery }, Patient[]>('patient.getManyByIds'),
+        getAll: pattern<{
+            where: {
+                nutritionistId?: string
+            },
+            options?: PatientFindOptions & PaginationQuery
+        }, Patient[]>('patient.getAll'),
+        softDeletionById: pattern<{ id: string }, boolean>('patient.softDeletionById'),
         findAllFromNutritionist: 'patient.findAllFromNutritionist',//data: { nutritionistId: string }
         isRelatedToNutritionist: pattern<{ patientId: string, nutritionistId: string }, boolean>('patient.isRelatedToNutritionist'),
         water: {
@@ -35,19 +51,28 @@ export const proxyPattern = {
     user: {
         getOneById: 'user.getOneById', //data: { id: string }
         getManyByIds: 'user.getManyByIds',
-        getAll: 'user.getAll',
-        deletionById: 'user.deletionById',
-        deletionByEmail: 'user.deletionByEmail',
-        creation: 'user.creation'
+        getAll: pattern<FindUserOptions & PaginationQuery, User[]>('user.getAll'),
+        deletionById: pattern<{ id: string }, { result: boolean }>('user.deletionById'),
+        deletionByEmail: pattern<{ email: string }, { result: boolean }>('user.deletionByEmail'),
+        creation: pattern<RegisterUserDto, User>('user.creation')
     },
     admin: {
         login: 'admin.login'
     },
     diet: {
-        getAll: 'diet.getAll',
+        getAll: pattern<{
+            where: { nutritionistId?: string, patientId?: string },
+            includes?: DietIncludeOptions
+        }, Diet[]>('diet.getAll'),
         getOne: pattern<Partial<Diet>, Diet>('diet.getOne'),
+        activate: pattern<{ id: string }, Diet>('diet.activate'),
         meal: {
             getOne: pattern<{ mealId: string, patientId?: string, nutritionistId?: string }, Meal>('diet.meal.getOne'),
+        }
+    },
+    record: {
+        weight: {
+            getAll: pattern<{patientId: string}, WeightRecord[]>('record.weight.getAll')
         }
     }
 }

@@ -21,3 +21,4 @@ export * from "./aliment/secret-aliment.entity";
 
 export * from "./record/meal-record.entity";
 export * from "./record/water-record.entity";
+export * from './record/weight-record.entity';

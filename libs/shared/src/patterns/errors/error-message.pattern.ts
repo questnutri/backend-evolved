@@ -1,9 +1,46 @@
 import { RepeatType } from "../../types"
 
 export const errorMessagePattern = {
+    auth: {
+        emailAlreadyExists: {
+            fn: () => 'An User with this email already exists'
+        },
+        invalidCredentials: {
+            fn: () => `Invalid password or email not found`
+        },
+        userNotFoundWithEmail: {
+            fn: (email?: string) => {
+                if (email) return `User with email ${email} not found`;
+                return `User not found`;
+            }
+        },
+        userNotFoundWithId: {
+            fn: (id: string) => `User with id ${id} not found`
+        },
+        tokenInvalidOrExpired: {
+            fn: () => 'Invalid or expired token'
+        },
+        invalidPassword: {
+            fn: () => `Invalid password`
+        },
+        didntReturnAValidId: {
+            fn: () => 'Auth service did not return a valid user id'
+        }
+    },
     patient: {
         notFound: {
-            key: ''
+            key: 'Patient not found or not related to nutritionist'
+        },
+        alreadyRegisteredWithNutritionist: {
+            key: 'Patient is already registered'
+        },
+        patientNotFoundAfterFailedCreation: {
+            key: 'Patient not found after failed creation attempt'
+        },
+        failedToUpdate: {
+            fn: (error?: any) => {
+                return 'Failed to update patient: ' + (error.details ?? 'unknown');
+            }
         }
     },
     diet: {
@@ -77,5 +114,38 @@ export const errorMessagePattern = {
         notFound: {
             key: 'Food not found or user does not have access to this food.'
         }
+    },
+    nutritionist: {
+        notFound: {
+            fn: () => `Nutritionist not found`
+        },
+        accountCreated: {
+            fn: () => {
+                return `Your account has been successfully created, but it is currently under review. Please wait for approval to access all features.`
+            }
+        },
+        creationFailed: {
+            fn: (error?: any) => {
+                return 'Failed to create nutritionist: ' + (error?.detail ?? 'unknown');
+            }
+        },
+        updateFailed: {
+            fn: (error?: any) => {
+                return 'Failed to update nutritionist: ' + (error?.detail ?? 'unknown');
+            }
+        },
+        deleteFailed: {
+            fn: (error?: any) => {
+                return 'Failed to delete nutritionist: ' + (error?.detail ?? 'unknown');
+            }
+        }
+    },
+    admin: {
+        isNotAdmin: {
+            fn: () => "The user is not an admin."
+        },
+        nutritionistIsAlreadyActive: {
+            fn: (email: string) => `Nutritionist with email ${email} is already active`
+        }
     }
-} 
+}

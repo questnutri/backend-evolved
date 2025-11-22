@@ -1,56 +1,47 @@
-import { Headers, Body, Controller, Get, Post, UseGuards, ForbiddenException, Param, NotFoundException, Put, Delete, UseFilters, Query, BadRequestException } from '@nestjs/common';
+import { Controller, UseFilters } from '@nestjs/common';
 import {
-    ApiBearerAuth,
-    ApiCreatedResponse,
-    ApiForbiddenResponse,
-    ApiNoContentResponse,
-    ApiNotFoundResponse,
-    ApiOkResponse,
-    ApiOperation,
-    ApiSecurity,
-    ApiQuery,
-    ApiBody,
-    ApiTags
+    ApiBearerAuth, ApiSecurity, ApiTags
 } from '@nestjs/swagger';
 import { DietService } from '../diet.service';
 import {
-    ControllerExceptionFilter,
-    CreateDietDto, Diet,
-    JwtRoleGuard,
-    UpdateDietDto,
-    DietPlan,
-    ContextUser,
-    DietRequestBody,
     ProxyMessengerFilter,
     proxyPattern,
     ProxyMessage,
-    toDateOnlyString
+    DietStatus
 } from '@backend-evolved/shared';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 
 @Controller()
-@ApiTags('diets')
-@ApiBearerAuth('bearer')
-@ApiSecurity('bearer')
-export class DietRestController {
+export class DietProxyController {
     constructor(
         private readonly dietService: DietService,
     ) { }
 
-    private mapDietDates(diet: any): any {
-        if (!diet) return diet;
-        if (diet.startDate) diet.startDate = toDateOnlyString(diet.startDate);
-        if (diet.endDate) diet.endDate = toDateOnlyString(diet.endDate);
-        return diet;
-    }
-
-    @MessagePattern(proxyPattern.diet.getAll)
+    @MessagePattern(proxyPattern.diet.getAll.key)
     @UseFilters(ProxyMessengerFilter)
     async handleGetAllDiets(
-        @Payload() payload: DietRequestBody
-    ): Promise<ProxyMessage<Diet[]>> {
-        const diets = await this.dietService.findAll({ ...payload });
-        return { payload: diets.map(diet => this.mapDietDates(diet)) };    
+        @Payload() payload: typeof proxyPattern.diet.getAll.payload
+    ): Promise<ProxyMessage<typeof proxyPattern.diet.getAll.response>> {
+        console.log('[DIET-PROXY] handleGetAllDiets payload:', payload);
+        const { where, includes } = payload;
+        return {
+            payload: await this.dietService.findAll(
+                where,
+                {
+                    includes
+                }
+            )
+        }
+    }
+
+    @MessagePattern(proxyPattern.diet.activate.key)
+    @UseFilters(ProxyMessengerFilter)
+    async handleActivateDiet(
+        @Payload() payload: typeof proxyPattern.diet.activate.payload
+    ): Promise<ProxyMessage<typeof proxyPattern.diet.activate.response>> {
+        return {
+            payload: await this.dietService.updateOne({ id: payload.id }, { status: DietStatus.ACTIVE })
+        }
     }
 
 

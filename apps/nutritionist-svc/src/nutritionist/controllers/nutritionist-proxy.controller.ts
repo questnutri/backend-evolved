@@ -1,5 +1,5 @@
 import { Controller, UseFilters } from '@nestjs/common';
-import { NutritionistService } from './nutritionist.service';
+import { NutritionistService } from '../nutritionist.service';
 import {
     ProxyMessage, ProxyMessengerFilter, Nutritionist,
     proxyPattern
@@ -24,10 +24,15 @@ export class NutritionistProxyController {
         return { payload: await this.nutritionistService.findOneWhere({ id: payload.id }) };
     }
 
-    @MessagePattern(proxyPattern.nutritionist.getManyByIds)
+    @MessagePattern(proxyPattern.nutritionist.getManyByIds.key)
     @UseFilters(ProxyMessengerFilter)
-    async getManyByIds(@Payload() payload: { ids: string[] }): Promise<ProxyMessage<Nutritionist[]>> {
-        return { payload: await this.nutritionistService.findManyByIds(payload.ids) };
+    async getManyByIds(
+        @Payload() payload: typeof proxyPattern.nutritionist.getManyByIds.payload
+    ): Promise<
+        ProxyMessage<typeof proxyPattern.nutritionist.getManyByIds.response>
+    > {
+        console.log(payload);
+        return { payload: await this.nutritionistService.findManyByIds(payload.ids, payload.options) };
     }
 
     @MessagePattern(proxyPattern.nutritionist.softDeletionById)

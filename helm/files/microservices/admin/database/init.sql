@@ -47,6 +47,19 @@ CREATE TABLE IF NOT EXISTS diet_management_level (
     id uuid PRIMARY KEY,
     "canViewDiets" boolean DEFAULT false,
     "canViewDietDetails" boolean DEFAULT false,
+    "canActivateDiet" boolean DEFAULT false,
+    "canCreateDiet" boolean DEFAULT false,
+    "canUpdateDiet" boolean DEFAULT false,
+    "canDeleteDiet" boolean DEFAULT false,
+    "canViewMeals" boolean DEFAULT false,
+    "canCreateMeal" boolean DEFAULT false,
+    "canUpdateMeal" boolean DEFAULT false,
+    "canDeleteMeal" boolean DEFAULT false,
+    "canViewFoods" boolean DEFAULT false,
+    "canCreateFood" boolean DEFAULT false,
+    "canUpdateFood" boolean DEFAULT false,
+    "canDeleteFood" boolean DEFAULT false,
+    "canViewDietPlan" boolean DEFAULT false,
     CONSTRAINT fk_diet_mgmt_admin FOREIGN KEY (id) REFERENCES admin(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
@@ -151,10 +164,36 @@ ON CONFLICT (id) DO NOTHING;
 INSERT INTO diet_management_level (
     id,
     "canViewDiets",
-    "canViewDietDetails"
+    "canViewDietDetails",
+    "canActivateDiet",
+    "canCreateDiet",
+    "canUpdateDiet",
+    "canDeleteDiet",
+    "canViewMeals",
+    "canCreateMeal",
+    "canUpdateMeal",
+    "canDeleteMeal",
+    "canViewFoods",
+    "canCreateFood",
+    "canUpdateFood",
+    "canDeleteFood",
+    "canViewDietPlan"
 )
 VALUES (
     '7d6e9968-b4db-4b35-8e67-75134632b9f9',
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
+    true,
     true,
     true
 )

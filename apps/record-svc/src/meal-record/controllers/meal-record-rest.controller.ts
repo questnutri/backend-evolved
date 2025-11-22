@@ -1,15 +1,42 @@
-import { Controller, Get, Post, Body, Param, Headers, UseGuards, UseFilters, NotFoundException, Query, Inject } from '@nestjs/common';
-import { ApiBearerAuth, ApiCreatedResponse, ApiOkResponse, ApiOperation, ApiSecurity, ApiQuery, ApiParam, ApiNotFoundResponse, ApiUnauthorizedResponse, ApiBody } from '@nestjs/swagger';
-import { MealRecordService } from './meal-record.service';
-import { MealRecord, JwtRoleGuard, ControllerExceptionFilter, CreatePatientMealRecordDto, ContextUser, DIET_SERVICE_PROXY_NAME, sendProxyMessage, Meal, proxyPattern, SchedulerHelper, GenerateAccessResponse } from '@backend-evolved/shared';
-import { Context } from '@nestjs/graphql';
+import {
+    Controller,
+    Get,
+    Post,
+    Body,
+    Param,
+    Headers,
+    UseGuards,
+    UseFilters,
+    NotFoundException,
+    Query,
+    Inject
+} from '@nestjs/common';
+import {
+    ApiBearerAuth,
+    ApiCreatedResponse,
+    ApiOkResponse,
+    ApiOperation,
+    ApiSecurity,
+    ApiQuery,
+    ApiParam,
+    ApiNotFoundResponse, ApiBody
+} from '@nestjs/swagger';
+import { MealRecordService } from '../meal-record.service';
+import {
+    MealRecord,
+    JwtRoleGuard,
+    ControllerExceptionFilter, ContextUser,
+    DIET_SERVICE_PROXY_NAME,
+    sendProxyMessage, proxyPattern,
+    SchedulerHelper,
+    GenerateAccessResponse
+} from '@backend-evolved/shared';
 import { ClientProxy } from '@nestjs/microservices';
-import { error, time } from 'console';
 
 @Controller('/meal')
 @ApiBearerAuth('bearer')
 @ApiSecurity('bearer')
-export class MealRecordController {
+export class MealRecordRestController {
     constructor(
         private readonly mealRecordService: MealRecordService,
         @Inject(DIET_SERVICE_PROXY_NAME)
@@ -207,7 +234,7 @@ export class MealRecordController {
         @ContextUser() ctxUser: ContextUser,
     ): Promise<any> {
         const foundMeal = await sendProxyMessage<
-            typeof proxyPattern.diet.meal.getOne.receive,
+            typeof proxyPattern.diet.meal.getOne.response,
             typeof proxyPattern.diet.meal.getOne.payload
         >({
             proxy: this.dietServiceProxy,
@@ -286,7 +313,7 @@ export class MealRecordController {
         @ContextUser() ctxUser: ContextUser,
     ) {
         const foundMeal = await sendProxyMessage<
-            typeof proxyPattern.diet.meal.getOne.receive,
+            typeof proxyPattern.diet.meal.getOne.response,
             typeof proxyPattern.diet.meal.getOne.payload
         >({
             proxy: this.dietServiceProxy,

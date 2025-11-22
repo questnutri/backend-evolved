@@ -5,3 +5,4 @@ export * from "./reset-password.dto";
 export * from './forgot-password.dto'
 export * from './reset-token.dto';
 export * from './change-password.dto';
+export * from './find-user.dto';

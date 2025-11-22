@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Body, Inject, UseGuards, UseFilters, InternalServerErrorException, NotFoundException } from '@nestjs/common';
-import { NutritionistService } from './nutritionist.service';
+import { NutritionistService } from '../nutritionist.service';
 import {
     BodyCreatePatientDto,
     CreateNutritionistDto, Patient,
@@ -115,51 +115,7 @@ export class NutritionistRestController {
         if (registeredNutritionist) {
             return { message: `Nutritionist created successfully`, success: true, id: registeredNutritionist.id };
         }
-        console.error(`Method nutritionist.controller.createOne has not returned a valid nutritionist and did not trigger any error while doing it. Returned value: ${registeredNutritionist}`);
         throw new InternalServerErrorException(`Error while creating a new account.`);
-    }
-
-    @Get('patients')
-    @ApiOperation({ summary: 'Get all patients for logged nutritionist' })
-    @ApiBearerAuth('bearer')
-    @ApiSecurity('bearer')
-    @ApiOkResponse({ description: 'Patients retrieved successfully' })
-    @UseGuards(JwtRoleGuard(['nutritionist', 'admin']))
-    @UseFilters(ControllerExceptionFilter)
-    async getAllPatients(
-        @ContextUser() ctxUser: ContextUser
-    ): Promise<Patient[]> {
-        return await sendProxyMessage<Patient[]>({
-            proxy: this.patientServiceProxy,
-            pattern: proxyPattern.patient.findAllFromNutritionist,
-            data: { nutritionistId: ctxUser.id } //gets from JWT!
-        });
-    }
-
-    @Post('patients')
-    @ApiOperation({ summary: 'Create a new patient for logged nutritionist' })
-    @ApiBearerAuth('bearer')
-    @ApiSecurity('bearer')
-    @ApiCreatedResponse({ description: 'Patient created successfully' })
-    @UseGuards(
-        JwtRoleGuard(['nutritionist', 'admin']),
-        IsRelatedGuard({
-            on: 'body',
-            withKeys: ['nutritionistId'],
-            adminBypass: true,
-            errorMessage: () => 'Nutritionist can only create patients for himself'
-
-        })
-    )
-    @UseFilters(ControllerExceptionFilter)
-    async createPatient(
-        @Body() body: BodyCreatePatientDto
-    ): Promise<Patient> {
-        return await sendProxyMessage<Patient, BodyCreatePatientDto>({
-            proxy: this.patientServiceProxy,
-            pattern: proxyPattern.patient.creation,
-            data: body,
-        });
     }
 
 }
