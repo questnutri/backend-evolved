@@ -1,8 +1,7 @@
 import { Body, Controller, Delete, Get, Inject, Param, Post, Query, UseFilters, UseGuards } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import {
-    AUTH_SERVICE_PROXY_NAME,
-    BodyCreatePatientDto,
+    AUTH_SERVICE_PROXY_NAME, ContextUser,
     ControllerExceptionFilter,
     JwtRoleGuard,
     Patient,
@@ -30,6 +29,7 @@ export class PatientController {
     )
     @UseFilters(ControllerExceptionFilter)
     async getAllPatients(
+        @ContextUser() ctxUser: ContextUser,
         @Query('nutritionistId') nutritionistId?: string
     ) {
         const patients = await sendProxyMessage<
@@ -42,8 +42,10 @@ export class PatientController {
                 where: {
                     nutritionistId
                 },
+                ctxUser,
                 options: {
-                    includeNutritionists: true
+                    includeNutritionists: true,
+                    includeDiets: true
                 }
             }
         })
@@ -57,6 +59,7 @@ export class PatientController {
     )
     @UseFilters(ControllerExceptionFilter)
     async getOneById(
+        @ContextUser() ctxUser: ContextUser,
         @Param('id') id: string
     ): Promise<PatientUser> {
         const patient = await sendProxyMessage<
@@ -67,6 +70,7 @@ export class PatientController {
             pattern: proxyPattern.patient.getById.key,
             data: { 
                 id,
+                ctxUser,
                 options: {
                     includeDiets: true,
                     includeNutritionists: true

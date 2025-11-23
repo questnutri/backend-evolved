@@ -5,6 +5,7 @@ export * from "./nutritionist";
 export * from './patient';
 
 export * from './diet';
+export * from './diet-plan.dto';
 
 export * from './search/search.dto';
 

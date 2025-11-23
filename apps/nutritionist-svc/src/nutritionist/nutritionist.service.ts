@@ -1,6 +1,4 @@
 import {
-    ConflictException,
-    HttpException,
     Inject,
     Injectable,
     InternalServerErrorException,
@@ -10,16 +8,13 @@ import {
     AUTH_SERVICE_PROXY_NAME,
     buildFiltering,
     CreateNutritionistDto,
-    errorMessagePattern,
-    KeysOf,
-    Nutritionist,
+    errorMessagePattern, Nutritionist,
     NutritionistFindOptions,
     NutritionistIncludeOptions,
     PaginationQuery,
     PATIENT_SERVICE_PROXY_NAME,
-    proxyPattern,
-    RegisterUserDto,
-    removePropertiesForMany,
+    proxyPattern, removePropertiesForMany,
+    removePropertyForOne,
     sendProxyMessage,
     ServiceContract,
     UserRole
@@ -92,7 +87,7 @@ export class NutritionistService implements ServiceContract<Nutritionist> {
         }
 
         nutritionist = await this.applyInclude({ ...options }, nutritionist);
-        nutritionist = removePropertiesForMany([nutritionist!], options?.removeKeys)[0];
+        nutritionist = removePropertyForOne(nutritionist!, [...(options?.removeKeys || [])]);
 
         return nutritionist!;
     }
@@ -130,8 +125,6 @@ export class NutritionistService implements ServiceContract<Nutritionist> {
                 }
             }
         );
-
-        console.log(userCreationResult);
 
         if (!userCreationResult.id) {
             throw new InternalServerErrorException(

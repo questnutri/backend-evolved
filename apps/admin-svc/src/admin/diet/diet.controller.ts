@@ -1,12 +1,10 @@
-import { Body, Controller, Get, Inject, Param, Post, Query, UseFilters, UseGuards } from '@nestjs/common';
+import { Controller, Delete, Get, Inject, Param, Post, Query, UseFilters, UseGuards } from '@nestjs/common';
 import {
     JwtRoleGuard,
-    DietRequestBody,
     DietManagementLevel,
     ControllerExceptionFilter,
     DIET_SERVICE_PROXY_NAME,
     sendProxyMessage,
-    Diet,
     proxyPattern
 } from "@backend-evolved/shared";
 
@@ -71,4 +69,24 @@ export class DietController {
         })
     }
 
+    @Delete(':dietId')
+    @UseGuards(
+        JwtRoleGuard(['admin']),
+        ManagementGuard(DietManagementLevel, "canDeleteDiets")
+    )
+    @UseFilters(ControllerExceptionFilter)
+    async deleteDiet(
+        @Param('dietId') dietId: string
+    ) {
+        return await sendProxyMessage<
+            typeof proxyPattern.diet.deleteById.response,
+            typeof proxyPattern.diet.deleteById.payload
+        >({
+            proxy: this.dietProxy,
+            pattern: proxyPattern.diet.deleteById.key,
+            data: {
+                id: dietId
+            }
+        })
+    }
 }

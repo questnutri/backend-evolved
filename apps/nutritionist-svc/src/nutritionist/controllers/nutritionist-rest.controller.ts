@@ -20,7 +20,8 @@ import {
     User, GenerateBadRequestResponse,
     NutritionistIncludeOptions,
     UpdateNutritionistDto,
-    errorMessagePattern
+    errorMessagePattern,
+    removePropertyForOne
 } from '@backend-evolved/shared';
 import {
     ApiOkResponse,
@@ -75,11 +76,11 @@ export class NutritionistRestController {
         @ContextUser() ctxUser: ContextUser,
         @Query() query: NutritionistIncludeOptions
     ): Promise<any> {
-        const nutritionist = await this.nutritionistService.findOne({
+        let nutritionist = await this.nutritionistService.findOne({
             ...query,
             where: { id: ctxUser.id },
         });
-        const userNutritionist = await sendProxyMessage<User>({
+        let userNutritionist = await sendProxyMessage<User>({
             proxy: this.authServiceProxy,
             pattern: proxyPattern.user.getOneById,
             data: { id: ctxUser.id },
@@ -90,6 +91,9 @@ export class NutritionistRestController {
                 }
             }
         })
+
+        nutritionist = removePropertyForOne(nutritionist, ['deletedAt']);
+        userNutritionist = removePropertyForOne(userNutritionist, ['active'])
 
         return {
             ...nutritionist,

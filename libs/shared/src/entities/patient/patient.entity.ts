@@ -87,7 +87,6 @@ export class Patient {
         return false;
     }
 
-    //TODO: Add => Notes for preferences, goals, medical conditions
     //TODO: CREATE SEPARATED ENTITIES FOR DEAL WITH: Medications, Allergies
     //TODO: If Female => Must have pregnancy related info
 }

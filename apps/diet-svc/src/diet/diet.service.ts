@@ -11,7 +11,8 @@ import {
     proxyPattern,
     DietStatus,
     errorMessagePattern,
-    DietIncludeOptions
+    DietIncludeOptions,
+    DietFindOptions
 } from '@backend-evolved/shared';
 import { Injectable, NotFoundException, Inject, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -49,8 +50,22 @@ export class DietService implements ServiceContract<Diet> {
 
     //TODO: FINISH DIET PLAN
 
-    async findOneWhere(where: any, relations: string[] = ['meals', 'meals.foods']): Promise<Diet> {
-        const foundDiet = await this.dietRepository.findOne({ where, relations });
+    async findOne(
+        find?: DietFindOptions
+    ): Promise<Diet> {
+        let where: any = {
+            ...find?.where,
+        }
+        const relations = [];
+        if(find?.includeMeals) relations.push('meals');
+        if(find?.includeFoods) relations.push('meals.foods');
+        const foundDiet = await this.dietRepository.findOne({
+            where,
+            relations
+        });
+
+        console.log('foundDiet', foundDiet);
+
         if (!foundDiet) throw new NotFoundException(errorMessagePattern.diet.notFound.key);
         return foundDiet;
     }
@@ -135,9 +150,9 @@ export class DietService implements ServiceContract<Diet> {
         return await this.dietRepository.save(diet);
     }
 
-    async updateOne(query: any, payload: Partial<Diet>): Promise<Diet> {
-        const foundDiet = await this.findOneWhere(query);
-        const scheduler = new SchedulerHelper(foundDiet.timeZone);
+    async updateOne(diet: Diet, payload: Partial<Diet>): Promise<Diet> {
+        let timeZone = payload.timeZone || diet.timeZone;
+        const scheduler = new SchedulerHelper(timeZone);
         const DISABLE_PAST_DATE_SCHEDULING = process.env.DISABLE_PAST_DATE_SCHEDULING === 'true';
         const requestDate = scheduler.startOfDay();
 
@@ -148,16 +163,16 @@ export class DietService implements ServiceContract<Diet> {
         if (updatePayload.startDate) {
             const sentStartDate = scheduler.buildDate({ date: updatePayload.startDate, startOfDay: true });
             if ( //Checks if diet is active and already started or if set end is before sent date
-                foundDiet.status === DietStatus.ACTIVE &&
+                diet.status === DietStatus.ACTIVE &&
                 (
                     (
-                        foundDiet.startDate < requestDate //Diet already started
+                        diet.startDate < requestDate //Diet already started
                     ) ||
                     (
                         //Diet hasn't started but already has a ended date definied. 
                         //This checks if the new start date is after the already set end.   
                         //It's a really rare scenario, but it's possible.
-                        foundDiet.endDate && foundDiet.endDate < sentStartDate
+                        diet.endDate && diet.endDate < sentStartDate
                     )
                 )
             ) {
@@ -169,7 +184,7 @@ export class DietService implements ServiceContract<Diet> {
                 );
             };
             if ( //Here diet HAVE NOT started yet, and sent date is not after a possible end date
-                foundDiet.status === DietStatus.ACTIVE &&
+                diet.status === DietStatus.ACTIVE &&
                 (
                     sentStartDate < requestDate && //New date is in the PAST
                     DISABLE_PAST_DATE_SCHEDULING //Past date scheduling is disabled
@@ -182,11 +197,27 @@ export class DietService implements ServiceContract<Diet> {
                         .fn(scheduler.format(requestDate, 'YYYY-MM-DD'))
                 );
             };
+            updatePayload.startDate = scheduler.buildDate({ date: payload.startDate, startOfDay: true });
         }
+        if(payload.endDate || payload.endDate === null){
+            if(diet.status === DietStatus.ACTIVE){
+                if(diet.endDate) {
+                    if(requestDate > diet.endDate){
+                        throw new BadRequestException(
+                            errorMessagePattern
+                                .diet
+                                .cannotChangeEndDateOfEndedDiet
+                                .fn()
+                        );
+                    }
+                }
+            }
+        }
+
         //TODO: Validate endDate changes too
 
-        this.dietRepository.merge(foundDiet, updatePayload);
-        return await this.dietRepository.save(foundDiet);
+        this.dietRepository.merge(diet, updatePayload);
+        return await this.dietRepository.save(diet);
     }
 
     async delete(diet: Diet): Promise<void> {

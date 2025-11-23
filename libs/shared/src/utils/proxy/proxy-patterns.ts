@@ -29,15 +29,13 @@ export const proxyPattern = {
     },
     patient: {
         creation: pattern<ProxyBodyCreatePatientDto, Patient>('patient.creation'),
-        getById: pattern<{
-            id: string,
-            options?: PatientFindOptions
-        }>('patient.getById'), //data: { id: string }
+        getById: pattern<{ id: string, options?: PatientFindOptions, ctxUser: ContextUser }>('patient.getById'), //data: { id: string }
         getManyByIds: pattern<{ ids: string[], options?: PatientFindOptions & PaginationQuery }, Patient[]>('patient.getManyByIds'),
         getAll: pattern<{
             where: {
                 nutritionistId?: string
             },
+            ctxUser: ContextUser,
             options?: PatientFindOptions & PaginationQuery
         }, Patient[]>('patient.getAll'),
         softDeletionById: pattern<{ id: string }, boolean>('patient.softDeletionById'),
@@ -69,11 +67,12 @@ export const proxyPattern = {
         activate: pattern<{ id: string }, Diet>('diet.activate'),
         meal: {
             getOne: pattern<{ mealId: string, patientId?: string, nutritionistId?: string }, Meal>('diet.meal.getOne'),
-        }
+        },
+        deleteById: pattern<{ id: string }, { result: boolean }>('diet.deletionById')
     },
     record: {
         weight: {
-            getLast: pattern<{ 
+            getLast: pattern<{
                 patientId: string,
                 ctxUser: ContextUser
             }, WeightRecord | null>('record.weight.getLast'),

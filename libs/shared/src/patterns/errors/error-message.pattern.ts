@@ -53,6 +53,9 @@ export const errorMessagePattern = {
         cannotChangeStartDateOfActiveOrEndedDiet: {
             key: 'Cannot change start date of an active or ended diet'
         },
+        cannotChangeEndDateOfEndedDiet: {
+            fn: () =>'Cannot change end date of an ended diet'
+        },
     },
     meal: {
         cannotAddToEndedDiet: {

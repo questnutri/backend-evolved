@@ -1,4 +1,4 @@
-import { Headers, Body, Controller, Get, Post, UseGuards, Param, Put, Delete, UseFilters, Query, BadRequestException, HttpCode, Inject, NotFoundException } from '@nestjs/common';
+import { Headers, Body, Controller, Get, Post, UseGuards, Param, Put, Delete, UseFilters, Query, BadRequestException, HttpCode, Inject, NotFoundException, Patch } from '@nestjs/common';
 import {
     ApiBearerAuth,
     ApiCreatedResponse, ApiNoContentResponse,
@@ -232,7 +232,7 @@ export class DietRestController {
             }
 
             // Return the full created structure
-            const dietWithRelations = await this.dietService.findOneWhere({ id: createdDiet.id });
+            const dietWithRelations = await this.dietService.findOne({ where: { id: createdDiet.id }, relations: ['meals', 'meals.foods'] });
             const publicDiet = await this.dietService.fetchDietAlimentsPublic(dietWithRelations as Diet);
             return {
                 result: publicDiet,
@@ -469,9 +469,9 @@ export class DietRestController {
     ): Promise<Diet> {
         let diet: Diet;
         if (ctxUser.role === UserRole.PATIENT) {
-            diet = await this.dietService.findOneWhere({ id: dietId, status: DietStatus.ACTIVE });
+            diet = await this.dietService.findOne({ where: { id: dietId, status: DietStatus.ACTIVE }, includeFoods: true, includeMeals: true });
         } else {
-            diet = await this.dietService.findOneWhere({ id: dietId });
+            diet = await this.dietService.findOne({ where: { id: dietId },  includeFoods: true, includeMeals: true });
         }
 
         ensureUserRelatedOrThrow(
@@ -490,7 +490,7 @@ export class DietRestController {
     async getDietPlanById(
         @Param('dietId') dietId: string
     ) {
-        const diet = await this.dietService.findOneWhere({ id: dietId });
+        const diet = await this.dietService.findOne({ where: { id: dietId } });
         if (diet) {
             this.dietService.getDietPlan(diet);
         }
@@ -507,7 +507,13 @@ export class DietRestController {
         @Param('dietId') dietId: string,
         @ContextUser() ctxUser: ContextUser,
     ) {
-        return await this.dietService.updateOne({ id: dietId, nutritionistId: ctxUser.id }, { status: DietStatus.ACTIVE });
+        const foundDiet = await this.dietService.findOne({
+            where: {
+                id: dietId,
+                nutritionistId: ctxUser.id
+            }
+        })
+        return await this.dietService.updateOne(foundDiet, { status: DietStatus.ACTIVE });
     }
 
     @Post(':dietId/clone')
@@ -535,7 +541,7 @@ export class DietRestController {
         @Body() overrideProperties: Partial<CreateDietDto>,
         @ContextUser() ctxUser: ContextUser,
     ) {
-        const diet = await this.dietService.findOneWhere({ id: dietId, nutritionistId: ctxUser.id });
+        const diet = await this.dietService.findOne({ where: { id: dietId, nutritionistId: ctxUser.id } });
 
         const targetPatient = targetPatientId || overrideProperties.patientId;
         if (targetPatient && targetPatient !== diet.patientId) {
@@ -567,7 +573,7 @@ export class DietRestController {
         });
     }
 
-    @Put(':dietId')
+    @Patch(':dietId')
     @ApiOperation({
         summary: 'Update a specific diet by ID',
         description: 'Update fields of an existing diet. Only nutritionists who created the diet can update it.'
@@ -586,7 +592,13 @@ export class DietRestController {
         @ContextUser() ctxUser: ContextUser,
         @Body() updateDietDto: UpdateDietDto,
     ): Promise<Diet> {
-        return await this.dietService.updateOne({ id: dietId, nutritionistId: ctxUser.id }, updateDietDto);
+        const foundDiet = await this.dietService.findOne({
+            where: {
+                id: dietId,
+                nutritionistId: ctxUser.id
+            }
+        });
+        return await this.dietService.updateOne(foundDiet, updateDietDto);
     }
 
     @Delete(':dietId')
@@ -607,7 +619,10 @@ export class DietRestController {
         @Param('dietId') dietId: string,
         @ContextUser() ctxUser: ContextUser,
     ): Promise<void> {
-        const foundDiet = await this.dietService.findOneWhere({ id: dietId, nutritionistId: ctxUser.id }, ['meals', 'meals.foods']);
+        const foundDiet = await this.dietService.findOne({
+            where: { id: dietId, nutritionistId: ctxUser.id },
+            relations: ['meals', 'meals.foods']
+        });
         const scheduler = new SchedulerHelper(foundDiet.timeZone);
         if (foundDiet.endDate && foundDiet.endDate < scheduler.startOfDay()) {
             throw new BadRequestException(
@@ -620,7 +635,12 @@ export class DietRestController {
         if (foundDiet.status === DietStatus.DEFINITION) {
             return await this.dietService.delete(foundDiet);
         } else {
-            await this.dietService.update(foundDiet, { endDate: scheduler.endOfDay() });
+            const requestDate = scheduler.startOfDay();
+            if (scheduler.isSameDate(foundDiet.startDate, requestDate, true)) {
+                await this.dietService.delete(foundDiet);
+            } else {
+                await this.dietService.update(foundDiet, { endDate: scheduler.endOfDay() });
+            }
         }
     }
 }

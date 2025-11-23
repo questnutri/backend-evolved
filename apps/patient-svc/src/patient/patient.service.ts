@@ -139,9 +139,10 @@ export class PatientService implements ServiceContract<Patient> {
     }
 
     async createOne(data: Partial<Patient> & { email: string, nutritionistId: string }): Promise<any> {
+        data.documentNumber = data.documentNumber!.replace(/[.\-\s]/g, '');
         const userPayload = {
             email: data.email,
-            password: data.documentNumber!.replace(/[.\-\s]/g, ''),
+            password: data.documentNumber,
             role: UserRole.PATIENT
         }
 

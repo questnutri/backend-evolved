@@ -1,10 +1,12 @@
-import { Controller, UseFilters } from '@nestjs/common';
+import { BadRequestException, Controller, UseFilters } from '@nestjs/common';
 import { DietService } from '../diet.service';
 import {
     ProxyMessengerFilter,
     proxyPattern,
     ProxyMessage,
-    DietStatus
+    DietStatus,
+    errorMessagePattern,
+    SchedulerHelper
 } from '@backend-evolved/shared';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 
@@ -35,9 +37,43 @@ export class DietProxyController {
     async handleActivateDiet(
         @Payload() payload: typeof proxyPattern.diet.activate.payload
     ): Promise<ProxyMessage<typeof proxyPattern.diet.activate.response>> {
+        const foundDiet = await this.dietService.findOne({ where: { id: payload.id } });
         return {
-            payload: await this.dietService.updateOne({ id: payload.id }, { status: DietStatus.ACTIVE })
+            payload: await this.dietService.updateOne(foundDiet, { status: DietStatus.ACTIVE })
         }
+    }
+
+    @MessagePattern(proxyPattern.diet.deleteById.key)
+    @UseFilters(ProxyMessengerFilter)
+    async handleDeleteDietById(
+        @Payload() payload: typeof proxyPattern.diet.deleteById.payload
+    ): Promise<
+        ProxyMessage<typeof proxyPattern.diet.deleteById.response>
+    > {
+        const foundDiet = await this.dietService.findOne({
+            where: { id: payload.id },
+            relations: ['meals', 'meals.foods']
+        });
+        const scheduler = new SchedulerHelper(foundDiet.timeZone);
+        if (foundDiet.endDate && foundDiet.endDate < scheduler.startOfDay()) {
+            throw new BadRequestException(
+                errorMessagePattern
+                    .diet
+                    .cannotDeleteEndedDiet
+                    .key
+            );
+        }
+        if (foundDiet.status === DietStatus.DEFINITION) {
+            await this.dietService.delete(foundDiet);
+        } else {
+            const requestDate = scheduler.startOfDay();
+            if (scheduler.isSameDate(foundDiet.startDate, requestDate, true)) {
+                await this.dietService.delete(foundDiet);
+            } else {
+                await this.dietService.update(foundDiet, { endDate: scheduler.endOfDay() });
+            }
+        }
+        return { payload: { result: true } };
     }
 
 

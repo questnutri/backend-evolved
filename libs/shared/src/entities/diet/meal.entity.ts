@@ -23,6 +23,12 @@ export class Meal {
     @Column()
     hour?: string;
 
+    @Column({
+        type: 'varchar',
+        nullable: true
+    })
+    description?: string;
+
     // --- TEMPORAL VERSIONING FIELDS ---
     @Column({ type: 'timestamp with time zone', default: () => 'CURRENT_TIMESTAMP' })
     startDate: Date | null; // The date this version becomes effective

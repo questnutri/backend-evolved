@@ -1,7 +1,8 @@
 import { Controller, UseFilters } from '@nestjs/common';
 import { NutritionistService } from '../nutritionist.service';
 import {
-    ProxyMessage, ProxyMessengerFilter, Nutritionist,
+    ProxyMessage,
+    ProxyMessengerFilter,
     proxyPattern
 } from '@backend-evolved/shared';
 import { MessagePattern, Payload } from '@nestjs/microservices';

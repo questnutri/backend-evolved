@@ -68,12 +68,17 @@ export class AddressService {
             throw new NotFoundException(errorMessagePattern.nutritionist.address.notFound.fn());
         }
 
-        return removePropertyForOne(foundAddress, [...(find?.removeKeys || [])]);
+        return removePropertyForOne(foundAddress, [...(find?.removeKeys || []) , 'nutritionist', 'nutritionistId', 'deletedAt']);
     }
 
     async updateOne(address: Address, payload: Partial<Address>): Promise<Address> {
         this.addressRepository.merge(address, payload);
-        return await this.addressRepository.save(address);
+        const saved = await this.addressRepository.save(address);
+        return removePropertyForOne(saved, [
+            'nutritionist',
+            'nutritionistId',
+            'deletedAt'
+        ]);
     }
 
     async deleteOne(address: Address): Promise<void> {

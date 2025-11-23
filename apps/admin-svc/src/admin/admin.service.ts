@@ -87,36 +87,25 @@ export class AdminService {
         return adaptedAdmin;
     }
 
-    // async findOneById(id: string, getPermissions: any[] = []): Promise<Admin | null> {
-    //     return await this.adminRepository.findOne({
-    //         where: { id },
-    //         relations: getPermissions.length > 0 ? getPermissions : [
-    //             'adminManagementLevel',
-    //             'nutritionistManagementLevel',
-    //             'patientManagementLevel',
-    //             'dietManagementLevel',
-    //             'recordManagementLevel',
-    //             'gameManagementLevel',
-    //             'logManagementLevel'
-    //         ]
-    //     });
-    // }
-
     async createOne(data: any) {
         const payload = {
             email: data.email,
             password: data.password,
             role: UserRole.ADMIN
         };
-        const userCreationResult = await firstValueFrom(
-            this.authServiceProxy.send<ProxyMessage<string>, RegisterUserDto>('user.creation', payload)
-        );
-        if (userCreationResult && 'error' in userCreationResult) throw new RpcException(userCreationResult);
+        const userCreationResult = await sendProxyMessage<
+            typeof proxyPattern.user.creation.response,
+            typeof proxyPattern.user.creation.payload
+        >({
+            proxy: this.authServiceProxy,
+            pattern: proxyPattern.user.creation.key,
+            data: payload,
+            options: {
+                retry: { count: 3, delay: 50 }
+            }
+        });
 
-        const userId = userCreationResult.payload;
-        if (!userId) throw new InternalServerErrorException('Auth service did not return user id');
-
-        const admin = this.adminRepository.create({ ...data, id: userId, canBeDeleted: true });
+        const admin = this.adminRepository.create({ ...data, id: userCreationResult.id, canBeDeleted: true });
         const savedAdmin = await this.adminRepository.save(admin, { reload: true });
 
         return savedAdmin;
@@ -130,10 +119,13 @@ export class AdminService {
         const foundAdmin = await this.adminRepository.findOne({ where: { id } });
         if (!foundAdmin) throw new NotFoundException(`Admin with id ${id} not found`);
         if (!foundAdmin.canBeDeleted) throw new ForbiddenException(`Admin with id ${id} cannot be deleted`);
-        const userDeletion = await sendProxyMessage<{ result: boolean }>(
+        const userDeletion = await sendProxyMessage<
+            typeof proxyPattern.user.deletionById.response,
+            typeof proxyPattern.user.deletionById.payload
+        >(
             {
                 proxy: this.authServiceProxy,
-                pattern: proxyPattern.user.deletionById,
+                pattern: proxyPattern.user.deletionById.key,
                 data: { id: foundAdmin.id },
                 options: {
                     retry: { count: 5, delay: 50 }

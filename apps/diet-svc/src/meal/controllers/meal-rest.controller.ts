@@ -9,7 +9,8 @@ import {
 	Get,
 	UseFilters,
 	HttpCode,
-	Query
+	Query,
+	Patch
 } from '@nestjs/common';
 import { MealService } from '../meal.service';
 import {
@@ -26,12 +27,12 @@ import {
 } from '@nestjs/swagger';
 import {
 	CreateMealDto,
-	Meal,
 	JwtRoleGuard, ControllerExceptionFilter, ContextUser,
 	CreateFoodDto,
 	DietStatus,
 	SchedulerHelper,
-	GenerateAccessResponse, errorMessagePattern
+	GenerateAccessResponse, errorMessagePattern,
+	Meal
 } from '@backend-evolved/shared';
 
 import { FoodService } from '../../food/food.service';
@@ -267,7 +268,7 @@ When creating meal records, the system validates that the \`date\` matches the m
 		@Body() createMealDto: CreateMealDto,
 		@ContextUser() ctxUser: ContextUser
 	) {
-		const diet = await this.dietService.findOneWhere({ id: createMealDto.dietId, nutritionistId: ctxUser.id });
+		const diet = await this.dietService.findOne({ where: { id: createMealDto.dietId, nutritionistId: ctxUser.id } });
 		return await this.mealService.createOne({ ...createMealDto, diet });
 	}
 
@@ -283,7 +284,7 @@ When creating meal records, the system validates that the \`date\` matches the m
 		@Body() body: CreateMealDto & { foods?: CreateFoodDto[] },
 		@ContextUser() ctxUser: ContextUser,
 	) {
-		const diet = await this.dietService.findOneWhere({ id: body.dietId, nutritionistId: ctxUser.id });
+		const diet = await this.dietService.findOne({ where: { id: body.dietId, nutritionistId: ctxUser.id } });
 		// Create the meal first
 		const createdMeal = await this.mealService.createOne({ ...body, diet });
 
@@ -364,7 +365,7 @@ When creating meal records, the system validates that the \`date\` matches the m
 			);
 		}
 		if (targetDietId) {
-			const targetDiet = await this.dietService.findOneWhere({ id: targetDietId, nutritionistId: ctxUser.id });
+			const targetDiet = await this.dietService.findOne({ where: { id: targetDietId, nutritionistId: ctxUser.id } });
 			if (targetDiet.nutritionistId !== ctxUser.id) {
 				throw new NotFoundException(errorMessagePattern.diet.notFound.key);
 			}
@@ -376,6 +377,29 @@ When creating meal records, the system validates that the \`date\` matches the m
 			copyPayload.diet = targetDiet;
 		}
 		return await this.mealService.clone(foundMeal, copyPayload);
+	}
+
+	@Patch(':mealId')
+	@ApiOperation({
+		summary: 'Update a specific meal by ID',
+		description: 'Update details of a specific meal using its ID'
+	})
+	@ApiOkResponse({ description: 'The meal has been successfully updated.', type: Meal })
+	@ApiNotFoundResponse({ description: 'Meal not found or user does not have access to this meal.' })
+	@UseGuards(JwtRoleGuard(['nutritionist']))
+	@UseFilters(ControllerExceptionFilter)
+	async patchOneById(
+		@Param('mealId') mealId: string,
+		@Body() updateData: Partial<Meal>,
+		@ContextUser() ctxUser: ContextUser,
+	) {
+		console.log('mealId', mealId);
+		console.log('updateData', updateData);
+		const foundMeal = await this.mealService.findOneWhere({ id: mealId }, ['diet', 'foods']);
+		if (foundMeal.diet.nutritionistId !== ctxUser.id) {
+			throw new NotFoundException(errorMessagePattern.meal.notFound.key);
+		}
+		return await this.mealService.updateOne(foundMeal, updateData);
 	}
 
 	@Delete(':mealId')
@@ -426,7 +450,7 @@ When creating meal records, the system validates that the \`date\` matches the m
 			await this.foodService.delete(foundMeal.foods); //Deletes all foods related to the meal
 			return await this.mealService.delete(foundMeal);
 		} else {
-			return await this.mealService.update(foundMeal, {
+			return await this.mealService.updateOne(foundMeal, {
 				endDate: scheduler.buildDate({
 					endOfDay: true
 				})

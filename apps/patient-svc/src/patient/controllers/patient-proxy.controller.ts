@@ -29,7 +29,7 @@ export class PatientProxyController {
     async createPatient(
         @Payload() data: typeof proxyPattern.patient.creation.payload
     ): Promise<ProxyMessage<typeof proxyPattern.patient.creation.response>> {
-        return { payload: await this.patientService.createOne(data) };
+        return { payload: await this.patientService.createOne(data as any) };
     }
 
     @MessagePattern(proxyPattern.patient.getAll.key)
@@ -45,9 +45,9 @@ export class PatientProxyController {
             patientIds.add(relation.patientId);
         });
         const patientsList = await this.patientService.findManyByIds(
-            Array.from(patientIds), {
-            removeKeys: ['nutritionists']
-        });
+            Array.from(patientIds),
+            payload.ctxUser,
+        );
 
         return {
             payload: patientsList.items
@@ -60,26 +60,28 @@ export class PatientProxyController {
         @Payload() payload: typeof proxyPattern.patient.getById.payload
     ): Promise<ProxyMessage<typeof proxyPattern.patient.getById.response>> {
         return {
-            payload: await this.patientService.findOne({
-                where: { id: payload.id },
-                ...payload.options
-            })
+            payload: await this.patientService.findOne(
+                payload.ctxUser,
+                {
+                    ...payload.options,
+                    where: { id: payload.id },
+                })
         };
     }
 
-    @MessagePattern(proxyPattern.patient.getManyByIds.key)
-    @UseFilters(ProxyMessengerFilter)
-    async getManyByIds(
-        @Payload() payload: typeof proxyPattern.patient.getManyByIds.payload
-    ): Promise<ProxyMessage<typeof proxyPattern.patient.getManyByIds.response>> {
-        const patientsList = await this.patientService.findManyByIds(
-            payload.ids, {
-            ...payload.options
-        });
-        return {
-            payload: patientsList.items
-        };
-    }
+    // @MessagePattern(proxyPattern.patient.getManyByIds.key)
+    // @UseFilters(ProxyMessengerFilter)
+    // async getManyByIds(
+    //     @Payload() payload: typeof proxyPattern.patient.getManyByIds.payload
+    // ): Promise<ProxyMessage<typeof proxyPattern.patient.getManyByIds.response>> {
+    //     const patientsList = await this.patientService.findManyByIds(
+    //         payload.ids, {
+    //         ...payload.options
+    //     });
+    //     return {
+    //         payload: patientsList.items
+    //     };
+    // }
 
     @MessagePattern(proxyPattern.patient.softDeletionById.key)
     @UseFilters(ProxyMessengerFilter)
@@ -91,18 +93,18 @@ export class PatientProxyController {
         return { payload: true };
     }
 
-    @MessagePattern(proxyPattern.patient.water.creation)
-    @UseFilters(ProxyMessengerFilter)
-    async createWaterGoal(
-        @Payload() payload: ProxyWaterGoalDto
-    ): Promise<ProxyMessage<WaterGoal>> {
-        const foundPatient = await this.patientService.findOne({ where: { id: payload.patientId } });
-        if (foundPatient && foundPatient.hasNutritionist?.(payload.nutritionistId)) {
-            return { payload: await this.waterGoalService.createWaterGoal(payload) };
-        } else {
-            throw new NotFoundException('Patient not found or not related to nutritionist');
-        }
-    }
+    // @MessagePattern(proxyPattern.patient.water.creation)
+    // @UseFilters(ProxyMessengerFilter)
+    // async createWaterGoal(
+    //     @Payload() payload: ProxyWaterGoalDto
+    // ): Promise<ProxyMessage<WaterGoal>> {
+    //     const foundPatient = await this.patientService.findOne({ where: { id: payload.patientId } });
+    //     if (foundPatient && foundPatient.hasNutritionist?.(payload.nutritionistId)) {
+    //         return { payload: await this.waterGoalService.createWaterGoal(payload) };
+    //     } else {
+    //         throw new NotFoundException('Patient not found or not related to nutritionist');
+    //     }
+    // }
 
     @MessagePattern(proxyPattern.patient.water.findCurrent)
     @UseFilters(ProxyMessengerFilter)
