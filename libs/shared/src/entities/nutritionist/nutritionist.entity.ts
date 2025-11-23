@@ -9,8 +9,12 @@ export class Nutritionist {
     id: string;
 
     @Column()
-    @ApiProperty({ example: 'John Doe' })
-    name: string;
+    @ApiProperty({ example: 'John' })
+    firstName: string;
+
+    @Column()
+    @ApiProperty({ example: 'Doe' })
+    lastName: string;
 
     @Column()
     @ApiProperty({ example: 'john.doe@example.com' })

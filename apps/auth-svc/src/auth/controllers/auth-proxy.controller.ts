@@ -17,7 +17,7 @@ export class AuthProxyController {
     constructor(
         private readonly authService: AuthService,
         private readonly userService: UserService,
-    ) { }
+    ) {}
 
     @MessagePattern(proxyPattern.user.creation.key)
     @UseFilters(ProxyMessengerFilter)

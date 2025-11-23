@@ -29,7 +29,7 @@ export const errorMessagePattern = {
     },
     patient: {
         notFound: {
-            key: 'Patient not found or not related to nutritionist'
+            fn: () => 'Patient not found or not related to nutritionist'
         },
         alreadyRegisteredWithNutritionist: {
             key: 'Patient is already registered'
@@ -146,6 +146,13 @@ export const errorMessagePattern = {
         },
         nutritionistIsAlreadyActive: {
             fn: (email: string) => `Nutritionist with email ${email} is already active`
+        }
+    },
+    record: {
+        weight: {
+            patientIdIsRequired: {
+                fn: () => 'Nutritionist must send patient ID via body to create a weight record'
+            }
         }
     }
 }

@@ -23,7 +23,7 @@ export class UserService {
         @InjectRepository(RefreshToken) private refreshRepository: Repository<RefreshToken>,
     ) { }
 
-    async create(userData: RegisterUserDto): Promise<User> {
+    async create(userData: RegisterUserDto): Promise<any> {
         const existing = await this.userRepository.findOne({ where: { email: userData.email } });
         if (existing) throw new ConflictException(
             errorMessagePattern
@@ -37,7 +37,8 @@ export class UserService {
             passwordHash: hash,
             role: userData.role
         });
-        return await this.userRepository.save(user);
+        const savedUser = await this.userRepository.save(user, {reload: true});
+        return removeProperties([savedUser], ['passwordHash'])[0];
     }
 
     async findAll(find?: FindUserOptions & PaginationQuery): Promise<User[]> {

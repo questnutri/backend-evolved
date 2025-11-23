@@ -1,7 +1,7 @@
 export enum LevelOfActivity {
-    SEDENTARY = '1.2',
-    LIGHTLY_ACTIVE = '1.375',
-    MODERATELY_ACTIVE = '1.55',
-    VERY_ACTIVE = '1.725',
-    EXTRA_ACTIVE = '1.9'
+    ONE = "1", //'1.2',
+    TWO = "2", //'1.375',
+    THREE = "3", //'1.55',
+    FOUR = "4", //'1.725',
+    FIVE = "5" //'1.9'
 }

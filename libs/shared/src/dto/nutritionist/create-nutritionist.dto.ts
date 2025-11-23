@@ -16,7 +16,16 @@ export class CreateNutritionistDto extends IntersectionType(LoginUserDto) {
     })
     @IsString()
     @IsNotEmpty()
-    name: string;
+    firstName: string;
+
+    @ApiProperty({
+        description: 'Last name of the nutritionist',
+        required: true,
+        example: 'Doe',
+    })
+    @IsString()
+    @IsNotEmpty()
+    lastName: string;
 
     @ApiProperty({
         description: 'Phone number of the nutritionist',

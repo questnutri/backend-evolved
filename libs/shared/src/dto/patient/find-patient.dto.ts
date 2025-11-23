@@ -9,6 +9,8 @@ export class PatientIncludeOptions extends IntersectionType(DietIncludeOptions) 
     includeNutritionists?: boolean;
     @IsOptional()
     includeDiets?: boolean;
+    @IsOptional()
+    includeLastWeight?: boolean;
 }
 
 export class PatientFindOptions extends

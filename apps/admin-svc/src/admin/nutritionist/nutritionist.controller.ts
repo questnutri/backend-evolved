@@ -79,7 +79,7 @@ export class NutritionistController {
             {
                 proxy: this.nutritionistServiceProxy,
                 pattern: proxyPattern.nutritionist.getManyByIds.key,
-                data: { 
+                data: {
                     ids: userNutritionists.map(u => u.id),
                     options: {
                         ...query,
@@ -111,10 +111,13 @@ export class NutritionistController {
     async getById(
         @Param('id') id: string
     ): Promise<NutriUser> {
-        const nutritionist = await sendProxyMessage<Nutritionist>(
+        const nutritionist = await sendProxyMessage<
+            typeof proxyPattern.nutritionist.getById.response,
+            typeof proxyPattern.nutritionist.getById.payload
+        >(
             {
                 proxy: this.nutritionistServiceProxy,
-                pattern: proxyPattern.nutritionist.getById,
+                pattern: proxyPattern.nutritionist.getById.key,
                 data: { id }
             }
         );
@@ -145,10 +148,13 @@ export class NutritionistController {
     async delete(
         @Param('id') id: string
     ) {
-        const foundNutritionist = await sendProxyMessage<Nutritionist>(
+        const foundNutritionist = await sendProxyMessage<
+            typeof proxyPattern.nutritionist.getById.response,
+            typeof proxyPattern.nutritionist.getById.payload
+        >(
             {
                 proxy: this.nutritionistServiceProxy,
-                pattern: proxyPattern.nutritionist.getById,
+                pattern: proxyPattern.nutritionist.getById.key,
                 data: { id }
             }
         );
@@ -164,16 +170,16 @@ export class NutritionistController {
             }
         );
 
-        if(userDeletion.result) {
-            const nutritionistDeletion = await sendProxyMessage<{result: boolean}>(
+        if (userDeletion.result) {
+            const nutritionistDeletion = await sendProxyMessage<{ result: boolean }>(
                 {
                     proxy: this.nutritionistServiceProxy,
                     pattern: proxyPattern.nutritionist.softDeletionById,
-                    data: {id: foundNutritionist.id}
+                    data: { id: foundNutritionist.id }
                 }
             );
             console.log("Nutritionist deletion result: ", nutritionistDeletion);
-            if(nutritionistDeletion.result) {
+            if (nutritionistDeletion.result) {
                 return { message: 'Nutritionist deleted successfully', success: true };
             }
         }

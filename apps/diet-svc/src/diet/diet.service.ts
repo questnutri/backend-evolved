@@ -1,8 +1,21 @@
-import { Diet, PATIENT_SERVICE_PROXY_NAME, RECORD_SERVICE_PROXY_NAME, ALIMENT_SERVICE_PROXY_NAME, ServiceContract, MealRecord, Aliment, Food, MealRepeatCalculator, RepeatType, SchedulerHelper, sendProxyMessage, proxyPattern, DietStatus, errorMessagePattern, DietIncludeOptions } from '@backend-evolved/shared';
-import { DietPlan, DietDayPlan, MealPlan, CleanedMealRecord } from '@backend-evolved/shared';
+import {
+    Diet,
+    PATIENT_SERVICE_PROXY_NAME,
+    RECORD_SERVICE_PROXY_NAME,
+    ALIMENT_SERVICE_PROXY_NAME,
+    ServiceContract,
+    Aliment,
+    Food,
+    SchedulerHelper,
+    sendProxyMessage,
+    proxyPattern,
+    DietStatus,
+    errorMessagePattern,
+    DietIncludeOptions
+} from '@backend-evolved/shared';
 import { Injectable, NotFoundException, Inject, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, Between } from 'typeorm';
+import { Repository } from 'typeorm';
 import { ClientProxy } from '@nestjs/microservices';
 import { firstValueFrom } from 'rxjs';
 import { MealService } from '../meal/meal.service';
@@ -24,15 +37,17 @@ export class DietService implements ServiceContract<Diet> {
         if (options?.includes?.includeMeals) relations.push('meals');
         if (options?.includes?.includeFoods) relations.push('meals.foods');
         const foundDiets = await this.dietRepository.find({ where, relations });
-        if( options?.includes?.includeFoods ) {
+        if (options?.includes?.includeFoods) {
             const fetchedDiets: Diet[] = [];
-            for(const diet of foundDiets) {
+            for (const diet of foundDiets) {
                 fetchedDiets.push(await this.fetchDietAliments(diet));
             }
             return fetchedDiets;
         }
         return foundDiets;
     }
+
+    //TODO: FINISH DIET PLAN
 
     async findOneWhere(where: any, relations: string[] = ['meals', 'meals.foods']): Promise<Diet> {
         const foundDiet = await this.dietRepository.findOne({ where, relations });
@@ -127,7 +142,7 @@ export class DietService implements ServiceContract<Diet> {
         const requestDate = scheduler.startOfDay();
 
         //Removing unupdatable fields
-        const { id, patientId, nutritionistId, meals, createdAt, updatedAt, ...rest} = payload;
+        const { id, patientId, nutritionistId, meals, createdAt, updatedAt, ...rest } = payload;
         const updatePayload = { ...rest } as Partial<Diet>;
 
         if (updatePayload.startDate) {
@@ -240,199 +255,4 @@ export class DietService implements ServiceContract<Diet> {
     async fetchDietAlimentsPublic(diet: Diet): Promise<Diet> {
         return await this.fetchDietAliments(diet);
     }
-
-    // /**
-    //  * Fetch all meal records for a patient within a specific date range
-    //  * This is done once per diet plan generation to avoid N+1 queries
-    //  */
-    // private async fetchMealRecordsForRange(patientId: string, startDate: Date, endDate: Date): Promise<MealRecord[]> {
-    //     try {
-    //         const mealRecords = await firstValueFrom(
-    //             this.recordProxyService.send<MealRecord[]>('meal-record.findByPatientAndDateRange', {
-    //                 patientId,
-    //                 startDate: this.normalizeToStartOfDay(startDate),
-    //                 endDate: this.normalizeToStartOfDay(endDate)
-    //             })
-    //         );
-    //         return mealRecords || [];
-    //     } catch (error) {
-    //         console.warn('Failed to fetch meal records:', error);
-    //         return [];
-    //     }
-    // }
-
-    // /**
-    //  * Normalize date to start of day (00:00:00) to ignore hours in UTC
-    //  */
-    // private normalizeToStartOfDay(date: Date): Date {
-    //     const normalized = new Date(date);
-    //     normalized.setUTCHours(0, 0, 0, 0);
-    //     return normalized;
-    // }
-
-    // /**
-    //  * Generate diet plans for a patient within a specific date range
-    //  * Default range: current month, one month back, one month forward
-    //  */
-    // async getDietPlanForPatient(patientId: string, nutritionistId: string, length: number = 1): Promise<DietPlan[]> {
-    //     const currentDate = new Date();
-
-    //     // Calculate date range based on length (in months) - normalize to start of day
-    //     const startDate = this.normalizeToStartOfDay(new Date(currentDate.getFullYear(), currentDate.getMonth() - length, 1));
-    //     const endDate = this.normalizeToStartOfDay(new Date(currentDate.getFullYear(), currentDate.getMonth() + length + 1, 0));
-
-    //     console.log(`[DEBUG] getDietPlanForPatient: currentDate=${currentDate.toISOString()}, length=${length}`);
-    //     console.log(`[DEBUG] getDietPlanForPatient: calculated startDate=${startDate.toISOString()}, endDate=${endDate.toISOString()}`);
-
-    //     // Get all diets for the patient within the date range
-    //     const diets = await this.dietRepository.find({
-    //         where: {
-    //             patientId,
-    //             nutritionistId,
-    //             startDate: Between(startDate, endDate)
-    //         },
-    //         relations: ['meals', 'meals.foods']
-    //     });
-
-    //     console.log(`[DEBUG] Found ${diets.length} diets for patient ${patientId}`);
-    //     if (diets.length > 0) {
-    //         console.log(`[DEBUG] Diet startDates: ${diets.map(d => d.startDate.toISOString()).join(', ')}`);
-    //     }
-
-    //     const dietPlans: DietPlan[] = [];
-
-    //     for (const diet of diets) {
-    //         // Fetch aliments for all foods in this diet
-    //         const dietWithAliments = await this.fetchDietAliments(diet);
-    //         const dietPlan = await this.generateDietPlan(dietWithAliments, startDate, endDate, patientId);
-    //         dietPlans.push(dietPlan);
-    //     }
-
-    //     return dietPlans;
-    // }
-
-    // /**
-    //  * Generate a single diet plan from a diet entity
-    //  */
-    // private async generateDietPlan(diet: Diet, rangeStart: Date, rangeEnd: Date, patientId: string): Promise<DietPlan> {
-    //     const dayPlans: DietDayPlan[] = [];
-
-    //     // Fetch all meal records for the patient within the date range for efficiency
-    //     const mealRecords = await this.fetchMealRecordsForRange(patientId, rangeStart, rangeEnd);
-
-    //     // Determine the effective date range for this diet - normalize to start of day
-    //     const dietStart = this.normalizeToStartOfDay(diet.startDate > rangeStart ? diet.startDate : rangeStart);
-    //     const dietEnd = this.normalizeToStartOfDay(diet.endDate && diet.endDate < rangeEnd ? diet.endDate : rangeEnd);
-
-    //     // Generate day plans for each day in the range
-    //     // Use ms-based increment to avoid local timezone/setDate pitfalls
-    //     let currentDate = new Date(dietStart);
-    //     while (currentDate <= dietEnd) {
-    //         const normalizedCurrentDate = this.normalizeToStartOfDay(currentDate);
-    //         const dayPlan = await this.generateDayPlan(diet, normalizedCurrentDate, patientId, mealRecords);
-    //         if (dayPlan.mealPlans.length > 0) {
-    //             dayPlans.push(dayPlan);
-    //         }
-    //         // increment by exact 24h in UTC ms to avoid DST/local offset shifts
-    //         currentDate = new Date(currentDate.getTime() + 24 * 60 * 60 * 1000);
-    //     }
-
-    //     return {
-    //         dietId: diet.id,
-    //         plan: dayPlans
-    //     };
-    // }
-
-    // /**
-    //  * Generate a day plan for a specific date
-    //  */
-    // private async generateDayPlan(diet: Diet, targetDate: Date, patientId: string, mealRecords: MealRecord[] = []): Promise<DietDayPlan> {
-    //     const mealPlans: MealPlan[] = [];
-    //     const normalizedTargetDate = this.normalizeToStartOfDay(targetDate);
-    //     const normalizedDietStartDate = this.normalizeToStartOfDay(diet.startDate);
-
-    //     for (const meal of diet.meals || []) {
-    //         if (!meal.isActive) {
-    //             continue;
-    //         }
-
-    //         // Provide default repeat configuration if none exists (for backward compatibility)
-    //         let mealRepeatConfig = meal.repeatConfiguration;
-    //         if (!mealRepeatConfig) {
-    //             mealRepeatConfig = {
-    //                 type: RepeatType.DAILY,
-    //                 startDate: normalizedDietStartDate,
-    //                 repeatTarget: 1
-    //             };
-    //         }
-
-    //         // Normalize meal.repeatConfiguration.startDate to UTC start-of-day if present,
-    //         // otherwise use diet start date. This ensures the repeat calculator gets a UTC date-only start.
-    //         const repeatStartDate = mealRepeatConfig.startDate
-    //             ? this.normalizeToStartOfDay(new Date(mealRepeatConfig.startDate))
-    //             : normalizedDietStartDate;
-    //         mealRepeatConfig = { ...mealRepeatConfig, startDate: repeatStartDate };
-
-    //         // Use new flexible repeat calculation
-    //         const dietDays = diet.endDate ?
-    //             Math.floor((diet.endDate.getTime() - normalizedDietStartDate.getTime()) / (1000 * 60 * 60 * 24)) + 1 :
-    //             365; // Default to 1 year if no end date
-
-    //         // For ONCE meals, use the meal's own startDate from repeatConfiguration
-    //         // For other types, use the diet's startDate as before
-    //         // Pass the normalized repeatStartDate so calculations are anchored correctly
-    //         const shouldSchedule = MealRepeatCalculator.shouldMealBeScheduled(
-    //             mealRepeatConfig,
-    //             normalizedTargetDate,
-    //             repeatStartDate,
-    //             dietDays
-    //         );
-
-    //         if (shouldSchedule) {
-    //             // Find the meal record for this meal and date
-    //             const mealRecord = this.findMealRecordInList(meal.id, patientId, normalizedTargetDate, mealRecords);
-
-    //             const mealPlan: MealPlan = {
-    //                 meal,
-    //                 mealRecord: mealRecord ? this.cleanMealRecord(mealRecord) : null
-    //             };
-    //             mealPlans.push(mealPlan);
-    //         }
-    //     }
-
-    //     return {
-    //         relativeDate: normalizedTargetDate,
-    //         mealPlans
-    //     };
-    // }
-
-    // /**
-    //  * Clean meal record by removing redundant fields that are already available in other parts of the plan
-    //  */
-    // private cleanMealRecord(mealRecord: MealRecord): CleanedMealRecord {
-    //     return {
-    //         id: mealRecord.id,
-    //         createdAt: mealRecord.createdAt,
-    //         updatedAt: mealRecord.updatedAt,
-    //         isCompleted: mealRecord.isCompleted,
-    //         mealRelativeDate: mealRecord.mealRelativeDate,
-    //     };
-    // }
-
-    // /**
-    //  * Find a meal record in a pre-fetched list for a specific meal and date
-    //  */
-    // private findMealRecordInList(mealId: string, patientId: string, targetDate: Date, mealRecords: MealRecord[]): MealRecord | null {
-    //     const normalizedTargetDate = this.normalizeToStartOfDay(targetDate);
-
-    //     return mealRecords.find(record => {
-    //         if (record.mealId !== mealId || record.patientId !== patientId) {
-    //             return false;
-    //         }
-
-    //         const recordDate = this.normalizeToStartOfDay(new Date(record.mealRelativeDate));
-    //         return recordDate.getTime() === normalizedTargetDate.getTime();
-    //     }) || null;
-    // }
-
 }

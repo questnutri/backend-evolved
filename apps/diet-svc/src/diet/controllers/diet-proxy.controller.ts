@@ -1,7 +1,4 @@
 import { Controller, UseFilters } from '@nestjs/common';
-import {
-    ApiBearerAuth, ApiSecurity, ApiTags
-} from '@nestjs/swagger';
 import { DietService } from '../diet.service';
 import {
     ProxyMessengerFilter,
@@ -22,7 +19,6 @@ export class DietProxyController {
     async handleGetAllDiets(
         @Payload() payload: typeof proxyPattern.diet.getAll.payload
     ): Promise<ProxyMessage<typeof proxyPattern.diet.getAll.response>> {
-        console.log('[DIET-PROXY] handleGetAllDiets payload:', payload);
         const { where, includes } = payload;
         return {
             payload: await this.dietService.findAll(

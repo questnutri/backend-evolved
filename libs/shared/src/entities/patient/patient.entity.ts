@@ -3,7 +3,6 @@ import { PatientNutritionist } from './patient-nutritionist.entity';
 import { WaterGoal } from './water-goal.entity';
 import { ApiProperty } from '@nestjs/swagger';
 import { Nutritionist } from '../nutritionist/nutritionist.entity';
-import { Filterable } from '../../utils';
 import { LevelOfActivity, Gender } from '../../enums';
 
 //TODO: IMPLEMENT SOFT DELETE
@@ -15,12 +14,22 @@ export class Patient {
 
     @Column()
     @ApiProperty({ example: 'Jane Doe' })
-    @Filterable()
-    name: string;
+    firstName: string;
+
+    @Column()
+    @ApiProperty({ example: 'Doe' })
+    lastName: string;
 
     @Column()
     @ApiProperty({ example: 'jane.doe@patient.com' })
     email: string;
+
+    @Column({
+        type: 'varchar',
+        nullable: true
+    })
+    @ApiProperty({ example: '+55 (11) 99999-9888', nullable: true })
+    phone: string | null;
 
     @Column({
         unique: true,
@@ -28,9 +37,15 @@ export class Patient {
     @ApiProperty({ example: '123.456.789-00' })
     documentNumber: string;
 
-    @Column({ type: 'date', nullable: true })
-    @ApiProperty({ example: '1990-01-01', required: false })
-    dateOfBirth?: Date;
+    @Column({
+        type: 'varchar',
+        nullable: true
+    })
+    @ApiProperty({
+        example: '1990-01-01',
+        required: false
+    })
+    dateOfBirth?: string | null;
 
     @Column({ type: 'float', nullable: true })
     @ApiProperty({ example: 170, required: false })
@@ -48,11 +63,11 @@ export class Patient {
     @Column({
         type: 'enum',
         enum: LevelOfActivity,
+        default: LevelOfActivity.ONE,
         nullable: true,
-        default: null,
     })
-    @ApiProperty({ example: LevelOfActivity.MODERATELY_ACTIVE })
-    levelOfActivity?: LevelOfActivity;
+    @ApiProperty({ example: LevelOfActivity.ONE })
+    levelOfActivity?: LevelOfActivity = LevelOfActivity.ONE;
 
     @OneToMany(() => WaterGoal, wg => wg.patient)
     @ApiProperty({ type: () => [WaterGoal] })
@@ -68,5 +83,8 @@ export class Patient {
         }
         return false;
     }
-    //TODO: Add => gender, date of birth, height, Medical Information, Allergies, Medical Conditions, Notes, Medications, Preferences, goal, Weight, level of activity
+
+    //TODO: Add => Notes for preferences, goals, medical conditions
+    //TODO: CREATE SEPARATED ENTITIES FOR DEAL WITH: Medications, Allergies
+    //TODO: If Female => Must have pregnancy related info
 }

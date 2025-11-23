@@ -26,9 +26,15 @@ import {
     PatientFindOptions,
     buildFiltering,
     PaginationQuery,
-    removeProperties
+    removeProperties,
+    SchedulerHelper,
+    LevelOfActivity,
+    ListResponse,
+    normalizeToList,
+    RECORD_SERVICE_PROXY_NAME,
+    WeightRecord
 } from '@backend-evolved/shared';
-import { firstValueFrom } from 'rxjs';
+import { firstValueFrom, last } from 'rxjs';
 import { In, QueryFailedError, Repository } from 'typeorm';
 import { error } from 'console';
 
@@ -44,11 +50,12 @@ export class PatientService implements ServiceContract<Patient> {
         @Inject(NUTRITIONIST_SERVICE_PROXY_NAME) private readonly nutritionistProxy: ClientProxy,
         @Inject(AUTH_SERVICE_PROXY_NAME) private readonly authServiceProxy: ClientProxy,
         @Inject(DIET_SERVICE_PROXY_NAME) private readonly dietServiceProxy: ClientProxy,
+        @Inject(RECORD_SERVICE_PROXY_NAME) private readonly recordServiceProxy: ClientProxy,
     ) { }
 
     async findAll(
         find?: PatientFindOptions & PaginationQuery
-    ): Promise<Patient[]> {
+    ): Promise<ListResponse<Patient>> {
         let page = find?.page || 1;
         let limit = find?.limit || 20;
         if (page < 1) page = 1;
@@ -56,7 +63,7 @@ export class PatientService implements ServiceContract<Patient> {
 
         let { where } = find || {};
 
-        let foundPatients = await this.patientRepository.find({
+        let [foundPatients, total] = await this.patientRepository.findAndCount({
             where: {
                 ...where,
                 ...buildFiltering(find?.filter)
@@ -70,13 +77,13 @@ export class PatientService implements ServiceContract<Patient> {
         foundPatients = await this.applyIncludes({ ...find, includeFoods: false, includeMeals: false }, foundPatients);
         foundPatients = removeProperties(foundPatients, find?.removeKeys);
 
-        return foundPatients;
+        return normalizeToList(foundPatients, total, page, limit);
     }
 
     async findManyByIds(
         ids: string[],
         options?: PatientFindOptions & PaginationQuery
-    ): Promise<Patient[]> {
+    ): Promise<ListResponse<Patient>> {
         if (options) {
             options['where'] = {
                 id: In(ids),
@@ -97,77 +104,16 @@ export class PatientService implements ServiceContract<Patient> {
                 errorMessagePattern
                     .patient
                     .notFound
-                    .key
+                    .fn()
             );
         }
 
-        patient = await this.applyIncludes({ ...options }, [patient]).then(res => res[0]);
+        patient = await this.applyIncludes({ ...options, includeLastWeight: true }, [patient]).then(res => res[0]);
+        patient = this.applyPatterns(patient!);
         patient = removeProperties([patient!], options?.removeKeys)[0];
 
         return patient!;
     }
-
-    // async createOne(data: Partial<Patient> & { email: string } & { nutritionistId: string }): Promise<Patient> {
-    //     // Cast data to CreatePatientDto for compatibility
-    //     try {
-    //         const payload = {
-    //             email: data.email,
-    //             password: data.documentNumber!.replace(/[.\-\s]/g, ''),
-    //             role: UserRole.PATIENT
-    //         };
-
-    //         try {
-    //             const userCreationResult = await firstValueFrom(
-    //                 this.authServiceProxy.send<ProxyMessage<string>, RegisterUserDto>('user.creation', payload as any)
-    //             );
-    //             if (userCreationResult && 'error' in userCreationResult) {
-    //                 throw new RpcException(userCreationResult);
-    //             }
-    //             const userId = userCreationResult.payload;
-    //             if (!userId) throw new InternalServerErrorException('Auth service did not return user id');
-    //             const patient = this.patientRepository.create({ ...data, id: userId });
-    //             const savedPatient = await this.patientRepository.save(patient);
-    //             const patientNutritionist = this.patientNutritionistRepository.create({
-    //                 patientId: savedPatient.id,
-    //                 nutritionistId: data.nutritionistId
-    //             });
-    //             await this.patientNutritionistRepository.save(patientNutritionist);
-    //             return savedPatient;
-    //         } catch (error: any) {
-    //             // console.log('Error during patient creation, checking if patient exists:', error.error?.detail || error);
-    //             if (error?.error?.detail?.includes("An User with this email already exists")) {
-    //                 const existingPatient = await this.patientRepository.findOneBy({ email: data.email }) || await this.patientRepository.findOneBy({ documentNumber: data.documentNumber });
-    //                 if (existingPatient) {
-    //                     const existingRelation = await this.patientNutritionistRepository.findOneBy({
-    //                         patientId: existingPatient.id,
-    //                         nutritionistId: data.nutritionistId
-    //                     });
-    //                     if (existingRelation) {
-    //                         throw new ConflictException('Patient already registered');
-    //                     }
-    //                     const patientNutritionist = this.patientNutritionistRepository.create({
-    //                         patientId: existingPatient.id,
-    //                         nutritionistId: data.nutritionistId
-    //                     });
-    //                     await this.patientNutritionistRepository.save(patientNutritionist);
-    //                     return existingPatient;
-    //                 } else {
-    //                     console.log(error);
-    //                     throw new InternalServerErrorException('Patient not found after failed creation');
-    //                 }
-    //             }
-    //             throw error;
-    //         }
-    //     } catch (error: any) {
-    //         if (!(error instanceof ConflictException)) {
-    //             await firstValueFrom(
-    //                 this.authServiceProxy.send<boolean, string>(proxyPattern.user.deletionByEmail, data.email!)
-    //             );
-    //         }
-
-    //         throw error;
-    //     }
-    // }
 
     async createOne(data: Partial<Patient> & { email: string, nutritionistId: string }): Promise<any> {
         const userPayload = {
@@ -186,10 +132,13 @@ export class PatientService implements ServiceContract<Patient> {
             options: {
                 rawResponse: true,
                 dontThrowIfError: true,
+                retry: {
+                    count: 3, delay: 50
+                }
             }
         });
 
-        
+
         try {
             if (createdUser && "error" in createdUser) {
                 //Patient maybe already exists
@@ -221,8 +170,6 @@ export class PatientService implements ServiceContract<Patient> {
                 }
             }
 
-            console.log('[Patient-Service] Created user payload:', createdUser);
-
             const { id } = createdUser.payload;
             if (!id) {
                 throw new InternalServerErrorException(
@@ -231,6 +178,19 @@ export class PatientService implements ServiceContract<Patient> {
                         .didntReturnAValidId
                         .fn()
                 );
+            }
+
+            if (data.dateOfBirth) {
+                const scheduler = new SchedulerHelper();
+                scheduler.setFormat('YYYY-MM-DD');
+                if (scheduler.isValidDate(data.dateOfBirth)) {
+                    data.dateOfBirth = scheduler.format(scheduler.buildDate({ date: data.dateOfBirth })).toString();
+                } else {
+                    data.dateOfBirth = null;
+                }
+            }
+            if (!data.levelOfActivity) {
+                data.levelOfActivity = LevelOfActivity.ONE;
             }
 
             const patient = this.patientRepository.create({ ...data, id });
@@ -257,25 +217,13 @@ export class PatientService implements ServiceContract<Patient> {
         }
     }
 
-    async updateOne(query: any, data: Partial<Patient>): Promise<Patient | null> {
-        try {
-            const result = await this.patientRepository.update(query, data);
-            if (result.affected === 0) throw new NotFoundException(errorMessagePattern.patient.notFound.key);
-            return await this.patientRepository.findOneBy(query);
-        } catch (error: any) {
-            if (error instanceof HttpException) {
-                throw error;
-            }
-            if (error instanceof QueryFailedError) {
-                throw new ConflictException(error.driverError.detail);
-            }
-            switch (error.source) {
-                case 'ConflictException':
-                    throw new ConflictException(error?.detail);
-                default:
-                    throw new InternalServerErrorException(errorMessagePattern.patient.failedToUpdate.fn(error));
-            }
-        }
+    async updateOne(patient: Patient, payload: Partial<Patient>): Promise<Patient> {
+        // Removing unupdatable fields
+        const { email, documentNumber, ...rest } = payload;
+        const updatePayload = { ...rest } as Partial<Patient>;
+
+        this.patientRepository.merge(patient, updatePayload);
+        return await this.patientRepository.save(patient);
     }
 
     async softDelete(patient: Patient): Promise<Patient> {
@@ -291,7 +239,7 @@ export class PatientService implements ServiceContract<Patient> {
     async deleteOne(query: any): Promise<void> {
         try {
             const result = await this.patientRepository.delete(query);
-            if (result.affected === 0) throw new NotFoundException(errorMessagePattern.patient.notFound.key);
+            if (result.affected === 0) throw new NotFoundException(errorMessagePattern.patient.notFound.fn());
         } catch (error) {
 
         }
@@ -332,6 +280,13 @@ export class PatientService implements ServiceContract<Patient> {
             }
             foundPatients = treatedPatients as unknown as Patient[];
         }
+        if (includes?.includeLastWeight) {
+            const treatedPatients: Patient[] = [];
+            for (const patient of foundPatients) {
+                treatedPatients.push(await this.formatPatientWithWeight(patient));
+            }
+            foundPatients = treatedPatients as unknown as Patient[];
+        }
         return foundPatients;
     }
 
@@ -345,7 +300,7 @@ export class PatientService implements ServiceContract<Patient> {
             >({
                 proxy: this.nutritionistProxy,
                 pattern: proxyPattern.nutritionist.getManyByIds.key,
-                data: { 
+                data: {
                     ids: nutritionists,
                     options: {
                         removeKeys: ['documentNumber', 'documentType']
@@ -371,6 +326,52 @@ export class PatientService implements ServiceContract<Patient> {
         };
     }
 
+    private applyPatterns(patient: Patient): Patient {
+        const birthYear = patient.dateOfBirth ? new Date(patient.dateOfBirth).getFullYear() : null
+        const age = birthYear ? new Date().getFullYear() - birthYear : 0;
+        if (patient.heightInCm && (patient as any).lastWeight) {
+            const weightKg = (patient as any).lastWeight.valueInKg;
+            const imc = this.calculateIMC(weightKg, patient.heightInCm);
+            (patient as any).imc = imc || null;
+            const tmb = this.calculateTMB(patient.gender || 'FEMALE', weightKg, patient.heightInCm, age);
+            (patient as any).tmb = tmb || null;
+            if (tmb) {
+                const tdee = this.calculateTDEE(tmb, patient.levelOfActivity || LevelOfActivity.ONE);
+                (patient as any).tdee = tdee;
+            } else {
+                (patient as any).tdee = null;
+            }
+        } else {
+            (patient as any).imc = null;
+            (patient as any).tmb = null;
+            (patient as any).tdee = null;
+        }
+        return patient;
+    }
+
+    private calculateIMC(weightKg: number, heightCm: number): number {
+        const h = heightCm / 100
+        return parseFloat((weightKg / (h * h)).toFixed(2));
+    }
+
+    private calculateTMB(gender: string, weightKg: number, heightCm: number, age: number): number {
+        if (gender === 'MALE') {
+            return 10 * weightKg + 6.25 * heightCm - 5 * age + 5
+        }
+        return parseFloat((10 * weightKg + 6.25 * heightCm - 5 * age - 161).toFixed(2));
+    }
+
+    private calculateTDEE(bmr: number, level: LevelOfActivity): number {
+        const factors: Record<string, number> = {
+            "1": 1.2,
+            "2": 1.375,
+            "3": 1.55,
+            "4": 1.725,
+            "5": 1.9
+        }
+        return parseFloat((bmr * (factors[level] || 1.2)).toFixed(2));
+    }
+
     async formatPatientWithDiets(patient: Patient, includes: DietIncludeOptions): Promise<any> {
         const diets = await sendProxyMessage<
             typeof proxyPattern.diet.getAll.response,
@@ -389,8 +390,6 @@ export class PatientService implements ServiceContract<Patient> {
             }
         });
 
-        console.log(diets);
-
         return {
             ...patient,
             diets
@@ -398,6 +397,34 @@ export class PatientService implements ServiceContract<Patient> {
     }
 
     async formatPatientWithWeight(patient: Patient): Promise<Patient> {
+        let weightRecord = await sendProxyMessage<
+            typeof proxyPattern.record.weight.getLast.response,
+            typeof proxyPattern.record.weight.getLast.payload
+        >({
+            proxy: this.recordServiceProxy,
+            pattern: proxyPattern.record.weight.getLast.key,
+            data: {
+                patientId: patient.id
+            }
+        });
+
+        if(weightRecord) {
+            const { patientId, ...weightData } = weightRecord;
+            if (
+                weightData &&
+                weightData.registeredBy &&
+                weightData.registeredBy.role === UserRole.PATIENT
+            ) {
+                (weightData as any).registeredBy.name = patient.firstName;
+            }
+    
+            (patient as any)['lastWeight'] = weightData;
+        } else {
+            (patient as any)['lastWeight'] = null;
+        }
+
+
+
         return patient;
     }
 

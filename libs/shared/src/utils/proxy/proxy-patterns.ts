@@ -21,7 +21,7 @@ const pattern = <SEND = any, RECEIVE = any>(key: string) => {
 export const proxyPattern = {
     nutritionist: {
         getManyByIds: pattern<{ ids: string[], options?: NutritionistFindOptions & PaginationQuery }, Nutritionist[]>('nutritionist.getManyByIds'),
-        getById: 'nutritionist.getById',
+        getById: pattern<{ id: string }, Nutritionist>('nutritionist.getById'),
         getAll: 'nutritionist.getAll',
         softDeletionById: 'nutritionist.softDeletionById',
         approval: 'nutritionist.approval'
@@ -54,7 +54,7 @@ export const proxyPattern = {
         getAll: pattern<FindUserOptions & PaginationQuery, User[]>('user.getAll'),
         deletionById: pattern<{ id: string }, { result: boolean }>('user.deletionById'),
         deletionByEmail: pattern<{ email: string }, { result: boolean }>('user.deletionByEmail'),
-        creation: pattern<RegisterUserDto, User>('user.creation')
+        creation: pattern<RegisterUserDto, User>('user.createOne')
     },
     admin: {
         login: 'admin.login'
@@ -72,6 +72,7 @@ export const proxyPattern = {
     },
     record: {
         weight: {
+            getLast: pattern<{ patientId: string }, WeightRecord | null>('record.weight.getLast'),
             getAll: pattern<{patientId: string}, WeightRecord[]>('record.weight.getAll')
         }
     }

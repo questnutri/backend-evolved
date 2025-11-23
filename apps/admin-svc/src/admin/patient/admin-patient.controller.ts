@@ -16,7 +16,6 @@ import { ManagementGuard } from '../../guards/management.guard';
 
 type PatientUser = Patient & User;
 
-//FIXME: FIX THIS CONTROLLER
 @Controller('patient')
 export class PatientController {
     constructor(

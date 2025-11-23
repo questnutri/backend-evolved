@@ -553,7 +553,7 @@ export class DietRestController {
                     errorMessagePattern
                         .patient
                         .notFound
-                        .key
+                        .fn()
                 );
             }
 

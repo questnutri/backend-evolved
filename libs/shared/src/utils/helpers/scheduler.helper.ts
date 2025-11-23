@@ -272,4 +272,18 @@ export class SchedulerHelper {
 
         return formatted
     }
+
+    isValidDate(dateString: string): boolean {
+        if (!dateString || typeof dateString !== 'string') {
+            return false
+        }
+
+        const date = new Date(dateString)
+
+        if (isNaN(date.getTime())) {
+            return false
+        }
+
+        return true
+    }
 }

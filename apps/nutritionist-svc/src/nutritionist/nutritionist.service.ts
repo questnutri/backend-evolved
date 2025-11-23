@@ -89,12 +89,23 @@ export class NutritionistService implements ServiceContract<Nutritionist> {
             role: UserRole.NUTRITIONIST
         };
 
-        let userCreationResult = await this.requestCreate(payload);
+        let userCreationResult = await sendProxyMessage<
+            typeof proxyPattern.user.creation.response,
+            typeof proxyPattern.user.creation.payload
+        >(
+            {
+                proxy: this.authServiceProxy,
+                pattern: proxyPattern.user.creation.key,
+                data: payload,
+                options: {
+                    retry: {
+                        count: 3, delay: 50
+                    }
+                }
+            }
+        );
 
-        while(typeof userCreationResult === 'string') {
-            await this.requestDelete(userCreationResult);
-            userCreationResult = await this.requestCreate(payload);
-        }
+        console.log(userCreationResult);
 
         if (!userCreationResult.id) {
             throw new InternalServerErrorException(
@@ -109,7 +120,16 @@ export class NutritionistService implements ServiceContract<Nutritionist> {
             const nutritionist = this.nutritionistRepository.create({ ...data, id: userCreationResult.id });
             return await this.nutritionistRepository.save(nutritionist);
         } catch (error: any) {
-            await this.requestDelete(userCreationResult.id);
+            await sendProxyMessage<
+                typeof proxyPattern.user.deletionByEmail.response,
+                typeof proxyPattern.user.deletionByEmail.payload
+            >(
+                {
+                    proxy: this.authServiceProxy,
+                    pattern: proxyPattern.user.deletionByEmail.key,
+                    data: { email: userCreationResult.email }
+                }
+            );
             // console.log('User deletion result after nutritionist creation failure:', );
             throw new InternalServerErrorException(
                 errorMessagePattern
@@ -118,32 +138,6 @@ export class NutritionistService implements ServiceContract<Nutritionist> {
                     .fn(error)
             );
         }
-    }
-
-    private async requestCreate(data: RegisterUserDto) {
-        return await sendProxyMessage<
-            typeof proxyPattern.user.creation.response,
-            typeof proxyPattern.user.creation.payload
-        >(
-            {
-                proxy: this.authServiceProxy,
-                pattern: proxyPattern.user.creation.key,
-                data
-            }
-        );
-    }
-
-    private async requestDelete(id: string) {
-        return await sendProxyMessage<
-            typeof proxyPattern.user.deletionById.response,
-            typeof proxyPattern.user.deletionById.payload
-        >(
-            {
-                proxy: this.authServiceProxy,
-                pattern: proxyPattern.user.deletionById.key,
-                data: { id }
-            }
-        );
     }
 
     async updateOneById(id: string, data: Partial<CreateNutritionistDto>) {
@@ -206,11 +200,12 @@ export class NutritionistService implements ServiceContract<Nutritionist> {
                     .notFound
                     .fn()
             );
-            nutritionist.name = "DELETED";
-            nutritionist.crn = "DELETED";
+            nutritionist.firstName = "DELETED";
+            nutritionist.lastName = "DELETED";
+            nutritionist.crn = null;
             nutritionist.email = "DELETED";
-            nutritionist.phone = "DELETED";
-            nutritionist.documentNumber = "DELETED";
+            nutritionist.phone = null;
+            nutritionist.documentNumber = null;
             await this.nutritionistRepository.save(nutritionist);
             console.log(`Nutritionist soft deleted`);
             console.log(nutritionist);

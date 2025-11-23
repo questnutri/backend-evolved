@@ -18,9 +18,11 @@ export class NutritionistProxyController {
         return { payload: await this.nutritionistService.findAll() };
     }
 
-    @MessagePattern(proxyPattern.nutritionist.getById)
+    @MessagePattern(proxyPattern.nutritionist.getById.key)
     @UseFilters(ProxyMessengerFilter)
-    async getById(@Payload() payload: { id: string }): Promise<ProxyMessage<Nutritionist>> {
+    async getById(
+        @Payload() payload: typeof proxyPattern.nutritionist.getById.payload
+    ): Promise<ProxyMessage<typeof proxyPattern.nutritionist.getById.response>> {
         return { payload: await this.nutritionistService.findOneWhere({ id: payload.id }) };
     }
 

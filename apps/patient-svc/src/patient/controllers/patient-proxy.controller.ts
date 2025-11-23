@@ -44,11 +44,13 @@ export class PatientProxyController {
         patientRelations.forEach(relation => {
             patientIds.add(relation.patientId);
         });
+        const patientsList = await this.patientService.findManyByIds(
+            Array.from(patientIds), {
+            removeKeys: ['nutritionists']
+        });
+
         return {
-            payload: await this.patientService.findManyByIds(
-                Array.from(patientIds), {
-                removeKeys: ['nutritionists']
-            })
+            payload: patientsList.items
         };
     }
 
@@ -70,10 +72,12 @@ export class PatientProxyController {
     async getManyByIds(
         @Payload() payload: typeof proxyPattern.patient.getManyByIds.payload
     ): Promise<ProxyMessage<typeof proxyPattern.patient.getManyByIds.response>> {
+        const patientsList = await this.patientService.findManyByIds(
+            payload.ids, {
+            ...payload.options
+        });
         return {
-            payload: await this.patientService.findManyByIds(payload.ids, {
-                ...payload.options
-            })
+            payload: patientsList.items
         };
     }
 

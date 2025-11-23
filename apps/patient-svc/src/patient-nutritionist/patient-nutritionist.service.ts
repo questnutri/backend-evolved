@@ -29,7 +29,7 @@ export class PatientNutritionistService implements ServiceContract<PatientNutrit
     async findOneWhere(where: any): Promise<Patient> {
         const foundPatient = await this.patientNutritionistRepository.findOne({ where, relations: ['patient'] });
         if (!foundPatient) {
-            throw new NotFoundException(errorMessagePattern.patient.notFound.key);
+            throw new NotFoundException(errorMessagePattern.patient.notFound.fn());
         }
         return foundPatient.patient;
     }
