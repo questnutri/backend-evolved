@@ -9,6 +9,7 @@ import {
     NutritionistFindOptions,
     FindUserOptions,
 } from "../../dto";
+import { ContextUser } from "../context-user";
 
 const pattern = <SEND = any, RECEIVE = any>(key: string) => {
     return {
@@ -40,7 +41,7 @@ export const proxyPattern = {
             options?: PatientFindOptions & PaginationQuery
         }, Patient[]>('patient.getAll'),
         softDeletionById: pattern<{ id: string }, boolean>('patient.softDeletionById'),
-        findAllFromNutritionist: 'patient.findAllFromNutritionist',//data: { nutritionistId: string }
+        findAllFromNutritionist: pattern<{ nutritionistId: string }, Patient[]>('patient.findAllFromNutritionist'),
         isRelatedToNutritionist: pattern<{ patientId: string, nutritionistId: string }, boolean>('patient.isRelatedToNutritionist'),
         water: {
             creation: 'patient.water.creation', //data: ProxyWaterGoalDto
@@ -72,8 +73,10 @@ export const proxyPattern = {
     },
     record: {
         weight: {
-            getLast: pattern<{ patientId: string }, WeightRecord | null>('record.weight.getLast'),
-            getAll: pattern<{patientId: string}, WeightRecord[]>('record.weight.getAll')
+            getLast: pattern<{ 
+                patientId: string,
+                ctxUser: ContextUser
+            }, WeightRecord | null>('record.weight.getLast'),
         }
     }
 }

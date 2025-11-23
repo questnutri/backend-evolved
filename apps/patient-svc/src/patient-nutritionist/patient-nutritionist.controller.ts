@@ -1,17 +1,24 @@
 import { Controller, UseFilters } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import { PatientNutritionistService } from './patient-nutritionist.service';
-import { ProxyMessage, Patient, ProxyMessengerFilter, proxyPattern } from '@backend-evolved/shared';
+import { ProxyMessage, ProxyMessengerFilter, proxyPattern, removePropertiesForMany } from '@backend-evolved/shared';
 
 @Controller()
 export class PatientNutritionistController {
     constructor(private readonly patientNutritionistService: PatientNutritionistService) { }
 
-    @MessagePattern(proxyPattern.patient.findAllFromNutritionist)
+    @MessagePattern(proxyPattern.patient.findAllFromNutritionist.key)
     @UseFilters(ProxyMessengerFilter)
-    async findAllPatients(@Payload() data: { nutritionistId: string }): Promise<ProxyMessage<Patient[]>> {
-        const patientNutritionistArray = await this.patientNutritionistService.findAll({ ...data });
-        const patients = patientNutritionistArray.map(pn => pn.patient);
+    async findAllPatients(
+        @Payload() data: typeof proxyPattern.patient.findAllFromNutritionist.payload
+    ): Promise<ProxyMessage<
+        typeof proxyPattern.patient.findAllFromNutritionist.response
+    >> {
+        const patientNutritionistArray = await this.patientNutritionistService.findAll({
+            where: { nutritionistId: data.nutritionistId },
+            limit: 999
+        });
+        const patients = removePropertiesForMany(patientNutritionistArray.map(pn => pn.patient), ['nutritionists']);
         return { payload: patients };
     }
 
@@ -20,6 +27,6 @@ export class PatientNutritionistController {
     async isNutritionistRelated(data: typeof proxyPattern.patient.isRelatedToNutritionist.payload): 
         Promise<ProxyMessage<typeof proxyPattern.patient.isRelatedToNutritionist.response>> 
     {
-        return { payload: (await this.patientNutritionistService.findOneWhere(data)) !== null };
+        return { payload: (await this.patientNutritionistService.findOnePatient(data)) !== null };
     }
 }

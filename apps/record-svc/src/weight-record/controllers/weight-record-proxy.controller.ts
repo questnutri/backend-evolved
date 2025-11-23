@@ -20,19 +20,6 @@ export class WeightRecordProxyController {
         @Inject(NUTRITIONIST_SERVICE_PROXY_NAME) private readonly nutritionistProxyClient: ClientProxy,
     ) { }
 
-    @MessagePattern(proxyPattern.record.weight.getAll.key)
-    @UseFilters(ProxyMessengerFilter)
-    async handleFindAll(
-        @Payload() payload: typeof proxyPattern.record.weight.getAll.payload
-    ): Promise<
-        ProxyMessage<typeof proxyPattern.record.weight.getAll.response>
-    > {
-        const recordList = await this.weightRecordService.findAll({
-            ...payload
-        });
-        return { payload: recordList.items };
-    }
-
     @MessagePattern(proxyPattern.record.weight.getLast.key)
     @UseFilters(ProxyMessengerFilter)
     async handleGetLast(
@@ -40,25 +27,26 @@ export class WeightRecordProxyController {
     ): Promise<
         ProxyMessage<typeof proxyPattern.record.weight.getLast.response>
     > {
-        const lastRecordList = (await this.weightRecordService.findAll({
+        const lastRecordList = (await this.weightRecordService.findAll(
+            payload.ctxUser, {
             patientId: payload.patientId,
             page: 1,
             limit: 1
         }));
-        if(lastRecordList.items.length === 0) {
+        if (lastRecordList.items.length === 0) {
             return { payload: null };
         }
 
         const lastRecord = lastRecordList.items[0];
 
-        if(lastRecord.registeredBy.role === UserRole.NUTRITIONIST) {
+        if (lastRecord.registeredBy.role === UserRole.NUTRITIONIST) {
             const nutritionistData = await sendProxyMessage<
                 typeof proxyPattern.nutritionist.getById.response,
                 typeof proxyPattern.nutritionist.getById.payload
             >({
                 proxy: this.nutritionistProxyClient,
                 pattern: proxyPattern.nutritionist.getById.key,
-                data: { 
+                data: {
                     id: lastRecord.registeredBy.userId
                 },
                 options: {

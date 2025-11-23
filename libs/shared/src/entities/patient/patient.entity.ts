@@ -1,4 +1,4 @@
-import { Column, Entity, OneToMany, PrimaryColumn } from 'typeorm';
+import { Column, DeleteDateColumn, Entity, OneToMany, PrimaryColumn } from 'typeorm';
 import { PatientNutritionist } from './patient-nutritionist.entity';
 import { WaterGoal } from './water-goal.entity';
 import { ApiProperty } from '@nestjs/swagger';
@@ -76,6 +76,9 @@ export class Patient {
     @OneToMany(() => PatientNutritionist, pn => pn.patient)
     @ApiProperty({ type: () => [Nutritionist] })
     nutritionists: PatientNutritionist[];
+
+    @DeleteDateColumn()
+    deletedAt?: Date | null;
 
     hasNutritionist(nutritionistId: string): boolean {
         if (this.nutritionists) {

@@ -6,7 +6,8 @@ import {
     PaginationQuery,
     RefreshToken,
     RegisterUserDto,
-    removeProperties,
+    removePropertiesForMany,
+    removePropertyForOne,
     ROOT_ADMIN_EMAIL,
     ROOT_ADMIN_ID,
     User,
@@ -38,7 +39,7 @@ export class UserService {
             role: userData.role
         });
         const savedUser = await this.userRepository.save(user, {reload: true});
-        return removeProperties([savedUser], ['passwordHash'])[0];
+        return removePropertyForOne(savedUser, ['passwordHash']);
     }
 
     async findAll(find?: FindUserOptions & PaginationQuery): Promise<User[]> {
@@ -54,7 +55,7 @@ export class UserService {
             take: limit || undefined,
         });
 
-        users = removeProperties(users, find?.removeKeys);
+        users = removePropertiesForMany(users, find?.removeKeys);
 
         return users;
     }

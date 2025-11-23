@@ -4,6 +4,7 @@ import { NutritionistRestController } from './controllers/nutritionist-rest.cont
 import { AUTH_SERVICE_PROXY_NAME, PATIENT_SERVICE_PROXY_NAME, provideProxyService } from '@backend-evolved/shared';
 import { dbConnection } from '../database/db-connection';
 import { NutritionistProxyController } from './controllers/nutritionist-proxy.controller';
+import { AddressService } from '../address/address.service';
 
 @Module({
     imports: [
@@ -15,6 +16,7 @@ import { NutritionistProxyController } from './controllers/nutritionist-proxy.co
     ],
     providers: [
         NutritionistService,
+        AddressService,
         provideProxyService(AUTH_SERVICE_PROXY_NAME),
         provideProxyService(PATIENT_SERVICE_PROXY_NAME)
     ],

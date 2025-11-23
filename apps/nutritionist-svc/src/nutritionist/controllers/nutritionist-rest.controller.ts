@@ -1,19 +1,36 @@
-import { Controller, Get, Post, Body, Inject, UseGuards, UseFilters, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import {
+    Controller,
+    Get, Post,
+    Body,
+    Inject,
+    UseGuards,
+    UseFilters,
+    InternalServerErrorException,
+    NotFoundException,
+    Query,
+    Patch
+} from '@nestjs/common';
 import { NutritionistService } from '../nutritionist.service';
 import {
-    BodyCreatePatientDto,
-    CreateNutritionistDto, Patient,
-    PATIENT_SERVICE_PROXY_NAME,
+    CreateNutritionistDto, PATIENT_SERVICE_PROXY_NAME,
     JwtRoleGuard,
     ControllerExceptionFilter, AUTH_SERVICE_PROXY_NAME, proxyPattern,
     ContextUser,
     sendProxyMessage,
-    User,
-    IsRelatedGuard,
-    GenerateBadRequestResponse,
-    Nutritionist
+    User, GenerateBadRequestResponse,
+    NutritionistIncludeOptions,
+    UpdateNutritionistDto,
+    errorMessagePattern
 } from '@backend-evolved/shared';
-import { ApiOkResponse, ApiOperation, ApiConflictResponse, ApiBadRequestResponse, ApiBearerAuth, ApiSecurity, ApiCreatedResponse, ApiExcludeEndpoint, ApiTags } from '@nestjs/swagger';
+import {
+    ApiOkResponse,
+    ApiOperation,
+    ApiConflictResponse, ApiBearerAuth,
+    ApiSecurity,
+    ApiCreatedResponse,
+    ApiExcludeEndpoint,
+    ApiTags
+} from '@nestjs/swagger';
 import { ClientProxy } from '@nestjs/microservices';
 
 @ApiTags('Nutritionist')
@@ -54,9 +71,14 @@ export class NutritionistRestController {
     })
     @UseGuards(JwtRoleGuard(['nutritionist']))
     @UseFilters(ControllerExceptionFilter)
-    async getMe(@ContextUser() ctxUser: ContextUser): Promise<any> {
-        const nutritionist = await this.nutritionistService.findOneWhere({ id: ctxUser.id });
-        if (!nutritionist) throw new NotFoundException("Nutritionist not found");
+    async getMe(
+        @ContextUser() ctxUser: ContextUser,
+        @Query() query: NutritionistIncludeOptions
+    ): Promise<any> {
+        const nutritionist = await this.nutritionistService.findOne({
+            ...query,
+            where: { id: ctxUser.id },
+        });
         const userNutritionist = await sendProxyMessage<User>({
             proxy: this.authServiceProxy,
             pattern: proxyPattern.user.getOneById,
@@ -73,6 +95,36 @@ export class NutritionistRestController {
             ...nutritionist,
             ...userNutritionist
         };
+    }
+
+    @Patch('me')
+    @ApiOperation({
+        summary: 'Update information about the logged nutritionist',
+        description: 'Update the profile information of the currently logged-in nutritionist.'
+    })
+    @ApiBearerAuth('bearer')
+    @ApiSecurity('bearer')
+    @UseGuards(JwtRoleGuard(['nutritionist']))
+    @UseFilters(ControllerExceptionFilter)
+    async updateMe(
+        @ContextUser() ctxUser: ContextUser,
+        @Body() body: Partial<UpdateNutritionistDto>
+    ): Promise<any> {
+        const foundNutritionist = await this.nutritionistService.findOne({ 
+            where: { id: ctxUser.id },
+            relations: ['addresses']
+        });
+        if(body.mainAddress) {
+            const doesAddressBelongToNutritionist = foundNutritionist.addresses.some(addr => addr.id === body.mainAddress);
+            if(!doesAddressBelongToNutritionist) {
+                throw new NotFoundException(
+                    errorMessagePattern.nutritionist.address.notFound.fn()
+                )
+            }
+        }
+
+        const updatedNutritionist = await this.nutritionistService.updateOne(foundNutritionist, body);
+        return updatedNutritionist;
     }
 
     @Post('register')

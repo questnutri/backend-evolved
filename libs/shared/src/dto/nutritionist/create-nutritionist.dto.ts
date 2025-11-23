@@ -2,11 +2,12 @@ import { IntersectionType, ApiProperty } from "@nestjs/swagger";
 import {
     IsEnum,
     IsNotEmpty,
+    IsOptional,
     IsString
 } from 'class-validator';
 import { DocumentType } from "../../enums/document-type.enum";
 import { LoginUserDto } from "../auth/login-user.dto";
-
+import { Gender } from "../../enums";
 
 export class CreateNutritionistDto extends IntersectionType(LoginUserDto) {
     @ApiProperty({
@@ -44,6 +45,15 @@ export class CreateNutritionistDto extends IntersectionType(LoginUserDto) {
     @IsString()
     @IsNotEmpty()
     crn: string;
+
+    @ApiProperty({
+        description: 'Gender of the nutritionist',
+        required: false,
+        example: Gender.MALE
+    })
+    @IsEnum(Gender)
+    @IsOptional()
+    gender?: Gender
 
     @ApiProperty({
         description: 'Document type of the nutritionist',

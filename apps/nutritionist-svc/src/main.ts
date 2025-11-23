@@ -1,16 +1,15 @@
-import { NutritionistModule } from './nutritionist/nutritionist.module';
 import { DocumentBuilder } from '@nestjs/swagger';
-import { 
+import {
     ControllerExceptionFilter,
     NestApplicationBuilder,
-    generateNestApplication,
-    provideJaegerTracing
+    generateNestApplication
 } from '@backend-evolved/shared';
+import { NutritionistServiceModule } from './service.module';
 
 async function bootstrap() {
     await generateNestApplication(
         NestApplicationBuilder
-            .forModule(NutritionistModule)
+            .forModule(NutritionistServiceModule)
             .setServiceName('Nutritionist Service')
             .setJaeger('nutritionist-svc')
             .setPort(process.env.DEV_NUTRITIONIST_SERVICE_PORT ?? '3000')

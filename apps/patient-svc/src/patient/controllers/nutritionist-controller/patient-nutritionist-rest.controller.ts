@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Patch, Post, Put, Query, UseFilters, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query, UseFilters, UseGuards } from '@nestjs/common';
 import { PatientService } from '../../patient.service';
 import {
     JwtRoleGuard,
@@ -12,10 +12,15 @@ import {
     DietIncludeOptions,
     FilterQuery,
     ListResponse,
-    normalizeToList
+    normalizeToList,
+    UpdatePatientDto_Nutritionist,
+    removePropertyForOne,
+    WeightRecord,
+    UserRole
 } from '@backend-evolved/shared';
 import { ApiOperation, ApiBearerAuth, ApiSecurity, ApiCreatedResponse, ApiTags, ApiOkResponse } from '@nestjs/swagger';
 import { PatientNutritionistService } from '../../../patient-nutritionist/patient-nutritionist.service';
+import { request } from 'http';
 
 @ApiTags('Nutritionist Interactions')
 @Controller()
@@ -36,7 +41,7 @@ export class PatientNutritionistRestController {
         @ContextUser() ctxUser: ContextUser,
         @Body() body: BodyCreatePatientDto
     ): Promise<Patient> {
-        return await this.patientService.createOne({ ...body, nutritionistId: ctxUser.id });
+        return await this.patientService.createOne({ ...body, nutritionistId: ctxUser.id } as any);
     }
 
     @Get('all')
@@ -55,10 +60,12 @@ export class PatientNutritionistRestController {
     ): Promise<ListResponse<Patient>> {
         const { includeDiets, page, limit } = query;
 
-        const patientRelations = await this.patientNutritionistService.findAll({
-            where: { nutritionistId: ctxUser.id },
-            page, limit
-        });
+        const patientRelations = await this.patientNutritionistService.findAll(
+            {
+                where: { nutritionistId: ctxUser.id },
+                page,
+                limit,
+            });
         if (patientRelations.length === 0) return normalizeToList([], 0, 1, 20);
         const patientIds = new Set<string>();
         patientRelations.forEach(relation => {
@@ -66,13 +73,16 @@ export class PatientNutritionistRestController {
         });
 
         return await this.patientService.findManyByIds(
-            Array.from(patientIds), {
+            Array.from(patientIds), ctxUser, {
             ...query,
             ...FilterQuery.forClass(Patient).withKeys(['name', 'email', "documentNumber"]).filter(filter),
             ...SelectQuery.forClass(Patient).select(select),
-            ...includeDiets ? { includeDiets: true } : {},
+            ...includeDiets ? { includeDiets: false } : {},
             includeLastWeight: false,
-            removeKeys: ['nutritionists']
+            removeKeys: [
+                'nutritionists',
+                'deletedAt'
+            ],
         });
     }
 
@@ -90,16 +100,51 @@ export class PatientNutritionistRestController {
             PaginationQuery &
             PatientIncludeOptions,
     ): Promise<Patient> {
-        const foundRelation = await this.patientNutritionistService.findOneWhere({
+        let foundRelation = await this.patientNutritionistService.findOne({
             nutritionistId: ctxUser.id,
             patientId
         });
-        return await this.patientService.findOne({
-            where: { id: foundRelation.id },
-            ...query,
-            includeMeals: false,
-            removeKeys: ['nutritionists']
-        });
+
+        let patient = await this.patientService.applyIncludeOptionsOnOne(
+            {
+                ...query,
+                includeLastWeight: true,
+                includeNutritionists: false
+            },
+            foundRelation.patient,
+            ctxUser
+        );
+        patient = this.patientService.applyHealthCalculation(patient);
+
+        let lastWeight = ((patient as any).lastWeight as WeightRecord)
+
+        if (
+            lastWeight &&
+            lastWeight.registeredBy &&
+            lastWeight.registeredBy.role === UserRole.NUTRITIONIST &&
+            lastWeight.registeredBy.userId !== ctxUser.id
+        ) {
+            lastWeight = {
+                ...lastWeight,
+                registeredBy: {
+                    role: UserRole.PATIENT,
+                    userId: patient.id
+                }
+            };
+            (patient as any).lastWeight = lastWeight;
+        }
+
+        foundRelation = removePropertyForOne(foundRelation, [
+            'patient',
+            'patientId',
+            'nutritionistId',
+            'deletedAt'
+        ]);
+
+        return {
+            ...patient,
+            ...foundRelation
+        } as unknown as Patient;
     }
 
     @Patch(':patientId')
@@ -112,16 +157,35 @@ export class PatientNutritionistRestController {
     async updatePatientById(
         @Param('patientId') patientId: string,
         @ContextUser() ctxUser: ContextUser,
-        @Body() body: Partial<BodyCreatePatientDto>
+        @Body() body: UpdatePatientDto_Nutritionist
     ): Promise<Patient> {
-        const foundRelation = await this.patientNutritionistService.findOneWhere({
+        const foundRelation = await this.patientNutritionistService.findOnePatient({
             nutritionistId: ctxUser.id,
             patientId
         });
         return await this.patientService.updateOne(
             foundRelation,
-            body
+            body as any
         );
+    }
+
+    @Delete(':patientId')
+    @ApiOperation({ summary: 'Update patient details by ID for logged nutritionist' })
+    @ApiOkResponse({ description: 'Patient details updated successfully', type: Patient })
+    @ApiBearerAuth('bearer')
+    @ApiSecurity('bearer')
+    @UseGuards(JwtRoleGuard(['nutritionist']))
+    @UseFilters(ControllerExceptionFilter)
+    async deletePatientById(
+        @Param('patientId') patientId: string,
+        @ContextUser() ctxUser: ContextUser,
+        @Body() body: UpdatePatientDto_Nutritionist
+    ): Promise<void> {
+        const foundRelation = await this.patientNutritionistService.findOne({
+            nutritionistId: ctxUser.id,
+            patientId
+        });
+        await this.patientNutritionistService.deleteOne(foundRelation);
     }
 
 }

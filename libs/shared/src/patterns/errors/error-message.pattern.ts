@@ -138,6 +138,11 @@ export const errorMessagePattern = {
             fn: (error?: any) => {
                 return 'Failed to delete nutritionist: ' + (error?.detail ?? 'unknown');
             }
+        },
+        address: {
+            notFound: {
+                fn: () => 'Address not found'
+            },
         }
     },
     admin: {
@@ -153,6 +158,11 @@ export const errorMessagePattern = {
             patientIdIsRequired: {
                 fn: () => 'Nutritionist must send patient ID via body to create a weight record'
             }
+        }
+    },
+    server: {
+        didnotSendRightRequest: {
+            fn: () => 'The service did not send a valid request'
         }
     }
 }

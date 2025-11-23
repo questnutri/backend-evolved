@@ -23,4 +23,6 @@ export * from './response';
 
 export * from './queries';
 
+export * from './request';
+
 // export * from './proxy';

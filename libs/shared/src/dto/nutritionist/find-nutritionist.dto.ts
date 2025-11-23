@@ -6,9 +6,12 @@ import { SearchDto } from "../search/search.dto";
 export class NutritionistIncludeOptions {
     @IsOptional()
     includePatients?: boolean;
-    
+
     @IsOptional()
     includeDiets?: boolean;
+
+    @IsOptional()
+    includeAddresses?: boolean;
 }
 
 export class NutritionistFindOptions extends
@@ -16,4 +19,5 @@ export class NutritionistFindOptions extends
         SearchDto<Nutritionist>,
         NutritionistIncludeOptions
     ) {
+    isDeleted?: boolean;
 }

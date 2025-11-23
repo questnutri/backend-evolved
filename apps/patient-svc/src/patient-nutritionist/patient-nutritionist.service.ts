@@ -14,9 +14,9 @@ export class PatientNutritionistService implements ServiceContract<PatientNutrit
         options?: PatientFindOptions & PaginationQuery
     ): Promise<PatientNutritionist[]> {
         let page = options?.page || 1;
-        if(page < 1) page = 1;
+        if (page < 1) page = 1;
         let limit = options?.limit || 20;
-        if(limit < 1) limit = 1;
+        if (limit < 1) limit = 1;
 
         return await this.patientNutritionistRepository.find({
             where: options?.where,
@@ -26,12 +26,20 @@ export class PatientNutritionistService implements ServiceContract<PatientNutrit
         });
     }
 
-    async findOneWhere(where: any): Promise<Patient> {
+    async findOnePatient(where: any): Promise<Patient> {
         const foundPatient = await this.patientNutritionistRepository.findOne({ where, relations: ['patient'] });
         if (!foundPatient) {
             throw new NotFoundException(errorMessagePattern.patient.notFound.fn());
         }
         return foundPatient.patient;
+    }
+
+    async findOne(where: any) {
+        const foundRelation = await this.patientNutritionistRepository.findOne({ where, relations: ['patient'] });
+        if (!foundRelation) {
+            throw new NotFoundException(errorMessagePattern.patient.notFound.fn());
+        }
+        return foundRelation;
     }
 
     async createOne(data: Partial<PatientNutritionist>): Promise<PatientNutritionist> {
@@ -43,11 +51,8 @@ export class PatientNutritionistService implements ServiceContract<PatientNutrit
         throw new Error('Method not implemented.');
     }
 
-    async deleteOne(query: KeysOf<PatientNutritionist>): Promise<void> {
-        const result = await this.patientNutritionistRepository.delete(query);
-        if (result.affected === 0) {
-            throw new NotFoundException('PatientNutritionist relation not found');
-        }
+    async deleteOne(relation: PatientNutritionist): Promise<void> {
+        await this.patientNutritionistRepository.softRemove(relation);
     }
 
     async isNutritionistRelated(patientId: string, nutritionistId: string): Promise<boolean> {

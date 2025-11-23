@@ -26,13 +26,15 @@ import {
     PatientFindOptions,
     buildFiltering,
     PaginationQuery,
-    removeProperties,
+    removePropertiesForMany,
     SchedulerHelper,
     LevelOfActivity,
     ListResponse,
     normalizeToList,
     RECORD_SERVICE_PROXY_NAME,
-    WeightRecord
+    WeightRecord,
+    RequestedBy,
+    removePropertyForOne
 } from '@backend-evolved/shared';
 import { firstValueFrom, last } from 'rxjs';
 import { In, QueryFailedError, Repository } from 'typeorm';
@@ -54,6 +56,7 @@ export class PatientService implements ServiceContract<Patient> {
     ) { }
 
     async findAll(
+        requestedBy: RequestedBy,
         find?: PatientFindOptions & PaginationQuery
     ): Promise<ListResponse<Patient>> {
         let page = find?.page || 1;
@@ -74,14 +77,20 @@ export class PatientService implements ServiceContract<Patient> {
             take: limit || undefined,
         });
 
-        foundPatients = await this.applyIncludes({ ...find, includeFoods: false, includeMeals: false }, foundPatients);
-        foundPatients = removeProperties(foundPatients, find?.removeKeys);
+        foundPatients = await this.applyIncludeOptionsOnMany({
+            ...find, includeFoods: false, includeMeals: false
+        },
+            foundPatients,
+            requestedBy
+        );
+        foundPatients = removePropertiesForMany(foundPatients, find?.removeKeys);
 
         return normalizeToList(foundPatients, total, page, limit);
     }
 
     async findManyByIds(
         ids: string[],
+        requestedBy: RequestedBy,
         options?: PatientFindOptions & PaginationQuery
     ): Promise<ListResponse<Patient>> {
         if (options) {
@@ -89,15 +98,22 @@ export class PatientService implements ServiceContract<Patient> {
                 id: In(ids),
             }
         }
-        return await this.findAll(options);
+        return await this.findAll(requestedBy, options);
     }
 
     async findOne(
+        requestedBy: RequestedBy,
         options?: PatientFindOptions
     ): Promise<Patient> {
+        let where = {
+            ...options?.where,
+            deletedAt: null
+        }
+
         let patient = await this.patientRepository.findOne({
-            where: options?.where,
-            relations: options?.relations || ['nutritionists']
+            where,
+            relations: options?.relations || ['nutritionists'],
+            withDeleted: true,
         });
         if (!patient) {
             throw new NotFoundException(
@@ -108,11 +124,18 @@ export class PatientService implements ServiceContract<Patient> {
             );
         }
 
-        patient = await this.applyIncludes({ ...options, includeLastWeight: true }, [patient]).then(res => res[0]);
-        patient = this.applyPatterns(patient!);
-        patient = removeProperties([patient!], options?.removeKeys)[0];
+        patient = await this.applyIncludeOptionsOnOne({
+            ...options,
+            includeLastWeight: true
+        },
+            patient,
+            requestedBy
+        );
+        patient = this.applyHealthCalculation(patient!);
+        patient = removePropertiesForMany([patient!], options?.removeKeys)[0];
 
         return patient!;
+
     }
 
     async createOne(data: Partial<Patient> & { email: string, nutritionistId: string }): Promise<any> {
@@ -143,15 +166,24 @@ export class PatientService implements ServiceContract<Patient> {
             if (createdUser && "error" in createdUser) {
                 //Patient maybe already exists
                 if (createdUser.detail.includes(errorMessagePattern.auth.emailAlreadyExists.fn())) {
-                    const existingPatient =
+                    let existingPatient =
                         await this.patientRepository.findOneBy({ email: data.email }) ||
                         await this.patientRepository.findOneBy({ documentNumber: data.documentNumber });
                     if (existingPatient) {
-                        const existingRelation = await this.patientNutritionistRepository.findOneBy({
-                            patientId: existingPatient.id,
-                            nutritionistId: data.nutritionistId
-                        });
+                        const existingRelation = await this.patientNutritionistRepository.findOne({
+                            where: {
+                                patientId: existingPatient.id,
+                                nutritionistId: data.nutritionistId
+                            },
+                            withDeleted: true
+                        } );
                         if (existingRelation) { //Patient is already registered with this nutritionist
+                            if(existingRelation.deletedAt) {
+                                existingRelation.deletedAt = null;
+                                await this.patientNutritionistRepository.save(existingRelation);
+                                existingPatient = removePropertyForOne(existingPatient, ['deletedAt']);
+                                return existingPatient;
+                            }
                             throw new ConflictException(errorMessagePattern.patient.alreadyRegisteredWithNutritionist.key);
                         }
                         const patientNutritionist = this.patientNutritionistRepository.create({
@@ -194,12 +226,13 @@ export class PatientService implements ServiceContract<Patient> {
             }
 
             const patient = this.patientRepository.create({ ...data, id });
-            const savedPatient = await this.patientRepository.save(patient);
+            let savedPatient = await this.patientRepository.save(patient);
             const patientNutritionist = this.patientNutritionistRepository.create({
                 patientId: savedPatient.id,
                 nutritionistId: data.nutritionistId
             });
             await this.patientNutritionistRepository.save(patientNutritionist);
+            savedPatient = removePropertyForOne(savedPatient, ['deletedAt']);
             return savedPatient;
         } catch (error: any) {
             if (!(error instanceof ConflictException)) {
@@ -246,11 +279,11 @@ export class PatientService implements ServiceContract<Patient> {
     }
 
     async findAllFromNutritionist(nutritionistId: string) {
-        console.log('Finding all patients for nutritionistId:', nutritionistId);
         const patients = await this.patientRepository
             .createQueryBuilder('patient')
             .innerJoinAndSelect('patient.nutritionists', 'patientNutritionist')
             .where('patientNutritionist.nutritionistId = :nutritionistId', { nutritionistId })
+            .andWhere('patient.deletedAt IS NULL')
             .select([
                 'patient.id',
                 'patient.name',
@@ -261,40 +294,44 @@ export class PatientService implements ServiceContract<Patient> {
         return patients;
     }
 
-    private async applyIncludes(includes: PatientIncludeOptions, foundPatients: Patient[]): Promise<Patient[]> {
-        if (includes?.includeNutritionists) {
-            const treatedPatients: TreatedPatient[] = [];
-            for (const patient of foundPatients) {
-                treatedPatients.push(await this.formatPatientWithNutritionists(patient));
-            }
-            foundPatients = treatedPatients as unknown as Patient[];
+    async applyIncludeOptionsOnOne(
+        includes: PatientIncludeOptions,
+        patient: Patient,
+        requestedBy: RequestedBy
+    ): Promise<Patient> {
+        let p = patient
+        if (
+            requestedBy.role !== UserRole.NUTRITIONIST && //always block nutritionists info
+            includes?.includeNutritionists
+        ) {
+            p = await this.formatPatientWithNutritionists(p)
         }
         if (includes?.includeDiets) {
-            const treatedPatients: TreatedPatient[] = [];
-            for (const patient of foundPatients) {
-                //For bulk operations, load meals and foods will be too expensive on perrformance
-                treatedPatients.push(await this.formatPatientWithDiets(patient, {
-                    includeFoods: includes.includeFoods,
-                    includeMeals: includes.includeMeals
-                }));
-            }
-            foundPatients = treatedPatients as unknown as Patient[];
+            p = await this.formatPatientWithDiets(p, {
+                includeFoods: includes.includeFoods,
+                includeMeals: includes.includeMeals
+            }, requestedBy)
         }
         if (includes?.includeLastWeight) {
-            const treatedPatients: Patient[] = [];
-            for (const patient of foundPatients) {
-                treatedPatients.push(await this.formatPatientWithWeight(patient));
-            }
-            foundPatients = treatedPatients as unknown as Patient[];
+            p = await this.formatPatientWithWeight(p, requestedBy)
         }
-        return foundPatients;
+        return p
+    }
+
+    async applyIncludeOptionsOnMany(
+        includes: PatientIncludeOptions,
+        foundPatients: Patient[],
+        requestedBy: RequestedBy
+    ): Promise<Patient[]> {
+        const promises = foundPatients.map(p => this.applyIncludeOptionsOnOne(includes, p, requestedBy))
+        return await Promise.all(promises)
     }
 
     async formatPatientWithNutritionists(patient: Patient): Promise<any> {
         const nutritionists = patient?.nutritionists?.map(n => n.nutritionistId) || [];
         let nutritionistsDetails: Partial<Nutritionist>[] = [];
         if (nutritionists && nutritionists.length > 0) {
-            let proxyResponse = await sendProxyMessage<
+            nutritionistsDetails = await sendProxyMessage<
                 typeof proxyPattern.nutritionist.getManyByIds.response,
                 typeof proxyPattern.nutritionist.getManyByIds.payload
             >({
@@ -303,19 +340,17 @@ export class PatientService implements ServiceContract<Patient> {
                 data: {
                     ids: nutritionists,
                     options: {
-                        removeKeys: ['documentNumber', 'documentType']
+                        removeKeys: [
+                            'documentNumber',
+                            'documentType',
+                            'mainAddress',
+                            'gender',
+                            'deletedAt'
+                        ]
                     }
                 },
                 options: {
                     retry: { count: 3, delay: 2000 }
-                }
-            });
-
-            nutritionistsDetails = proxyResponse.map(n => {
-                const { id, ...rest } = n;
-                return {
-                    ...rest,
-                    nutritionistId: id,
                 }
             });
 
@@ -326,7 +361,7 @@ export class PatientService implements ServiceContract<Patient> {
         };
     }
 
-    private applyPatterns(patient: Patient): Patient {
+    applyHealthCalculation(patient: Patient): Patient {
         const birthYear = patient.dateOfBirth ? new Date(patient.dateOfBirth).getFullYear() : null
         const age = birthYear ? new Date().getFullYear() - birthYear : 0;
         if (patient.heightInCm && (patient as any).lastWeight) {
@@ -372,7 +407,20 @@ export class PatientService implements ServiceContract<Patient> {
         return parseFloat((bmr * (factors[level] || 1.2)).toFixed(2));
     }
 
-    async formatPatientWithDiets(patient: Patient, includes: DietIncludeOptions): Promise<any> {
+    async formatPatientWithDiets(
+        patient: Patient,
+        includes: DietIncludeOptions,
+        requestedBy: RequestedBy
+    ): Promise<any> {
+        let where: any = {
+            patientId: patient.id
+        }
+        if (requestedBy.role === UserRole.NUTRITIONIST) {
+            where = {
+                ...where,
+                nutritionistId: requestedBy.id
+            }
+        }
         const diets = await sendProxyMessage<
             typeof proxyPattern.diet.getAll.response,
             typeof proxyPattern.diet.getAll.payload
@@ -380,9 +428,7 @@ export class PatientService implements ServiceContract<Patient> {
             proxy: this.dietServiceProxy,
             pattern: proxyPattern.diet.getAll.key,
             data: {
-                where: {
-                    patientId: patient.id
-                },
+                where,
                 includes
             },
             options: {
@@ -396,7 +442,7 @@ export class PatientService implements ServiceContract<Patient> {
         };
     }
 
-    async formatPatientWithWeight(patient: Patient): Promise<Patient> {
+    async formatPatientWithWeight(patient: Patient, requestedBy: RequestedBy): Promise<Patient> {
         let weightRecord = await sendProxyMessage<
             typeof proxyPattern.record.weight.getLast.response,
             typeof proxyPattern.record.weight.getLast.payload
@@ -404,11 +450,12 @@ export class PatientService implements ServiceContract<Patient> {
             proxy: this.recordServiceProxy,
             pattern: proxyPattern.record.weight.getLast.key,
             data: {
-                patientId: patient.id
+                patientId: patient.id,
+                ctxUser: requestedBy
             }
         });
 
-        if(weightRecord) {
+        if (weightRecord) {
             const { patientId, ...weightData } = weightRecord;
             if (
                 weightData &&
@@ -417,7 +464,7 @@ export class PatientService implements ServiceContract<Patient> {
             ) {
                 (weightData as any).registeredBy.name = patient.firstName;
             }
-    
+
             (patient as any)['lastWeight'] = weightData;
         } else {
             (patient as any)['lastWeight'] = null;

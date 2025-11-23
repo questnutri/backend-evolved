@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { ContextUser, FindWeightOptions, ListResponse, normalizeToList, PaginationQuery, SchedulerHelper, WeightRecord } from '@backend-evolved/shared';
+import { ContextUser, FindWeightOptions, ListResponse, normalizeToList, PaginationQuery, SchedulerHelper, UserRole, WeightRecord } from '@backend-evolved/shared';
 import { Between, Repository } from 'typeorm';
 
 @Injectable()
@@ -10,7 +10,10 @@ export class WeightRecordService {
         private readonly weightRecordRepository: Repository<WeightRecord>,
     ) { }
 
-    async findAll(find?: { patientId: string } & FindWeightOptions & PaginationQuery): Promise<ListResponse<WeightRecord>> {
+    async findAll(
+        requestedBy: ContextUser,
+        find?: { patientId: string } & FindWeightOptions & PaginationQuery
+    ): Promise<ListResponse<WeightRecord>> {
         const page = find?.page && find.page > 0 ? find.page : 1;
         const limit = find?.limit && find.limit > 0 ? find.limit : 20;
 
@@ -36,7 +39,7 @@ export class WeightRecordService {
             );
         }
 
-        const [items, totalItems] = await this.weightRecordRepository.findAndCount({
+        let [items, totalItems] = await this.weightRecordRepository.findAndCount({
             where,
             skip: (page - 1) * limit,
             take: limit,
@@ -45,10 +48,18 @@ export class WeightRecordService {
             }
         });
 
+        if (requestedBy.role === UserRole.NUTRITIONIST) {
+            items = items.filter(item => {
+                return item.registeredBy.role !== UserRole.NUTRITIONIST || (
+                    item.registeredBy.userId === requestedBy.id
+                )
+            });
+        }
+
         return normalizeToList(items, totalItems, page, limit);
     }
 
-    async create(data: Partial<WeightRecord>, ctxUser: ContextUser): Promise<WeightRecord> {        
+    async create(data: Partial<WeightRecord>, ctxUser: ContextUser): Promise<WeightRecord> {
         const weightRecord = this.weightRecordRepository.create({
             ...data,
             registeredBy: {

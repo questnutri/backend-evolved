@@ -69,8 +69,8 @@ export class WeightRecordRestController {
             patientId = ctxUser.id;
         }
         return await this.weightRecordService.create({
+            ...createWeightRecordDto,
             patientId,
-            ...createWeightRecordDto
         },
             ctxUser
         );
@@ -90,10 +90,12 @@ export class WeightRecordRestController {
         @Query() query: FindWeightOptions & PaginationQuery,
         @ContextUser() ctxUser: ContextUser
     ): Promise<ListResponse<WeightRecord>> {
-        return await this.weightRecordService.findAll({
-            patientId: ctxUser.id,
-            ...query
-        });
+        return await this.weightRecordService.findAll(
+            ctxUser,
+            {
+                patientId,
+                ...query
+            });
     }
 
 }

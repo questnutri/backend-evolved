@@ -14,10 +14,12 @@ import {
     KeysOf,
     Nutritionist,
     NutritionistFindOptions,
+    NutritionistIncludeOptions,
     PaginationQuery,
+    PATIENT_SERVICE_PROXY_NAME,
     proxyPattern,
     RegisterUserDto,
-    removeProperties,
+    removePropertiesForMany,
     sendProxyMessage,
     ServiceContract,
     UserRole
@@ -26,16 +28,18 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { ClientProxy } from '@nestjs/microservices';
 import {
     In,
-    QueryFailedError,
     Repository
 } from 'typeorm';
+import { AddressService } from '../address/address.service';
 
 
 @Injectable()
 export class NutritionistService implements ServiceContract<Nutritionist> {
     constructor(
         @Inject(AUTH_SERVICE_PROXY_NAME) private readonly authServiceProxy: ClientProxy,
+        @Inject(PATIENT_SERVICE_PROXY_NAME) private readonly patientServiceProxy: ClientProxy,
         @InjectRepository(Nutritionist) private readonly nutritionistRepository: Repository<Nutritionist>,
+        private readonly addressService: AddressService,
     ) { }
 
     async findAll(find?: NutritionistFindOptions & PaginationQuery): Promise<Nutritionist[]> {
@@ -54,7 +58,7 @@ export class NutritionistService implements ServiceContract<Nutritionist> {
             select: find?.select
         });
 
-        foundNutritionists = removeProperties(foundNutritionists, find?.removeKeys);
+        foundNutritionists = removePropertiesForMany(foundNutritionists, find?.removeKeys);
 
         return foundNutritionists;
     }
@@ -69,6 +73,28 @@ export class NutritionistService implements ServiceContract<Nutritionist> {
             }
         }
         return await this.findAll(options);
+    }
+
+    async findOne(
+        options?: NutritionistFindOptions
+    ): Promise<Nutritionist> {
+        let nutritionist = await this.nutritionistRepository.findOne({
+            where: options?.where,
+            relations: options?.relations
+        });
+        if (!nutritionist) {
+            throw new NotFoundException(
+                errorMessagePattern
+                    .nutritionist
+                    .notFound
+                    .fn()
+            );
+        }
+
+        nutritionist = await this.applyInclude({ ...options }, nutritionist);
+        nutritionist = removePropertiesForMany([nutritionist!], options?.removeKeys)[0];
+
+        return nutritionist!;
     }
 
     async findOneWhere(where: { [key in keyof Nutritionist]?: any }) {
@@ -140,35 +166,14 @@ export class NutritionistService implements ServiceContract<Nutritionist> {
         }
     }
 
-    async updateOneById(id: string, data: Partial<CreateNutritionistDto>) {
-        try {
-            const result = await this.nutritionistRepository.update({ id }, data);
-            if (result.affected === 0) throw new NotFoundException(
-                errorMessagePattern
-                    .nutritionist
-                    .notFound
-                    .fn()
-            );
-            return await this.nutritionistRepository.findOne({ where: { id } });
-        } catch (error: any) {
-            if (error instanceof HttpException) {
-                throw error;
-            }
-            if (error instanceof QueryFailedError) {
-                throw new ConflictException(error.driverError.detail);
-            }
-            switch (error.source) {
-                case 'ConflictException':
-                    throw new ConflictException(error?.detail);
-                default:
-                    throw new InternalServerErrorException(
-                        errorMessagePattern
-                            .nutritionist
-                            .updateFailed
-                            .fn(error)
-                    );
-            }
-        }
+    async updateOne(nutritionist: Nutritionist, payload: Partial<Nutritionist>) {
+        // Removing unupdatable fields
+        const { email, documentNumber, ...rest } = payload;
+        const updatePayload = { ...rest } as Partial<Nutritionist>;
+
+        this.nutritionistRepository.merge(nutritionist, updatePayload);
+        const saved = await this.nutritionistRepository.save(nutritionist);
+        return this.applyInclude({}, saved)
     }
 
     async deleteOneById(id: string): Promise<void> {
@@ -211,8 +216,64 @@ export class NutritionistService implements ServiceContract<Nutritionist> {
             console.log(nutritionist);
             return true;
         } catch (error) {
-            console.log(error);
             return false;
         }
+    }
+
+    async applyIncludeOnMany(
+        options: NutritionistIncludeOptions,
+        nutritionists: Nutritionist[]
+    ): Promise<Nutritionist[]> {
+
+        for (let i = 0; i < nutritionists.length; i++) {
+            nutritionists[i] = await this.applyInclude(options, nutritionists[i]);
+        }
+
+        return Promise.resolve(nutritionists);
+    }
+
+    async applyInclude(
+        options: NutritionistIncludeOptions,
+        nutritionist: Nutritionist
+    ) {
+        if (!options.includeAddresses && nutritionist.mainAddress) {
+            const address = await this.addressService.findOne({
+                where: { id: nutritionist.mainAddress, nutritionistId: nutritionist.id }
+            });
+            (nutritionist as any).mainAddress = address;
+        }
+        if (options.includeAddresses) {
+            const addresses = await this.addressService.findAll({
+                where: { nutritionistId: nutritionist.id },
+                limit: 99,
+                removeKeys: ['nutritionist', 'nutritionistId']
+            });
+            (nutritionist as any).addresses = addresses.items;
+            if (nutritionist.mainAddress) {
+                let foundOnList = addresses.items.find(
+                    addr => addr.id === nutritionist.mainAddress
+                );
+                if (!foundOnList) { //fallback in case mainAddress is not in the fetched list, rare but possible
+                    foundOnList = await this.addressService.findOne({
+                        where: { id: nutritionist.mainAddress, nutritionistId: nutritionist.id },
+                        removeKeys: ['nutritionist', 'nutritionistId']
+                    });
+                }
+                (nutritionist as any).mainAddress = foundOnList;
+            }
+        }
+        if (options.includePatients) {
+            const patients = await sendProxyMessage<
+                typeof proxyPattern.patient.findAllFromNutritionist.response,
+                typeof proxyPattern.patient.findAllFromNutritionist.payload
+            >({
+                proxy: this.patientServiceProxy,
+                pattern: proxyPattern.patient.findAllFromNutritionist.key,
+                data: { nutritionistId: nutritionist.id },
+            });
+            (nutritionist as any).patients = patients;
+        }
+
+        return nutritionist;
     }
 }
