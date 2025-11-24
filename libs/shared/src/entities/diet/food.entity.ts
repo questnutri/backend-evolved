@@ -42,11 +42,13 @@ export class Food {
         // Must load relations to access diet (meal.diet)
         return this.meal.diet.nutritionistId === nutritionistId;
     }
+
+    isValidForDate(targetDate: Date): boolean {
+        //Checks if food hasn't started yet
+        if (targetDate < this.startDate) return false;
+        //Checks if food has ended
+        if (this.endDate && targetDate > this.endDate) return false;
+        return true;
+    }
+
 }
-
-
-/**
- * Food startDate should be relative to Meal startDate
- * Food endDate should be relative to Meal endDate or before, if deleted
- * Diet can't be created on past dates
- */

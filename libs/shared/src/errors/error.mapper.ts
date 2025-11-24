@@ -28,27 +28,27 @@ export class ErrorMapper {
 
     static handle(error: unknown, captured?: CapturedError): any {
         console.error(`[ErrorMapper] Handling error:`, error);
-        if(ErrorMapper.isErrorOfType(BadRequestException, error)) {
+        if (ErrorMapper.isErrorOfType(BadRequestException, error)) {
             const capturedError = captured || ErrorMapper.capture(error);
             throw new BadRequestException(capturedError.original.response.message || 'Bad request error occurred')
         }
-        
-        if(ErrorMapper.isErrorOfType(UnauthorizedException, error)) {
+
+        if (ErrorMapper.isErrorOfType(UnauthorizedException, error)) {
             const capturedError = captured || ErrorMapper.capture(error);
             throw new UnauthorizedException(capturedError.original.response.message || 'Unauthorized error occurred')
         }
 
-        if(ErrorMapper.isErrorOfType(ForbiddenException, error)) {
+        if (ErrorMapper.isErrorOfType(ForbiddenException, error)) {
             const capturedError = captured || ErrorMapper.capture(error);
             throw new ForbiddenException(capturedError.original.response.message || 'Forbidden error occurred')
         }
 
-        if(ErrorMapper.isErrorOfType(NotFoundException, error)) {
+        if (ErrorMapper.isErrorOfType(NotFoundException, error)) {
             const capturedError = captured || ErrorMapper.capture(error);
             throw new NotFoundException(capturedError.original.response.message || 'Not found error occurred')
         }
 
-        if(ErrorMapper.isErrorOfType(HttpException, error)) {
+        if (ErrorMapper.isErrorOfType(HttpException, error)) {
             const capturedError = captured || ErrorMapper.capture(error);
             throw new HttpException(capturedError.original.message, capturedError.original.status);
         }
@@ -61,7 +61,7 @@ export class ErrorMapper {
             throw new InternalServerErrorException(captured?.detail || 'Internal server error occurred')
         }
 
-        if(ErrorMapper.isErrorOfType(TypeError, error)) {
+        if (ErrorMapper.isErrorOfType(TypeError, error)) {
             const capturedError = captured || ErrorMapper.capture(error);
             throw new InternalServerErrorException(`Internal server error occurred. ${capturedError.detail}`);
         }
@@ -79,19 +79,17 @@ export class ErrorMapper {
                     throw new ConflictException(
                         `Unique constraint violation in table "${table}". Detail: ${detail}`
                     );
-                case '22P02': { // invalid_text_representation
-                    const routine = capturedError.original?.driverError?.routine;
-                    const where = capturedError.original?.driverError?.where;
-                    switch (routine) {
-                        case 'string_to_uuid':
-                            throw new BadRequestException(
-                                `Invalid input syntax for type UUID. Check every UUID sent.`
-                            );
-                        default:
-                            throw new BadRequestException(
-                                `Invalid input syntax (${routine || 'unknown type'}). Context: ${where || 'N/A'}`
-                            );
+                case '22P02': {
+                    const routine = capturedError.original?.driverError?.routine
+                    const val = capturedError.original?.parameters?.[0]
+                    if (routine === 'string_to_uuid') {
+                        if (typeof val === 'string' && val.includes('{{') && val.includes('}}')) {
+                            throw new BadRequestException(`Template variable sent instead of UUID`)
+                        }
+                        throw new BadRequestException(`Invalid input syntax for type UUID`)
                     }
+                    const where = capturedError.original?.driverError?.where
+                    throw new BadRequestException(`Invalid input syntax (${routine || 'unknown'}). Context: ${where || 'N/A'}`)
                 }
                 default:
                     console.error(`Unhandled captured: `, capturedError);

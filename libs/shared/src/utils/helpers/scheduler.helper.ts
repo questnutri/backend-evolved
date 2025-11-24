@@ -221,6 +221,31 @@ export class SchedulerHelper {
         return this.buildDate({ startOfDay: true });
     }
 
+    startOfMonth(date?: Date, timeZone?: number): Date {
+        const tz = this.tzForCall(timeZone)
+        const baseDate = date || new Date()
+        const parts = this.localPartsFromInstant(baseDate, tz)
+        
+        // Return date set to 00:00:00 of the first day of the month
+        return this.utcFromLocalParts(parts.year, parts.month, 1, 0, 0, 0, tz)
+    }
+
+    endOfMonth(date?: Date, timeZone?: number): Date {
+        const tz = this.tzForCall(timeZone)
+        const baseDate = date || new Date()
+        const parts = this.localPartsFromInstant(baseDate, tz)
+        
+        // Get the last day of the month by going to the first day of next month and subtracting 1 day
+        const firstDayNextMonth = this.utcFromLocalParts(parts.year, parts.month + 1, 1, 0, 0, 0, tz)
+        const lastDayOfMonth = new Date(firstDayNextMonth.getTime() - 86400000) // subtract 1 day
+        
+        // Get the day number from the last day
+        const lastDayParts = this.localPartsFromInstant(lastDayOfMonth, tz)
+        
+        // Return date set to 23:59:59 of the last day
+        return this.utcFromLocalParts(lastDayParts.year, lastDayParts.month, lastDayParts.day, 23, 59, 59, tz)
+    }
+
     normalizeToStartOfDay(date: Date, timeZone?: number): Date {
         const tz = this.tzForCall(timeZone)
         const p = this.localPartsFromInstant(date, tz)

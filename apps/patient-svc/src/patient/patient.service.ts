@@ -1,7 +1,5 @@
 import {
-    ConflictException,
-    HttpException,
-    Inject,
+    ConflictException, Inject,
     Injectable,
     InternalServerErrorException,
     NotFoundException
@@ -9,9 +7,7 @@ import {
 import { ClientProxy, RpcException } from '@nestjs/microservices';
 import { InjectRepository } from '@nestjs/typeorm';
 import {
-    UserRole,
-    RegisterUserDto,
-    Patient,
+    UserRole, Patient,
     AUTH_SERVICE_PROXY_NAME,
     PatientNutritionist,
     ServiceContract,
@@ -31,13 +27,10 @@ import {
     LevelOfActivity,
     ListResponse,
     normalizeToList,
-    RECORD_SERVICE_PROXY_NAME,
-    WeightRecord,
-    RequestedBy,
+    RECORD_SERVICE_PROXY_NAME, RequestedBy,
     removePropertyForOne
 } from '@backend-evolved/shared';
-import { firstValueFrom, last } from 'rxjs';
-import { In, QueryFailedError, Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { error } from 'console';
 
 export type TreatedPatient = Partial<Omit<Patient, 'nutritionists'>> & { nutritionists: Nutritionist[] };

@@ -12,7 +12,8 @@ import {
     DietStatus,
     errorMessagePattern,
     DietIncludeOptions,
-    DietFindOptions
+    DietFindOptions,
+    DietPlanFindOptions
 } from '@backend-evolved/shared';
 import { Injectable, NotFoundException, Inject, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -57,8 +58,8 @@ export class DietService implements ServiceContract<Diet> {
             ...find?.where,
         }
         const relations = [];
-        if(find?.includeMeals) relations.push('meals');
-        if(find?.includeFoods) relations.push('meals.foods');
+        if (find?.includeMeals) relations.push('meals');
+        if (find?.includeFoods) relations.push('meals.foods');
         const foundDiet = await this.dietRepository.findOne({
             where,
             relations
@@ -199,10 +200,10 @@ export class DietService implements ServiceContract<Diet> {
             };
             updatePayload.startDate = scheduler.buildDate({ date: payload.startDate, startOfDay: true });
         }
-        if(payload.endDate || payload.endDate === null){
-            if(diet.status === DietStatus.ACTIVE){
-                if(diet.endDate) {
-                    if(requestDate > diet.endDate){
+        if (payload.endDate || payload.endDate === null) {
+            if (diet.status === DietStatus.ACTIVE) {
+                if (diet.endDate) {
+                    if (requestDate > diet.endDate) {
                         throw new BadRequestException(
                             errorMessagePattern
                                 .diet
@@ -230,19 +231,75 @@ export class DietService implements ServiceContract<Diet> {
         if (result.affected === 0) throw new NotFoundException('Diet not found');
     }
 
-    async getDietPlan(diet: Diet, date?: string, length: number = 1): Promise<any> {
-        const scheduler = new SchedulerHelper(diet.timeZone);
-        if (length === 0) length = 1;
-        else if (length < 0) length *= (-1);
+    async getDietPlan(find: DietPlanFindOptions): Promise<any> {
+        //TODO: Add meal records if includeRecords is true
+        let { diet, date, length, monthlyView } = find;
+        const scheduler = new SchedulerHelper(diet.timeZone)
+        date = scheduler.buildDate({ date: date, startOfDay: true })
+        if (!length || length === 0) length = 1;
+        else if (length < 0) length *= -1
 
-        const requestDate = scheduler.buildDate({ date, startOfDay: true });
-        const startDate = scheduler.buildDate({ date, startOfDay: true, offset: { month: -length } });
-        const endDate = scheduler.buildDate({ date, startOfDay: true, offset: { month: +length } });
+        // Calculate the range dates
+        const rangeStartDate = scheduler.buildDate({ date, startOfDay: true, offset: { month: -length } })
+        const rangeEndDate = scheduler.buildDate({ date, endOfDay: true, offset: { month: +length } })
 
-        console.log(`Request Date: ${requestDate}`);
-        console.log(`Start Date: ${startDate}`);
-        console.log(`End Date: ${endDate}`);
+        // Apply diet boundaries to the range
+        let effectiveStartDate = diet.startDate > rangeStartDate ? diet.startDate : rangeStartDate;
+        let effectiveEndDate = diet.endDate && diet.endDate < rangeEndDate ? diet.endDate : rangeEndDate;
 
+        // Ensure the diet has meals loaded
+        if (!diet.meals || diet.meals.length === 0) {
+            return {
+                dietId: diet.id,
+                startDate: diet.startDate,
+                endDate: diet.endDate,
+                plan: []
+            }
+        };
+
+        if (monthlyView) {
+            effectiveStartDate = scheduler.startOfMonth(date);
+            effectiveEndDate = scheduler.endOfMonth(date);
+        }
+
+        const start = effectiveStartDate;
+
+        const end = effectiveEndDate;
+
+        const days: Date[] = []
+        const cursor = new Date(start);
+
+        while (cursor <= end) {
+            days.push(new Date(cursor))
+            cursor.setDate(cursor.getDate() + 1)
+        }
+
+        const dayPlans = await Promise.all(
+            days.map(async d => {
+                const normalizedDate = scheduler.buildDate({ date: d, startOfDay: true })
+                const mealPlans = diet.meals
+                    .filter(meal => meal.isValidForDate(normalizedDate))
+                    .map(meal => ({
+                        meal: {
+                            ...meal,
+                            foods: meal.foods.filter(f => f.isValidForDate(normalizedDate))
+                        },
+                        mealRecord: null
+                    }))
+                if (mealPlans.length === 0) return null
+                return {
+                    relativeDate: new Date(normalizedDate),
+                    mealPlans
+                }
+            })
+        )
+
+        return {
+            dietId: diet.id,
+            startDate: diet.startDate,
+            endDate: diet.endDate,
+            plan: dayPlans.filter(p => p !== null)
+        }
     }
 
     /**

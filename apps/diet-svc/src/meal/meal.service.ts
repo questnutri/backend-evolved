@@ -305,8 +305,12 @@ export class MealService implements ServiceContract<Meal> {
     }
 
     async delete(meal: Meal | Meal[]) {
-        await this.foodService.delete(Array.isArray(meal) ? meal.flatMap(m => m.foods || []) : meal.foods || []);
-        await this.mealRepository.remove(Array.isArray(meal) ? meal : [meal]);
+        if(meal) {
+            const items = Array.isArray(meal) ? meal.filter(m => !!m) : [meal];
+            const foods = items.flatMap(m => m.foods || []);
+            await this.foodService.delete(foods);
+            await this.mealRepository.remove(items);
+        }
     }
 
     async deleteOneWhere(where: any): Promise<void> {

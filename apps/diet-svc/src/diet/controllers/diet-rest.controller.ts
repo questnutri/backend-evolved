@@ -27,7 +27,10 @@ import {
     errorMessagePattern,
     PATIENT_SERVICE_PROXY_NAME,
     proxyPattern,
-    sendProxyMessage
+    sendProxyMessage,
+    DietPlanFindOptions,
+    DietPlanQueryOptions,
+    DietPlanIncludeOptions
 } from '@backend-evolved/shared';
 import { FoodService } from '../../food/food.service';
 import { MealService } from '../../meal/meal.service';
@@ -269,86 +272,36 @@ export class DietRestController {
         }
     }
 
-    // @Post('plan')
-    // @ApiOperation({
-    //     summary: 'Get complex diet plan for a patient',
-    //     description: 'Retrieve a comprehensive diet plan with calendar planning for a specific patient, including meal schedules and records. Dates are returned as YYYY-MM-DD (UTC) and meals include their configured hour separately.'
-    // })
-    // @ApiQuery({
-    //     name: 'length',
-    //     description: 'Number of months to include (default: 1 = current month + 1 back + 1 forward)',
-    //     required: false,
-    //     type: Number
-    // })
-    // @ApiBody({
-    //     type: DietRequestBody,
-    //     required: true,
-    //     description: 'Request must include patientId (nutritionists) or will be inferred (patients).',
-    //     schema: {
-    //         example: {
-    //             patientId: 'b6f9c2a4-1111-4444-aaaa-bb2c3d4e5f67'
-    //         }
-    //     }
-    // })
-    // @ApiOkResponse({
-    //     description: 'Diet plan has been successfully generated. relativeDate values are date-only strings (YYYY-MM-DD) and each meal includes its hour. Example truncated response:',
-    //     schema: {
-    //         example: [
-    //             {
-    //                 dietId: 'diet-1111-2222-3333',
-    //                 dayPlans: [
-    //                     {
-    //                         relativeDate: '2025-11-03', // Monday
-    //                         mealPlans: [
-    //                             {
-    //                                 meal: {
-    //                                     id: 'dcf11dca-bdd1-4426-8fa3-128bcc35880b',
-    //                                     name: 'Dinner',
-    //                                     hour: '19:00',
-    //                                     repeatConfiguration: { type: 'WEEKLY', interval: 1, daysOfWeek: [1, 2] },
-    //                                     foods: []
-    //                                 },
-    //                                 mealRecord: null
-    //                             }
-    //                         ]
-    //                     },
-    //                     {
-    //                         relativeDate: '2025-11-04', // Tuesday
-    //                         mealPlans: [ /* ... */]
-    //                     }
-    //                 ]
-    //             }
-    //         ]
-    //     }
-    // })
-    // @ApiForbiddenResponse({
-    //     description: 'User not allowed to access this diet plan',
-    // })
-    // @UseGuards(
-    //     JwtRoleGuard(['nutritionist', 'patient']),
-    //     IsRelatedGuard({
-    //         on: 'body',
-    //         withKeys: ['patientId', 'nutritionistId'],
-    //         errorMessage: (role: UserRole) => {
-    //             if (role === 'patient') {
-    //                 return 'Patients can only access their own diet plans.';
-    //             }
-    //             if (role === 'nutritionist') {
-    //                 return 'Nutritionists can only access diet plans of their patients.';
-    //             }
-    //             return 'Access denied.';
-    //         },
-    //     })
-    // )
-    // @UseFilters(ControllerExceptionFilter)
-    // async getDietPlan(
-    //     @Body() body: DietRequestBody,
-    //     @Query('length') length?: number,
-    // ): Promise<DietPlan[]> {
-    //     const planLength = length && length > 0 ? length : 1;
-    //     const rawPlans = await this.dietService.getDietPlanForPatient(body.patientId, body.nutritionistId, planLength);
-    //     return this.mapDietPlanDates(rawPlans);
-    // }
+    @Get(':dietId/plan')
+    @UseGuards(
+        JwtRoleGuard(['nutritionist', 'patient']),
+    )
+    @UseFilters(ControllerExceptionFilter)
+    async getDietPlan(
+        @ContextUser() ctxUser: ContextUser,
+        @Param('dietId') id: string,
+        @Query() query: DietPlanQueryOptions & DietPlanIncludeOptions
+    ): Promise<DietPlan[]> {
+        let where: any = {
+            id
+        }
+        if (ctxUser.role === UserRole.PATIENT) {
+            where.patientId = ctxUser.id;
+        } else {
+            where.nutritionistId = ctxUser.id;
+        }
+
+        const foundDiet = await this.dietService.findOne({
+            where,
+            includeFoods: true,
+            includeMeals: true
+        });
+
+        return await this.dietService.getDietPlan({
+            diet: foundDiet,
+            ...query,
+        });
+    }
 
     @Post()
     @ApiOperation({
@@ -471,7 +424,7 @@ export class DietRestController {
         if (ctxUser.role === UserRole.PATIENT) {
             diet = await this.dietService.findOne({ where: { id: dietId, status: DietStatus.ACTIVE }, includeFoods: true, includeMeals: true });
         } else {
-            diet = await this.dietService.findOne({ where: { id: dietId },  includeFoods: true, includeMeals: true });
+            diet = await this.dietService.findOne({ where: { id: dietId }, includeFoods: true, includeMeals: true });
         }
 
         ensureUserRelatedOrThrow(
@@ -484,16 +437,6 @@ export class DietRestController {
         )
 
         return await this.dietService.fetchDietAlimentsPublic(diet);
-    }
-
-    @Get(':dietId/plan')
-    async getDietPlanById(
-        @Param('dietId') dietId: string
-    ) {
-        const diet = await this.dietService.findOne({ where: { id: dietId } });
-        if (diet) {
-            this.dietService.getDietPlan(diet);
-        }
     }
 
     @Post(':dietId/activate')
@@ -621,7 +564,8 @@ export class DietRestController {
     ): Promise<void> {
         const foundDiet = await this.dietService.findOne({
             where: { id: dietId, nutritionistId: ctxUser.id },
-            relations: ['meals', 'meals.foods']
+            includeFoods: true,
+            includeMeals: true
         });
         const scheduler = new SchedulerHelper(foundDiet.timeZone);
         if (foundDiet.endDate && foundDiet.endDate < scheduler.startOfDay()) {
