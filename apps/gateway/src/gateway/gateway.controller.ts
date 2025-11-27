@@ -20,6 +20,7 @@ export class GatewayController {
             case 'diet': return process.env.DEV_DIET_SERVICE_URL ?? 'http://diet-service:3000';
             case 'aliment': return process.env.DEV_ALIMENT_SERVICE_URL ?? 'http://aliment-service:3000';
             case 'record': return process.env.DEV_RECORD_SERVICE_URL ?? 'http://record-service:3000';
+            case 'game': return process.env.DEV_GAME_SERVICE_URL ?? 'http://game-service:3000';
             default: return undefined;
         }
     }
@@ -68,7 +69,7 @@ export class GatewayController {
 
     @Get('health')
     async healthCheck() {
-        const services = ['admin', 'auth', 'nutritionist', 'patient', 'diet', 'aliment', 'record'];
+        const services = ['admin', 'auth', 'nutritionist', 'patient', 'diet', 'aliment', 'record', 'game'];
         const serviceStatus: { [key: string]: boolean } = {};
 
         const healthChecks = services.map(async (service) => {

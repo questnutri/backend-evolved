@@ -5,7 +5,9 @@ import {
     UseFilters,
     Res,
     Get,
-    UseGuards
+    UseGuards,
+    UseInterceptors,
+    HttpCode
 } from '@nestjs/common';
 import {
     LoginUserDto,
@@ -20,6 +22,9 @@ import {
     ResetPasswordResponse,
     ROOT_ADMIN_EMAIL,
     GenerateAccessResponse,
+    system,
+    LoggingInterceptor,
+    FirstLoginResponse,
 } from '@backend-evolved/shared';
 import {
     ApiAcceptedResponse,
@@ -63,7 +68,8 @@ export class AuthRestController {
         return { keys: [jwk] };
     }
 
-    @Post('login')
+    @Post(system.auth.controller.login.route)
+    @HttpCode(200)
     @ApiOperation({
         summary: 'Login an user (patient or nutritionist)',
         description: 'Logs in an user using email and password, returning authentication tokens. If user is a patient and is the first login, the reset token of the password is returned instead.'
@@ -105,12 +111,12 @@ export class AuthRestController {
         }
     })
     @UseFilters(ControllerExceptionFilter)
-    async login(@Res() res: any, @Body() body: LoginUserDto): Promise<LoginResponse> {
-        const result = await this.authService.generalLogin(body);
-        return res.status(200).json(result);
+    @UseInterceptors(LoggingInterceptor)
+    async login(@Body() body: LoginUserDto): Promise<LoginResponse | FirstLoginResponse> {
+        return await this.authService.generalLogin(body);
     }
 
-    @Post('refresh')
+    @Post(system.auth.controller.refresh.route)
     @ApiOperation({ summary: 'Refresh user authentication token' })
     @ApiOkResponse({ description: 'The user authentication token has been successfully refreshed.' })
     @UseFilters(ControllerExceptionFilter)
@@ -118,7 +124,7 @@ export class AuthRestController {
         return await this.tokenService.refresh(body)
     }
 
-    @Post('reset-password')
+    @Post(system.auth.controller.resetPassword.route)
     @ApiOperation({
         summary: 'Reset user password using reset token',
         description: ''
@@ -145,7 +151,7 @@ export class AuthRestController {
         return await this.authService.resetPassword(body);
     }
 
-    @Post('forgot-password')
+    @Post(system.auth.controller.forgotPassword.route)
     @ApiOperation({ summary: 'Request password reset token for an email' })
     @ApiOkResponse({ description: 'Returns a password reset token to be sent to the user.' })
     @UseFilters(ControllerExceptionFilter)
@@ -154,7 +160,7 @@ export class AuthRestController {
         return await this.authService.forgotPassword(body.email);
     }
 
-    @Post('change-password')
+    @Post(system.auth.controller.changePassword.route)
     @ApiOperation({
         summary: 'Changes a logged user password',
         description: 'Unlike resetting a password, this requires both a valid access token and the current password to be provided.',

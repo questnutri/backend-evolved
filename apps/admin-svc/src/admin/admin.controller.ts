@@ -1,4 +1,4 @@
-import { Controller, Body, Post, Inject, UseGuards, UseFilters, Get, NotFoundException } from '@nestjs/common';
+import { Controller, Body, Post, Inject, UseGuards, UseFilters, Get, NotFoundException, UseInterceptors } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import {
     AUTH_SERVICE_PROXY_NAME,
@@ -9,7 +9,9 @@ import {
     ContextUser,
     sendProxyMessage,
     User,
-    proxyPattern
+    proxyPattern,
+    LoggingInterceptor,
+    CustomLoggingInterceptor
 } from '@backend-evolved/shared';
 import { ClientProxy } from '@nestjs/microservices';
 import { Admin } from 'typeorm';
@@ -30,6 +32,14 @@ export class AdminController {
 
     @Post('login')
     @UseFilters(ControllerExceptionFilter)
+    @UseInterceptors(new CustomLoggingInterceptor({
+        transform: (data) => {
+            return {
+                id: data?.id,
+                role: data?.role,
+            };
+        }
+    }))
     async login(@Body('email') email: string, @Body('password') password: string) {
         return sendProxyMessage<LoginResponse, LoginUserDto>({
             proxy: this.authProxy,

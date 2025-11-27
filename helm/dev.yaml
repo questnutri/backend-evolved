@@ -8,3 +8,4 @@ developmentValues:
     aliment: 27017
     record: 5437
     admin: 5430
+    game: 5438

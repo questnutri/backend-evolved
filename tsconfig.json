@@ -1,37 +1,40 @@
 {
-  "extends": "./tsconfig.base.json",
-  "compileOnSave": false,
-  "files": [],
-  "references": [
-    {
-      "path": "./apps/auth-svc"
-    },
-    {
-      "path": "./apps/nutritionist-svc"
-    },
-    {
-      "path": "./apps/patient-svc"
-    },
-    {
-      "path": "./apps/gateway"
-    },
-    {
-      "path": "./libs/shared"
-    },
-    {
-      "path": "./apps/admin-svc"
-    },
-    {
-      "path": "./apps/diet-svc"
-    },
-    {
-      "path": "./apps/aliment-svc"
-    },
-    {
-      "path": "./apps/record-svc"
-    },
-    {
-      "path": "./apps/log-svc"
-    }
-  ]
+    "extends": "./tsconfig.base.json",
+    "compileOnSave": false,
+    "files": [],
+    "references": [
+        {
+            "path": "./apps/auth-svc"
+        },
+        {
+            "path": "./apps/nutritionist-svc"
+        },
+        {
+            "path": "./apps/patient-svc"
+        },
+        {
+            "path": "./apps/gateway"
+        },
+        {
+            "path": "./libs/shared"
+        },
+        {
+            "path": "./apps/admin-svc"
+        },
+        {
+            "path": "./apps/diet-svc"
+        },
+        {
+            "path": "./apps/aliment-svc"
+        },
+        {
+            "path": "./apps/record-svc"
+        },
+        {
+            "path": "./apps/log-svc"
+        },
+        {
+            "path": "./apps/game-svc"
+        }
+    ]
 }

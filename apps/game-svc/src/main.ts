@@ -1,15 +1,17 @@
-import { NestApplicationBuilder, generateNestApplication, ControllerExceptionFilter } from '@backend-evolved/shared';
-import { DocumentBuilder } from '@nestjs/swagger';
+import { 
+    NestApplicationBuilder,
+    generateNestApplication
+} from '@backend-evolved/shared';
 import { AppModule } from './app/app.module';
 
 async function bootstrap() {
     await generateNestApplication(
         NestApplicationBuilder
             .forModule(AppModule)
-            .setServiceName(' Log Service')
-            .setJaeger('log-svc')
-            .setPort(process.env.DEV_LOG_SERVICE_PORT ?? '3000')
-            .setQueueName('log_queue')
+            .setServiceName('Game Service')
+            .setJaeger('game-svc')
+            .setPort(process.env.DEV_GAME_SERVICE_PORT ?? '3000')
+            .setQueueName('game_queue')
             .setPipe({
                 whitelist: true,
                 forbidNonWhitelisted: true,

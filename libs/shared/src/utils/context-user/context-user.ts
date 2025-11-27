@@ -7,18 +7,22 @@ export interface ContextUser {
     role: UserRole;
 }
 
+// Utility function to extract ContextUser from a request
+export function getContextUser(request: any): ContextUser {
+    const rawId = request.headers?.['user-id'] ?? request.user?.id;
+    const rawRole = request.headers?.['role'] ?? request.user?.role;
+
+    return {
+        id: String(rawId ?? ''),
+        role: (rawRole as UserRole) as UserRole
+    };
+}
+
 export const ContextUser = createParamDecorator(
     (data: ContextUserDecoratorData, ctx: ExecutionContext) => {
         const request = ctx.switchToHttp().getRequest();
-        const rawId = request.headers?.['user-id'] ?? request.user?.id;
-        const rawRole = request.headers?.['role'] ?? request.user?.role;
+        const user = getContextUser(request);
 
-        const user: ContextUser = {
-            id: String(rawId ?? ''),
-            role: (rawRole as UserRole) as UserRole
-        };
-
-        // no relation check requested
         if (!data || !data.isRelated) {
             return user;
         }
@@ -27,7 +31,7 @@ export const ContextUser = createParamDecorator(
 
         ensureUserRelatedOrThrow(user, request, opts);
 
-        // allowed
+        // Allowed
         return user;
     },
 );

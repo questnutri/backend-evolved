@@ -8,7 +8,8 @@ import {
     InternalServerErrorException,
     NotFoundException,
     Query,
-    Patch
+    Patch,
+    UseInterceptors
 } from '@nestjs/common';
 import { NutritionistService } from '../nutritionist.service';
 import {
@@ -21,7 +22,8 @@ import {
     NutritionistIncludeOptions,
     UpdateNutritionistDto,
     errorMessagePattern,
-    removePropertyForOne
+    removePropertyForOne,
+    LoggingInterceptor
 } from '@backend-evolved/shared';
 import {
     ApiOkResponse,
@@ -166,6 +168,7 @@ export class NutritionistRestController {
         }
     })
     @UseFilters(ControllerExceptionFilter)
+    @UseInterceptors(LoggingInterceptor)
     async register(@Body() body: CreateNutritionistDto) {
         const registeredNutritionist = await this.nutritionistService.createOne(body);
         if (registeredNutritionist) {

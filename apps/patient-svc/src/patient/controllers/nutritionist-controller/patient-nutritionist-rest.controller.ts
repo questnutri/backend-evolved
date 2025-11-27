@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query, UseFilters, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query, UseFilters, UseGuards, UseInterceptors } from '@nestjs/common';
 import { PatientService } from '../../patient.service';
 import {
     JwtRoleGuard,
@@ -16,7 +16,8 @@ import {
     UpdatePatientDto_Nutritionist,
     removePropertyForOne,
     WeightRecord,
-    UserRole
+    UserRole,
+    LoggingInterceptor
 } from '@backend-evolved/shared';
 import { ApiOperation, ApiBearerAuth, ApiSecurity, ApiCreatedResponse, ApiTags, ApiOkResponse } from '@nestjs/swagger';
 import { PatientNutritionistService } from '../../../patient-nutritionist/patient-nutritionist.service';
@@ -37,6 +38,7 @@ export class PatientNutritionistRestController {
     @ApiCreatedResponse({ description: 'Patient created successfully' })
     @UseGuards(JwtRoleGuard(['nutritionist']))
     @UseFilters(ControllerExceptionFilter)
+    @UseInterceptors(LoggingInterceptor)
     async createPatient(
         @ContextUser() ctxUser: ContextUser,
         @Body() body: BodyCreatePatientDto

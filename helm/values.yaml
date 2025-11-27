@@ -53,8 +53,12 @@ microservices:
         - name: admin-postgres-config-map
           keys:
             - init.sql
+  - name: game
+    image: questnutri/gateway:2.3.1
+    database:
+      type: postgres
   - name: gateway
-    image: questnutri/gateway:2.3.0
+    image: questnutri/gateway:2.3.1
     port: 8181
     servicePort: 8080
     serviceType: LoadBalancer
