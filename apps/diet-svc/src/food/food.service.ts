@@ -1,4 +1,4 @@
-import { Aliment, ALIMENT_SERVICE_PROXY_NAME, errorMessagePattern, Food, getUTCTodayStart, getUTCYesterdayEnd, ProxyMessage, SchedulerHelper, ServiceContract } from '@backend-evolved/shared';
+import { Aliment, ALIMENT_SERVICE_PROXY_NAME, errorMessagePattern, Food, getUTCTodayStart, getUTCYesterdayEnd, ProxyMessage, proxyPattern, SchedulerHelper, sendProxyMessage, ServiceContract } from '@backend-evolved/shared';
 import { BadRequestException, Inject, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -13,20 +13,32 @@ export class FoodService implements ServiceContract<Food> {
         @Inject(ALIMENT_SERVICE_PROXY_NAME) private readonly alimentServiceProxy: ClientProxy
     ) { }
 
-    async fetchAliment(food: Food): Promise<any> {
+    async fetchAliment(food: Food): Promise<Food> {
         let aliment;
-        if (food.alimentId) {
-            const alimentResponse = await firstValueFrom(this.alimentServiceProxy.send<ProxyMessage<Aliment>>('findAlimentById', { id: food.alimentId }));
-            if (alimentResponse && "error" in alimentResponse) {
-                aliment = null;
-            } else {
-                aliment = alimentResponse.payload;
+        if(!food.alimentId) return {...food, aliment: null } as unknown as Food;
+        const alimentResponse = await sendProxyMessage<
+            ProxyMessage<typeof proxyPattern.aliment.getById.response>,
+            typeof proxyPattern.aliment.getById.payload
+        >({
+            proxy: this.alimentServiceProxy,
+            pattern: proxyPattern.aliment.getById.key,
+            data: { id: food.alimentId },
+            options: {
+                retry: {
+                    count: 3, delay: 50
+                },
+                dontThrowIfError: true,
+                rawResponse: true
             }
-        } else {
+        });
+        console.log(alimentResponse);
+        if("error" in alimentResponse) {
             aliment = null;
+        } else {
+            aliment = alimentResponse.payload;
         }
         const { alimentId, ...rest } = food;
-        return { ...rest, aliment };
+        return { ...rest, aliment } as unknown as Food;
     }
 
     async findAll(query: { [key in keyof Food]?: any }): Promise<Food[]> {
@@ -38,7 +50,7 @@ export class FoodService implements ServiceContract<Food> {
     async findOneWhere(where: any = {}, relations: string[] = ['meal']): Promise<Food> {
         const foundFood = await this.foodRepository.findOne({ where, relations });
         if (!foundFood) {
-            throw new NotFoundException(errorMessagePattern.diet.food.notFound.key);
+            throw new NotFoundException(errorMessagePattern.food.notFound.key);
         }
         return await this.fetchAliment(foundFood);
     }
@@ -51,7 +63,7 @@ export class FoodService implements ServiceContract<Food> {
             ||
             (data.meal?.diet.endDate && data.meal?.diet.endDate < validStartTargetDate)
         ) {
-            throw new BadRequestException('Cannot add food to a meal or diet that has ended');
+            throw new BadRequestException(errorMessagePattern.food.cannotAddToEndedDietOrMeal.fn());
         }
         if (validStartTargetDate < data.meal!.startDate!) {
             validStartTargetDate = data.meal!.startDate!;

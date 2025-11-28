@@ -4,7 +4,6 @@ import { Diet } from './diet.entity';
 import type { RepeatConfiguration } from '../../types/repeat-configuration';
 import { RepeatType } from '../../types/repeat-configuration';
 import { SchedulerHelper } from '../../utils';
-import { scheduler } from 'timers/promises';
 
 @Entity('meals')
 export class Meal {

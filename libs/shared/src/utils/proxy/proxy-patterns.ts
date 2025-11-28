@@ -1,4 +1,4 @@
-import { Diet, Meal, Nutritionist, Patient, User, WaterGoal, WeightRecord } from "../../entities";
+import { Aliment, Diet, Meal, Nutritionist, Patient, User, WaterGoal, WeightRecord } from "../../entities";
 import { Payload_GetWaterGoalById } from "../../interfaces/proxy";
 import {
     ProxyBodyCreatePatientDto,
@@ -10,6 +10,7 @@ import {
     FindUserOptions,
 } from "../../dto";
 import { ContextUser } from "../context-user";
+import { AlimentSource } from "../../enums";
 
 const pattern = <SEND = any, RECEIVE = any>(key: string) => {
     return {
@@ -77,5 +78,9 @@ export const proxyPattern = {
                 ctxUser: ContextUser
             }, WeightRecord | null>('record.weight.getLast'),
         }
+    },
+    aliment: {
+        getById: pattern<{ id: string }, Aliment>('aliment.getById'),
+        getManyByIds: pattern<{ ids: string[], source: AlimentSource | null }, Aliment[]>('aliment.getManyByIds')
     }
 }

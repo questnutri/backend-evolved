@@ -116,6 +116,9 @@ export const errorMessagePattern = {
     food: {
         notFound: {
             key: 'Food not found or user does not have access to this food.'
+        },
+        cannotAddToEndedDietOrMeal: {
+            fn: () => 'Cannot add food to a meal or diet that has ended'
         }
     },
     nutritionist: {

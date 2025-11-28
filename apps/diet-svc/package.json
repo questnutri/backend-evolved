@@ -1,6 +1,6 @@
 {
   "name": "@backend-evolved/diet-svc",
-  "version": "2.3.0",
+  "version": "2.3.2",
   "private": true,
   "nx": {
     "targets": {

@@ -1,20 +1,13 @@
-import { Injectable, NestInterceptor, ExecutionContext, CallHandler } from '@nestjs/common';
-import { ClientProxy, ClientProxyFactory, ClientOptions } from '@nestjs/microservices';
+import { Injectable, ExecutionContext, CallHandler } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
-import { ContextUser, getContextUser, provideRabbitMqConnection } from '../utils';
+import { ContextUser, getContextUser } from '../utils';
 import { LoggingInterceptor } from './logging.interceptor';
+import { provideLogProxy } from '../providers';
+import { EventOrigin } from '../enums';
+import { LogRecord } from '../types';
 
-let loggingProxy: ClientProxy | null = null;
-
-function getLoggingProxy(): ClientProxy {
-    if (!loggingProxy) {
-        loggingProxy = ClientProxyFactory.create(
-            provideRabbitMqConnection('log_queue') as ClientOptions
-        );
-    }
-    return loggingProxy;
-}
+let logProxy = provideLogProxy();
 
 @Injectable()
 export class CustomLoggingInterceptor extends LoggingInterceptor {
@@ -33,9 +26,10 @@ export class CustomLoggingInterceptor extends LoggingInterceptor {
         const handler = context.getHandler().name;
         const controller = context.getClass().name;
         const req = context.switchToHttp().getRequest();
+        const res = context.switchToHttp().getResponse();
         const method = req.method;
         const path = req.url;
-        const ip = req.ip; // Extract the IP address
+        const ip = req.ip;
 
         let user: ContextUser | null = getContextUser(req);
         if (user.id.trim().length === 0) {
@@ -44,19 +38,20 @@ export class CustomLoggingInterceptor extends LoggingInterceptor {
 
         return next.handle().pipe(
             map(data => {
-                const payload = {
+                const payload: LogRecord = {
+                    origin: EventOrigin.CONTROLLER,
                     controller,
                     handler,
                     method,
                     path,
                     ip,
+                    statusCode: res.statusCode,
                     response: this.transform(data),
                     user,
                     timestamp: new Date().toISOString()
                 };
 
                 try {
-                    const logProxy = getLoggingProxy();
                     logProxy.emit('log.message', payload);
                 } catch (error) {
                     console.error('[LOGGING] Failed to send log:', error);

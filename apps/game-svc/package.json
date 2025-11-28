@@ -78,6 +78,10 @@
         }
     },
     "dependencies": {
-      "@nestjs/mapped-types": "*"
+        "@nestjs/mapped-types": "*",
+        "json-logic-js": "^2.0.5"
+    },
+    "devDependencies": {
+        "@types/json-logic-js": "^2.0.8"
     }
 }

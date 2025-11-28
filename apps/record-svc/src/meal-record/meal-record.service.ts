@@ -36,7 +36,7 @@ export class MealRecordService implements ServiceContract<MealRecord> {
                 patientId: meal.diet.patientId,
                 dietId: meal.diet.id,
                 nutritionistId: meal.diet.nutritionistId,
-                mealRelativeDate: scheduler.buildDate({ date: requestDate, startOfDay: true, offset: { day: -1 } })
+                relativeDate: scheduler.buildDate({ date: requestDate, startOfDay: true, offset: { day: -1 } })
             }
         });
         if (foundPreviousRecord) {
@@ -192,7 +192,7 @@ export class MealRecordService implements ServiceContract<MealRecord> {
             dietId: meal.diet.id,
             nutritionistId: meal.diet.nutritionistId,
             isCompleted: true,
-            mealRelativeDate: scheduler.buildDate({ date: requestDate, startOfDay: true, offset: { day: -1 } })
+            relativeDate: scheduler.buildDate({ date: requestDate, startOfDay: true, offset: { day: -1 } })
         });
 
         return await this.mealRecordRepository.save(createdRecord);

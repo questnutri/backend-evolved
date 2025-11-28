@@ -1,6 +1,6 @@
 import { Controller, UseFilters, Get } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
-import { ProxyMessengerFilter, ProxyMessage, Aliment, AlimentSource } from "@backend-evolved/shared";
+import { ProxyMessengerFilter, ProxyMessage, Aliment, AlimentSource, proxyPattern } from "@backend-evolved/shared";
 import { TacoService } from '../taco/taco.service';
 import { HomeMeasureService } from '../home-measure/home-measure.service';
 import { SecretAlimentService } from '../secret-aliment/secret-aliment.service';
@@ -21,9 +21,11 @@ export class AlimentController {
         return { active: true };
     }
 
-    @MessagePattern('findAlimentById')
+    @MessagePattern(proxyPattern.aliment.getById.key)
     @UseFilters(ProxyMessengerFilter)
-    async findAlimentById(@Payload() data: { id: string; }): Promise<ProxyMessage<Aliment>> {
+    async handleGetById(
+        @Payload() data: typeof proxyPattern.aliment.getById.payload
+    ): Promise<ProxyMessage<typeof proxyPattern.aliment.getById.response>> {
         const id = new ObjectId(data.id);
         let result = null;
         result = await this.tacoService.findOneById(id) || null;
@@ -36,9 +38,13 @@ export class AlimentController {
         return { payload: result };
     }
 
-    @MessagePattern('findManyAlimentsByIds')
+    @MessagePattern(proxyPattern.aliment.getManyByIds.key)
     @UseFilters(ProxyMessengerFilter)
-    async findManyAlimentsByIds(@Payload() payload: { ids: string[], source: AlimentSource | null }): Promise<Aliment[]> {
+    async handleGetManyByIds(
+        @Payload() payload: typeof proxyPattern.aliment.getManyByIds.payload
+    ): Promise<
+        ProxyMessage<typeof proxyPattern.aliment.getManyByIds.response>
+    > {
         const objectIds = payload.ids.map(id => new ObjectId(id));
         let results: Aliment[] = [];
 
@@ -59,6 +65,6 @@ export class AlimentController {
             results = results.filter(a => a.source === payload.source);
         }
 
-        return results;
+        return { payload: results };
     }
 }

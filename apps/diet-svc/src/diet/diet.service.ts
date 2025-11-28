@@ -276,31 +276,72 @@ export class DietService implements ServiceContract<Diet> {
 
         const dayPlans = await Promise.all(
             days.map(async d => {
-                const normalizedDate = scheduler.buildDate({ date: d, startOfDay: true })
-                const mealPlans = diet.meals
-                    .filter(meal => meal.isValidForDate(normalizedDate))
-                    .map(meal => ({
-                        meal: {
-                            ...meal,
-                            foods: meal.foods.filter(f => f.isValidForDate(normalizedDate))
-                        },
-                        mealRecord: null
-                    }))
-                if (mealPlans.length === 0) return null
+                const normalizedDate = scheduler.buildDate({ date: d, startOfDay: true });
+                const validMeals = diet.meals.filter(meal => meal.isValidForDate(normalizedDate))
+                const clonedMeals = validMeals.map(meal => ({
+                    ...meal,
+                    foods: meal.foods.filter(f => f.isValidForDate(normalizedDate))
+                }))
+                await this.injectAlimentsIntoMeals(clonedMeals)
+                if (clonedMeals.length === 0) return null;
                 return {
                     relativeDate: new Date(normalizedDate),
-                    mealPlans
-                }
+                    mealPlans: clonedMeals.map(meal => ({
+                        meal,
+                        mealRecord: null
+                    }))
+                };
             })
         )
 
         return {
-            dietId: diet.id,
+            diet: await this.fetchDietAliments(diet),
             startDate: diet.startDate,
             endDate: diet.endDate,
             plan: dayPlans.filter(p => p !== null)
         }
     }
+
+    async injectAlimentsIntoMeals(meals: any[]): Promise<any[]> {
+        const ids: string[] = []
+        const positions: { mealIndex: number; foodIndex: number; alimentId: string }[] = []
+
+        meals.forEach((meal, mealIndex) => {
+            meal.foods?.forEach((food: Food, foodIndex: number) => {
+                if (food.alimentId) {
+                    ids.push(food.alimentId)
+                    positions.push({ mealIndex, foodIndex, alimentId: food.alimentId })
+                }
+            })
+        })
+
+        let fetched: Aliment[] = []
+        if (ids.length > 0) {
+            fetched = await sendProxyMessage
+                <
+                    typeof proxyPattern.aliment.getManyByIds.response,
+                    typeof proxyPattern.aliment.getManyByIds.payload
+                >
+                ({
+                    proxy: this.alimentServiceProxy,
+                    pattern: proxyPattern.aliment.getManyByIds.key,
+                    data: { ids, source: null },
+                    options: { retry: { count: 3, delay: 50 } }
+                })
+        }
+
+        const map = new Map(fetched.map(a => [a._id.toString(), a]))
+
+        positions.forEach(pos => {
+            const meal = meals[pos.mealIndex]
+            const food = meal.foods[pos.foodIndex]
+            const aliment = map.get(pos.alimentId) || null
+            food.aliment = aliment
+        })
+
+        return meals
+    }
+
 
     /**
      * Fetch aliment information for all foods in a diet
@@ -320,9 +361,21 @@ export class DietService implements ServiceContract<Diet> {
 
         let fetchedAliments: Aliment[] = []
         if (allAlimentIds.length > 0) {
-            fetchedAliments = await firstValueFrom(
-                this.alimentServiceProxy.send<Aliment[]>('findManyAlimentsByIds', { ids: allAlimentIds, source: null })
-            )
+            fetchedAliments = await sendProxyMessage<
+                typeof proxyPattern.aliment.getManyByIds.response,
+                typeof proxyPattern.aliment.getManyByIds.payload
+            >({
+                proxy: this.alimentServiceProxy,
+                pattern: proxyPattern.aliment.getManyByIds.key,
+                data: {
+                    ids: allAlimentIds, source: null
+                },
+                options: {
+                    retry: {
+                        count: 3, delay: 50,
+                    },
+                }
+            });
         }
 
         const alimentMap = new Map(fetchedAliments.map(a => [a._id.toString(), a]))

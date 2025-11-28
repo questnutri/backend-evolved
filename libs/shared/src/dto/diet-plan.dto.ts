@@ -1,5 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import { Meal } from '@backend-evolved/shared';
+import { Diet, Meal } from '@backend-evolved/shared';
 
 export class CleanedMealRecord {
     @ApiProperty({ description: 'The meal record ID' })
@@ -36,7 +36,7 @@ export class DietDayPlan {
 
 export class DietPlan {
     @ApiProperty({ description: 'The diet ID' })
-    dietId: string;
+    diet: Diet;
 
     @ApiProperty({ description: 'List of daily plans', type: [DietDayPlan] })
     plan: DietDayPlan[];

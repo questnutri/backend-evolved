@@ -25,6 +25,7 @@ import {
     system,
     LoggingInterceptor,
     FirstLoginResponse,
+    CustomLoggingInterceptor,
 } from '@backend-evolved/shared';
 import {
     ApiAcceptedResponse,
@@ -111,7 +112,14 @@ export class AuthRestController {
         }
     })
     @UseFilters(ControllerExceptionFilter)
-    @UseInterceptors(LoggingInterceptor)
+    @UseInterceptors(new CustomLoggingInterceptor({
+        transform: (data) => {
+            return {
+                role: data.role,
+                id: data.id
+            }
+        }
+    }))
     async login(@Body() body: LoginUserDto): Promise<LoginResponse | FirstLoginResponse> {
         return await this.authService.generalLogin(body);
     }

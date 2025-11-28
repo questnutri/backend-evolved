@@ -19,10 +19,7 @@ class LogProxy {
     }
 
     emit<TResult = any, TInput = any>(pattern: any, data: TInput) {
-        console.log(pattern, data);
         this.gameService.emit(pattern, data);
-        console.log('emitted to game service');
         this.logService.emit(pattern, data);
-        console.log('emitted to log service');
     }
 }

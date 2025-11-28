@@ -24,7 +24,7 @@ export class MealRecordProxyController {
         
         // Filter by date range (the service should handle this, but for now we'll do it here)
         return allRecords.filter(record => {
-            const recordDate = new Date(record.mealRelativeDate);
+            const recordDate = new Date(record.relativeDate);
             const startDate = new Date(data.startDate);
             const endDate = new Date(data.endDate);
             
@@ -57,7 +57,7 @@ export class MealRecordProxyController {
         targetDate.setHours(0, 0, 0, 0);
         
         return allRecords.find(record => {
-            const recordDate = new Date(record.mealRelativeDate);
+            const recordDate = new Date(record.relativeDate);
             recordDate.setHours(0, 0, 0, 0);
             return recordDate.getTime() === targetDate.getTime();
         }) || null;

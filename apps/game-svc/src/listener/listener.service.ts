@@ -16,6 +16,9 @@ export class ListenerService {
     }
 
     async find(where: any) {
-        return await this.listenerRepository.find({ where })
+        return await this.listenerRepository.find({
+            where,
+            relations: ['triggers', 'triggers.track']
+        })
     }
 }

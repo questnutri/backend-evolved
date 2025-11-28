@@ -10,7 +10,7 @@ export class AppController {
     getData(
         @Payload() data: any
     ) {
-        console.log('[LOG-SVC] Received log message:');
-        console.log(data);
+        // console.log('[LOG-SVC] Received log message:');
+        // console.log(data);
     }
 }

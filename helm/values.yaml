@@ -13,7 +13,7 @@ microservices:
           keys:
             - init.sql
   - name: aliment
-    image: questnutri/aliment-svc:2.3.0
+    image: questnutri/aliment-svc:2.3.1
     database: 
       type: mongodb
       volumeMaps:
@@ -27,7 +27,7 @@ microservices:
           keys:
             - import-databases.sh
   - name: diet
-    image: questnutri/diet-svc:2.3.0
+    image: questnutri/diet-svc:2.3.2
     database:
       type: postgres
     envVariables:
@@ -54,11 +54,11 @@ microservices:
           keys:
             - init.sql
   - name: game
-    image: questnutri/gateway:2.3.1
+    image: questnutri/gateway:2.3.0
     database:
       type: postgres
   - name: gateway
-    image: questnutri/gateway:2.3.1
+    image: questnutri/gateway:2.3.0
     port: 8181
     servicePort: 8080
     serviceType: LoadBalancer
