@@ -10,7 +10,6 @@ import {
     UserRole, Patient,
     AUTH_SERVICE_PROXY_NAME,
     PatientNutritionist,
-    ServiceContract,
     ProxyMessage,
     proxyPattern,
     NUTRITIONIST_SERVICE_PROXY_NAME,
@@ -36,7 +35,7 @@ import { error } from 'console';
 export type TreatedPatient = Partial<Omit<Patient, 'nutritionists'>> & { nutritionists: Nutritionist[] };
 
 @Injectable()
-export class PatientService implements ServiceContract<Patient> {
+export class PatientService {
     constructor(
         @InjectRepository(Patient)
         private readonly patientRepository: Repository<Patient>,

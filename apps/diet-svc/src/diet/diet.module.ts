@@ -9,6 +9,7 @@ import {
     RECORD_SERVICE_PROXY_NAME,
     provideProxyService
 } from '@backend-evolved/shared';
+
 import { DietProxyController } from './controllers/diet-proxy.controller';
 
 @Module({

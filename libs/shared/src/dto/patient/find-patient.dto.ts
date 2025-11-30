@@ -1,9 +1,8 @@
 import { IntersectionType } from "@nestjs/swagger";
 import { IsOptional } from "class-validator";
 import { Patient } from "../../entities";
-import { SearchDto } from "../search/search.dto";
-import { DietIncludeOptions } from "../diet/find-diet.dto";
-import { RequestedBy } from "../request";
+import { SearchDto } from "../search";
+import { DietIncludeOptions } from "../diet";
 
 export class PatientIncludeOptions extends IntersectionType(DietIncludeOptions) {
     @IsOptional()

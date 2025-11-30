@@ -170,5 +170,67 @@ export const errorMessagePattern = {
         didnotSendRightRequest: {
             fn: () => 'The service did not send a valid request'
         }
+    },
+    game: {
+        listener: {
+            notFound: {
+                fn: () => 'Listener not found'
+            },
+            listenerHasTriggersAttached: {
+                fn: () => 'Cannot delete listener with triggers attached'
+            }
+        },
+        track: {
+            invalidUpdateOperation: {
+                fn: (details: {
+                    operation: string,
+                    type: string,
+                    allowedOperations: string[]
+                }
+                ) => `Invalid update operation: '${details.operation}' for type: '${details.type}'. Allowed operations are: ${details.allowedOperations.join(', ')}`
+            },
+            templateNotFound: {
+                fn: () => `Track template not found.`
+            }
+        },
+        trigger: {
+            triggerForListenerAndTrackAlreadyExists: {
+                fn: (details: {trackId: string, listenerId: string}) => {
+                    return `Trigger for (trackId: ${details.trackId}) and (listenerId: ${details.listenerId}) already exists.`
+                }
+            },
+            invalidTriggerConditionConfiguration: {
+                fn: (
+                    type: 
+                        'foundAtNotProvided' |
+                        'mappingKeyNotFound' |
+                        'noConditionOperationDefinedNeitherDate' |
+                        'dateNotProvided' |
+                        'nonComparableValues',
+                    details?: any
+                ) => {
+                    let message = '';
+                    switch(type) {
+                        case 'foundAtNotProvided':
+                            message = `'foundAt' not provided in search specification`;
+                            break;
+                        case 'mappingKeyNotFound':
+                            message = `The mapping key '${details.mappingKey}' was not found in the '${details.foundAt}' data.`;
+                            break;
+                        case 'noConditionOperationDefinedNeitherDate':
+                            message = 'No condition operation defined neither date';
+                            break;
+                        case 'dateNotProvided':
+                            message = 'Date value not provided in log data';
+                            break;
+                        case 'nonComparableValues':
+                            message = 'Non-comparable values were defined for trigger';
+                            break;
+                    }
+
+                    return `Invalid trigger condition configuration: ${message}`
+                }
+            },
+        }
     }
 }

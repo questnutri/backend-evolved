@@ -1,6 +1,6 @@
 import { EventOrigin } from "../../enums"
 
-export type LogRecord = {
+export type LogRecord<T = any> = {
     origin: EventOrigin.CONTROLLER,
     controller: string,
     method: string,
@@ -8,7 +8,7 @@ export type LogRecord = {
     path: string,
     handler: string,
     ip: string,
-    response: any,
+    data: T,
     user: any,
     timestamp: string
 } | {

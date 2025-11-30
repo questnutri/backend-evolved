@@ -1,0 +1,1 @@
+export type KeysOf<T> = {[key in keyof T]: T[key]}

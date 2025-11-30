@@ -1,7 +1,7 @@
 import { Column, Entity, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 import { EventOrigin } from "../../enums";
 import { ApiProperty } from "@nestjs/swagger";
-import { TriggerEntity } from "./trigger.entity";
+import { Trigger } from "./trigger/trigger.entity";
 
 @Entity('listeners')
 export class ListenerEntity {
@@ -22,8 +22,8 @@ export class ListenerEntity {
     method: string;
 
     @Column()
-    path: string;
+    handler: string;
 
-    @OneToMany(() => TriggerEntity, (trigger) => trigger.listener)
-    triggers: TriggerEntity[];
+    @OneToMany(() => Trigger, (trigger) => trigger.listener)
+    triggers: Trigger[];
 }

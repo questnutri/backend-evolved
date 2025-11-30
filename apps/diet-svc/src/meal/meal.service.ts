@@ -1,6 +1,5 @@
 import {
     Meal,
-    ServiceContract,
     RepeatType,
     SchedulerHelper,
     errorMessagePattern,
@@ -16,7 +15,7 @@ import { Repository } from 'typeorm';
 import { FoodService } from '../food/food.service';
 
 @Injectable()
-export class MealService implements ServiceContract<Meal> {
+export class MealService {
     constructor(
         @InjectRepository(Meal)
         private readonly mealRepository: Repository<Meal>,

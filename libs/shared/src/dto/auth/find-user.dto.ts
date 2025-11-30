@@ -1,5 +1,5 @@
 import { IntersectionType } from "@nestjs/swagger";
-import { SearchDto } from "../search/search.dto";
+import { SearchDto } from "../search";
 import { User } from "../../entities";
 
 export class FindUserOptions 

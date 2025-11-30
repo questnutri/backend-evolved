@@ -7,4 +7,6 @@ SERVICES=(
   "gateway"
   "aliment-svc"
   "record-svc"
+  "game-svc"
+  "notification-svc"
 )

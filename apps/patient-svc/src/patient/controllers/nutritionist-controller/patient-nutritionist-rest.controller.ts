@@ -21,7 +21,6 @@ import {
 } from '@backend-evolved/shared';
 import { ApiOperation, ApiBearerAuth, ApiSecurity, ApiCreatedResponse, ApiTags, ApiOkResponse } from '@nestjs/swagger';
 import { PatientNutritionistService } from '../../../patient-nutritionist/patient-nutritionist.service';
-import { request } from 'http';
 
 @ApiTags('Nutritionist Interactions')
 @Controller()

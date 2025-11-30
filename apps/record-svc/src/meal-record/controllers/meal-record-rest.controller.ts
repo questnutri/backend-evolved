@@ -9,7 +9,8 @@ import {
     UseFilters,
     NotFoundException,
     Query,
-    Inject
+    Inject,
+    UseInterceptors
 } from '@nestjs/common';
 import {
     ApiBearerAuth,
@@ -29,7 +30,8 @@ import {
     DIET_SERVICE_PROXY_NAME,
     sendProxyMessage, proxyPattern,
     SchedulerHelper,
-    GenerateAccessResponse
+    GenerateAccessResponse,
+    LoggingInterceptor
 } from '@backend-evolved/shared';
 import { ClientProxy } from '@nestjs/microservices';
 
@@ -228,6 +230,7 @@ export class MealRecordRestController {
     @GenerateAccessResponse()
     @UseGuards(JwtRoleGuard(['patient']))
     @UseFilters(ControllerExceptionFilter)
+    @UseInterceptors(LoggingInterceptor)
     async trackMealRecord(
         @Param('mealId') mealId: string,
         @Body() body: { date: string, time?: string },

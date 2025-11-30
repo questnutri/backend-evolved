@@ -57,6 +57,10 @@ microservices:
     image: questnutri/gateway:2.3.0
     database:
       type: postgres
+  - name: notification
+    image: questnutri/notification-svc:2.3.0
+    database:
+      type: postgres
   - name: gateway
     image: questnutri/gateway:2.3.0
     port: 8181

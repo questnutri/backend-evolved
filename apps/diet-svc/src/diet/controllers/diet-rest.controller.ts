@@ -57,25 +57,6 @@ export class DietRestController {
         @Inject(PATIENT_SERVICE_PROXY_NAME) private readonly patientProxy: ClientProxy,
     ) { }
 
-    // Helper: map startDate/endDate on Diet and relativeDate on DietPlan dayPlans
-    private mapDietDates(diet: any): any {
-        if (!diet) return diet;
-        if (diet.startDate) diet.startDate = toDateOnlyString(diet.startDate);
-        if (diet.endDate) diet.endDate = toDateOnlyString(diet.endDate);
-        return diet;
-    }
-
-    private mapDietPlanDates(plans: DietPlan[] | any): DietPlan[] {
-        if (!plans || !Array.isArray(plans)) return plans;
-        return plans.map(plan => ({
-            ...plan,
-            dayPlans: Array.isArray(plan.dayPlans) ? plan.dayPlans.map((dp: any) => ({
-                ...dp,
-                relativeDate: toDateOnlyString((dp as any).relativeDate)
-            })) : plan.dayPlans
-        }));
-    }
-
     @Get('health')
     @ApiExcludeEndpoint()
     healthCheck() {
@@ -87,17 +68,6 @@ export class DietRestController {
         summary: 'Get all diets',
         description: 'Retrieve all diets filtered by patientId and/or nutritionistId. Returns date-only startDate/endDate fields (YYYY-MM-DD, UTC).'
     })
-    // @ApiBody({
-    //     type: DietRequestBody,
-    //     required: true,
-    //     description: 'Filter object. Nutritionists must provide patientId; patients can omit patientId (will be inferred).',
-    //     schema: {
-    //         example: {
-    //             patientId: 'b6f9c2a4-1111-4444-aaaa-bb2c3d4e5f67',
-    //             nutritionistId: 'ntr-1234-5678-90ab-cdef'
-    //         }
-    //     }
-    // })
     @ApiOkResponse({
         description: 'Array of Diet objects with date-only startDate/endDate',
         schema: {
@@ -115,17 +85,7 @@ export class DietRestController {
         }
     })
     @UseGuards(
-        JwtRoleGuard(['nutritionist', 'patient']),
-        // IsRelatedGuard({
-        //     on: 'query',
-        //     withKeys: ['patientId', 'nutritionistId'],
-        //     errorMessage: (role: UserRole) => {
-        //         if (role === 'patient') {
-        //             return 'Patients can only access their own diets.';
-        //         }
-        //         return 'Nutritionists can only access diets of their patients.';
-        //     }
-        // })
+        JwtRoleGuard(['nutritionist', 'patient'])
     )
     @UseFilters(ControllerExceptionFilter)
     async getAllDiets(
@@ -416,7 +376,7 @@ export class DietRestController {
     @GenerateAccessResponse()
     @UseGuards(JwtRoleGuard(['nutritionist', 'patient']))
     @UseFilters(ControllerExceptionFilter)
-    async findById(
+    async getDietById(
         @Param('dietId') dietId: string,
         @ContextUser() ctxUser: ContextUser,
     ): Promise<Diet> {

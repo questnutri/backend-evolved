@@ -1,12 +1,18 @@
 import { Injectable, NotFoundException, Inject, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
-import { ServiceContract, KeysOf, MealRecord, DIET_SERVICE_PROXY_NAME, ProxyMessage, Meal, RepeatType, SchedulerHelper } from '@backend-evolved/shared';
-import { ClientProxy, RpcException } from '@nestjs/microservices';
-import { firstValueFrom } from 'rxjs';
+import {
+    KeysOf,
+    MealRecord,
+    DIET_SERVICE_PROXY_NAME,
+    Meal,
+    RepeatType,
+    SchedulerHelper
+} from '@backend-evolved/shared';
+import { ClientProxy } from '@nestjs/microservices';
 
 @Injectable()
-export class MealRecordService implements ServiceContract<MealRecord> {
+export class MealRecordService {
     constructor(
         @InjectRepository(MealRecord)
         private readonly mealRecordRepository: Repository<MealRecord>,
@@ -40,7 +46,7 @@ export class MealRecordService implements ServiceContract<MealRecord> {
             }
         });
         if (foundPreviousRecord) {
-            const updated = this.mealRecordRepository.merge(foundPreviousRecord, { isCompleted: !foundPreviousRecord.isCompleted });
+            const updated = this.mealRecordRepository.merge(foundPreviousRecord, { isCompleted: !foundPreviousRecord.isCompleted, conclusionHour: scheduler.format(requestDate, 'HH:mm:ss'),});
             return await this.mealRecordRepository.save(updated);
         }
 
@@ -73,22 +79,36 @@ export class MealRecordService implements ServiceContract<MealRecord> {
             case RepeatType.DAILY:
                 start = scheduler.buildDate({
                     date: meal.startDate!,
+                    startOfDay: true
                 });
-                endDate = meal.endDate || meal.diet.endDate;
-                end = scheduler.buildDate({
-                    date: endDate!,
-                });
-                isValid = scheduler.isBetween({
-                    start,
-                    end,
-                    target: requestDate,
-                });
+                endDate = meal.endDate || meal.diet.endDate || null;
+                if (!endDate) {
+                    isValid = start <= requestDate;
+                    if (!isValid) {
+                        throw new BadRequestException(
+                            `The date ${scheduler.format(requestDate, 'YYYY-MM-DD')} is not within the scheduled range for this meal which is starting on ${scheduler.format(start, 'YYYY-MM-DD')}.`
+                        );
+                    }
+                } else {
+                    end = scheduler.buildDate({
+                        date: endDate!,
+                        endOfDay: true
+                    });
 
-                if (!isValid) {
-                    throw new BadRequestException(
-                        `The date ${scheduler.format(requestDate, 'YYYY-MM-DD')} is not within the scheduled range for this meal which is between ${scheduler.format(start, 'YYYY-MM-DD')} and ${scheduler.format(end, 'YYYY-MM-DD')}.`
-                    );
+                    isValid = scheduler.isBetween({
+                        start,
+                        end,
+                        target: requestDate,
+                    });
+                    if (!isValid) {
+                        throw new BadRequestException(
+                            `The date ${scheduler.format(requestDate, 'YYYY-MM-DD')} is not within the scheduled range for this meal which is between ${scheduler.format(start, 'YYYY-MM-DD')} and ${scheduler.format(end, 'YYYY-MM-DD')}.`
+                        );
+                    }
                 }
+
+
+
 
                 const daysFromMealStart = scheduler.getDaysDifference(
                     start,
@@ -186,13 +206,16 @@ export class MealRecordService implements ServiceContract<MealRecord> {
                 }
                 break;
         }
+
         const createdRecord = this.mealRecordRepository.create({
             mealId: meal.id,
             patientId: meal.diet.patientId,
             dietId: meal.diet.id,
             nutritionistId: meal.diet.nutritionistId,
             isCompleted: true,
-            relativeDate: scheduler.buildDate({ date: requestDate, startOfDay: true, offset: { day: -1 } })
+            relativeDate: scheduler.buildDate({ date: requestDate, startOfDay: true, offset: { day: -1 } }),
+            expectedHour: meal.hour!,
+            conclusionHour: scheduler.format(requestDate, 'HH:mm:ss'),
         });
 
         return await this.mealRecordRepository.save(createdRecord);

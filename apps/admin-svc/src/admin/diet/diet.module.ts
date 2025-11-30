@@ -1,7 +1,7 @@
 import { Module } from '@nestjs/common';
 import { DietController } from './diet.controller';
 import { dbConnection } from '../../database/db-connection';
-import { DIET_SERVICE_PROXY_NAME, provideProxyService } from '../../../../../libs/shared/src/providers';
+import { DIET_SERVICE_PROXY_NAME, provideProxyService } from '@backend-evolved/shared';
 import { PermissionService } from '../../permission/permission.service';
 
 @Module({

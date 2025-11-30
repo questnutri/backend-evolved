@@ -82,5 +82,14 @@ export const proxyPattern = {
     aliment: {
         getById: pattern<{ id: string }, Aliment>('aliment.getById'),
         getManyByIds: pattern<{ ids: string[], source: AlimentSource | null }, Aliment[]>('aliment.getManyByIds')
+    },
+    game: {
+        message: pattern('game.message')
+    },
+    log: {
+        message: pattern('log.message')
+    },
+    notification: {
+        create: pattern<any, void>('notification.create')
     }
 }

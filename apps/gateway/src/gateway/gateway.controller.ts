@@ -9,20 +9,22 @@ export class GatewayController {
     // Flag to control whether to add service prefix to forwarded paths
     private readonly ADD_SERVICE_PREFIX = false;
 
+    private servicesMapping: { [key: string]: string } = {
+        'admin': process.env.DEV_ADMIN_SERVICE_URL || 'http://admin-service:3000',
+        'auth': process.env.DEV_AUTH_SERVICE_URL || 'http://auth-service:3000',
+        'nutritionist': process.env.DEV_NUTRITIONIST_SERVICE_URL || 'http://nutritionist-service:3000',
+        'patient': process.env.DEV_PATIENT_SERVICE_URL || 'http://patient-service:3000',
+        'diet': process.env.DEV_DIET_SERVICE_URL || 'http://diet-service:3000',
+        'aliment': process.env.DEV_ALIMENT_SERVICE_URL || 'http://aliment-service:3000',
+        'record': process.env.DEV_RECORD_SERVICE_URL || 'http://record-service:3000',
+        'game': process.env.DEV_GAME_SERVICE_URL || 'http://game-service:3000',
+        'notification': process.env.DEV_NOTIFICATION_SERVICE_URL || 'http://notification-service:3000'
+    }
+
     // Map incoming path prefixes to service base URLs. Use environment variables to override.
     private getTarget(path: string | undefined): string | undefined {
         if (!path) return undefined;
-        switch (path) {
-            case 'admin': return process.env.DEV_ADMIN_SERVICE_URL ?? 'http://admin-service:3000';
-            case 'auth': return process.env.DEV_AUTH_SERVICE_URL ?? 'http://auth-service:3000';
-            case 'nutritionist': return process.env.DEV_NUTRITIONIST_SERVICE_URL ?? 'http://nutritionist-service:3000';
-            case 'patient': return process.env.DEV_PATIENT_SERVICE_URL ?? 'http://patient-service:3000';
-            case 'diet': return process.env.DEV_DIET_SERVICE_URL ?? 'http://diet-service:3000';
-            case 'aliment': return process.env.DEV_ALIMENT_SERVICE_URL ?? 'http://aliment-service:3000';
-            case 'record': return process.env.DEV_RECORD_SERVICE_URL ?? 'http://record-service:3000';
-            case 'game': return process.env.DEV_GAME_SERVICE_URL ?? 'http://game-service:3000';
-            default: return undefined;
-        }
+        return this.servicesMapping[path];
     }
 
     private async checkServiceHealth(serviceUrl: string): Promise<boolean> {
@@ -69,7 +71,7 @@ export class GatewayController {
 
     @Get('health')
     async healthCheck() {
-        const services = ['admin', 'auth', 'nutritionist', 'patient', 'diet', 'aliment', 'record', 'game'];
+        const services = Object.keys(this.servicesMapping);
         const serviceStatus: { [key: string]: boolean } = {};
 
         const healthChecks = services.map(async (service) => {

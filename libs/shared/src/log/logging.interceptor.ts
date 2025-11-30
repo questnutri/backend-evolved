@@ -1,8 +1,8 @@
 import { Injectable, NestInterceptor, ExecutionContext, CallHandler } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { map } from 'rxjs/operators';
-import { ContextUser, getContextUser } from '../utils';
-import { provideLogProxy } from '../providers';
+import { ContextUser, getContextUser, proxyPattern } from '../utils';
+import { provideLogProxy } from '../utils/providers';
 import { EventOrigin } from '../enums';
 import { LogRecord } from '../types/log/log.type';
 
@@ -34,13 +34,13 @@ export class LoggingInterceptor implements NestInterceptor {
                     path,
                     ip,
                     statusCode: res.statusCode,
-                    response: data,
+                    data,
                     user,
                     timestamp: new Date().toISOString()
                 };
 
                 try {
-                    logProxy.emit('log.message', payload);
+                    logProxy.emit(proxyPattern.log.message.key, payload);
                 } catch (error) {
                     console.error('[LOGGING] Failed to send log:', error);
                 }

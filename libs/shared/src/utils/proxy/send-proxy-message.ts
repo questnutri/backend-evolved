@@ -2,7 +2,7 @@ import { ClientOptions, ClientProxy, ClientProxyFactory, RpcException, Transport
 import { firstValueFrom } from "rxjs";
 import { timeout, retry } from "rxjs/operators";
 import { ProxyMessage } from "../../types";
-import { provideRabbitMqConnection } from "../rabbitmq/provide-rabbitmq-connection";
+import { provideRabbitMqConnection } from "../providers/provide-rabbitmq-connection";
 
 let loggingProxy: ClientProxy | null = null;
 

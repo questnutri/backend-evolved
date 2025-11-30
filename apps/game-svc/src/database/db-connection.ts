@@ -1,9 +1,11 @@
 import { 
     ListenerEntity,
     provideTypeOrmDbConnection,
-    TrackEntity,
+    TrackTemplate,
     TrackRecord,
-    TriggerEntity
+    Trigger,
+    AchievementTemplate,
+    AchievementRecord
 } from "@backend-evolved/shared";
 
 export const dbConnection = () => provideTypeOrmDbConnection(
@@ -12,9 +14,11 @@ export const dbConnection = () => provideTypeOrmDbConnection(
         port: process.env.DEV_GAME_SERVICE_DATABASE_PORT,
         entities: [
             ListenerEntity,
-            TrackEntity,
+            TrackTemplate,
             TrackRecord,
-            TriggerEntity,
+            Trigger,
+            AchievementTemplate,
+            AchievementRecord
         ],
         synchronize: true
     }

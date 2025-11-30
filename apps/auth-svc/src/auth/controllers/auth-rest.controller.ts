@@ -112,11 +112,10 @@ export class AuthRestController {
         }
     })
     @UseFilters(ControllerExceptionFilter)
-    @UseInterceptors(new CustomLoggingInterceptor({
-        transform: (data) => {
-            return {
-                role: data.role,
-                id: data.id
+    @UseInterceptors(new CustomLoggingInterceptor<LoginResponse | FirstLoginResponse>({
+        transform: ({ payload, data, statusCode }) => {
+            if (!('firstLogin' in data)) {
+                payload({ user: { id: data.id, role: data.role }, data: null });
             }
         }
     }))

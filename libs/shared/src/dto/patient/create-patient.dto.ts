@@ -5,7 +5,10 @@ import {
     IsEnum,
     IsOptional
 } from 'class-validator';
-import { Gender, LevelOfActivity } from "../../enums";
+import {
+    Gender,
+    LevelOfActivity
+} from "../../enums";
 
 export class BodyCreatePatientDto {
     @ApiProperty({

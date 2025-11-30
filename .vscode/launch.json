@@ -165,6 +165,21 @@
             "skipFiles": ["<node_internals>/**"],
             "sourceMaps": true,
             "outFiles": ["${workspaceFolder}/apps/game-svc/dist/**/*.(m|c|)js", "!**/node_modules/**"]
+        },
+        {
+            "type": "node",
+            "request": "launch",
+            "name": "Debug @backend-evolved/notification-svc with Nx",
+            "runtimeExecutable": "npx",
+            "runtimeArgs": ["nx", "serve", "@backend-evolved/notification-svc"],
+            "env": {
+                "NODE_OPTIONS": "--inspect=9240"
+            },
+            "console": "integratedTerminal",
+            "internalConsoleOptions": "neverOpen",
+            "skipFiles": ["<node_internals>/**"],
+            "sourceMaps": true,
+            "outFiles": ["${workspaceFolder}/apps/notification-svc/dist/**/*.(m|c|)js", "!**/node_modules/**"]
         }
     ]
 }

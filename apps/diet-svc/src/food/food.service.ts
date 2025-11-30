@@ -1,12 +1,21 @@
-import { Aliment, ALIMENT_SERVICE_PROXY_NAME, errorMessagePattern, Food, getUTCTodayStart, getUTCYesterdayEnd, ProxyMessage, proxyPattern, SchedulerHelper, sendProxyMessage, ServiceContract } from '@backend-evolved/shared';
+import {
+    ALIMENT_SERVICE_PROXY_NAME,
+    errorMessagePattern,
+    Food,
+    getUTCTodayStart,
+    getUTCYesterdayEnd,
+    ProxyMessage,
+    proxyPattern,
+    SchedulerHelper,
+    sendProxyMessage
+} from '@backend-evolved/shared';
 import { BadRequestException, Inject, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
 import { InjectRepository } from '@nestjs/typeorm';
-import { firstValueFrom } from 'rxjs';
 import { Repository } from 'typeorm';
 
 @Injectable()
-export class FoodService implements ServiceContract<Food> {
+export class FoodService  {
     constructor(
         @InjectRepository(Food)
         private readonly foodRepository: Repository<Food>,

@@ -5,9 +5,11 @@ import {
     IsOptional,
     IsString
 } from 'class-validator';
-import { DocumentType } from "../../enums/document-type.enum";
-import { LoginUserDto } from "../auth/login-user.dto";
-import { Gender } from "../../enums";
+import { 
+    Gender,
+    DocumentType
+} from "../../enums";
+import { LoginUserDto } from "../auth";
 
 export class CreateNutritionistDto extends IntersectionType(LoginUserDto) {
     @ApiProperty({

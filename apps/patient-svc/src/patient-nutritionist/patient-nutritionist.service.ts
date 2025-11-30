@@ -1,10 +1,17 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { PatientNutritionist, ServiceContract, KeysOf, errorMessagePattern, Patient, PaginationQuery, PatientFindOptions } from '@backend-evolved/shared';
+import { 
+    PatientNutritionist,
+    KeysOf,
+    errorMessagePattern,
+    Patient,
+    PaginationQuery,
+    PatientFindOptions
+} from '@backend-evolved/shared';
 import { Repository } from 'typeorm';
 
 @Injectable()
-export class PatientNutritionistService implements ServiceContract<PatientNutritionist> {
+export class PatientNutritionistService {
     constructor(
         @InjectRepository(PatientNutritionist)
         private readonly patientNutritionistRepository: Repository<PatientNutritionist>,

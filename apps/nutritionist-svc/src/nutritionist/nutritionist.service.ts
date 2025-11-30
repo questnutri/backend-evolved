@@ -16,7 +16,6 @@ import {
     proxyPattern, removePropertiesForMany,
     removePropertyForOne,
     sendProxyMessage,
-    ServiceContract,
     UserRole
 } from '@backend-evolved/shared';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -29,7 +28,7 @@ import { AddressService } from '../address/address.service';
 
 
 @Injectable()
-export class NutritionistService implements ServiceContract<Nutritionist> {
+export class NutritionistService {
     constructor(
         @Inject(AUTH_SERVICE_PROXY_NAME) private readonly authServiceProxy: ClientProxy,
         @Inject(PATIENT_SERVICE_PROXY_NAME) private readonly patientServiceProxy: ClientProxy,

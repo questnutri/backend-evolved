@@ -1,7 +1,7 @@
 import { IntersectionType } from "@nestjs/swagger";
 import { IsOptional } from "class-validator";
 import { Nutritionist } from "../../entities";
-import { SearchDto } from "../search/search.dto";
+import { SearchDto } from "../search";
 
 export class NutritionistIncludeOptions {
     @IsOptional()

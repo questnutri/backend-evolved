@@ -3,7 +3,6 @@ import {
     PATIENT_SERVICE_PROXY_NAME,
     RECORD_SERVICE_PROXY_NAME,
     ALIMENT_SERVICE_PROXY_NAME,
-    ServiceContract,
     Aliment,
     Food,
     SchedulerHelper,
@@ -13,17 +12,17 @@ import {
     errorMessagePattern,
     DietIncludeOptions,
     DietFindOptions,
-    DietPlanFindOptions
+    DietPlanFindOptions,
+    Meal
 } from '@backend-evolved/shared';
 import { Injectable, NotFoundException, Inject, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ClientProxy } from '@nestjs/microservices';
-import { firstValueFrom } from 'rxjs';
 import { MealService } from '../meal/meal.service';
 
 @Injectable()
-export class DietService implements ServiceContract<Diet> {
+export class DietService {
     constructor(
         @InjectRepository(Diet) private readonly dietRepository: Repository<Diet>,
         @Inject(PATIENT_SERVICE_PROXY_NAME) private readonly patientProxyService: ClientProxy,
@@ -38,7 +37,10 @@ export class DietService implements ServiceContract<Diet> {
         const relations = [];
         if (options?.includes?.includeMeals) relations.push('meals');
         if (options?.includes?.includeFoods) relations.push('meals.foods');
-        const foundDiets = await this.dietRepository.find({ where, relations });
+        const foundDiets = await this.dietRepository.find({ where, relations, order: {
+            createdAt: 'DESC',
+            startDate: 'DESC'
+        } });
         if (options?.includes?.includeFoods) {
             const fetchedDiets: Diet[] = [];
             for (const diet of foundDiets) {
@@ -64,8 +66,6 @@ export class DietService implements ServiceContract<Diet> {
             where,
             relations
         });
-
-        console.log('foundDiet', foundDiet);
 
         if (!foundDiet) throw new NotFoundException(errorMessagePattern.diet.notFound.key);
         return foundDiet;
@@ -96,6 +96,7 @@ export class DietService implements ServiceContract<Diet> {
             }
             if (disabledPastDateScheduling) {
                 if (data.startDate) {
+                    //Checks if startDate is in the past
                     if (validStartDate < requestDate) {
                         throw new BadRequestException(`Diet startDate (${formatter(validStartDate)}) cannot be in the past.`);
                     }
@@ -106,6 +107,7 @@ export class DietService implements ServiceContract<Diet> {
                     date: data.endDate,
                     endOfDay: true,
                 });
+                //Checks if endDate is before startDate
                 if (validStartDate > validEndDate) {
                     throw new BadRequestException(`Diet endDate (${formatter(validEndDate)}) cannot be before startDate (${formatter(validStartDate)}).`);
                 }
@@ -234,14 +236,14 @@ export class DietService implements ServiceContract<Diet> {
     async getDietPlan(find: DietPlanFindOptions): Promise<any> {
         //TODO: Add meal records if includeRecords is true
         let { diet, date, length, monthlyView } = find;
-        const scheduler = new SchedulerHelper(diet.timeZone)
-        date = scheduler.buildDate({ date: date, startOfDay: true })
+        const scheduler = new SchedulerHelper(diet.timeZone);
+        date = scheduler.buildDate({ date: date, startOfDay: true });
         if (!length || length === 0) length = 1;
-        else if (length < 0) length *= -1
+        else if (length < 0) length *= -1;
 
         // Calculate the range dates
-        const rangeStartDate = scheduler.buildDate({ date, startOfDay: true, offset: { month: -length } })
-        const rangeEndDate = scheduler.buildDate({ date, endOfDay: true, offset: { month: +length } })
+        let rangeStartDate = scheduler.buildDate({ date, startOfDay: true, offset: { month: -length } });
+        let rangeEndDate = scheduler.buildDate({ date, endOfDay: true, offset: { month: +length } });
 
         // Apply diet boundaries to the range
         let effectiveStartDate = diet.startDate > rangeStartDate ? diet.startDate : rangeStartDate;
@@ -250,35 +252,37 @@ export class DietService implements ServiceContract<Diet> {
         // Ensure the diet has meals loaded
         if (!diet.meals || diet.meals.length === 0) {
             return {
-                dietId: diet.id,
+                diet: await this.fetchDietAliments(diet),
                 startDate: diet.startDate,
                 endDate: diet.endDate,
                 plan: []
-            }
+            };
         };
 
         if (monthlyView) {
-            effectiveStartDate = scheduler.startOfMonth(date);
-            effectiveEndDate = scheduler.endOfMonth(date);
+            const monthStart = scheduler.startOfMonth(date);
+            const monthEnd = scheduler.endOfMonth(date);
+            effectiveStartDate = monthStart > diet.startDate ? monthStart : diet.startDate;
+            effectiveEndDate = diet.endDate && diet.endDate < monthEnd ? diet.endDate : monthEnd;
         }
 
         const start = effectiveStartDate;
 
         const end = effectiveEndDate;
 
-        const days: Date[] = []
+        const days: Date[] = [];
         const cursor = new Date(start);
 
         while (cursor <= end) {
-            days.push(new Date(cursor))
-            cursor.setDate(cursor.getDate() + 1)
-        }
+            days.push(new Date(cursor));
+            cursor.setDate(cursor.getDate() + 1);
+        };
 
         const dayPlans = await Promise.all(
             days.map(async d => {
                 const normalizedDate = scheduler.buildDate({ date: d, startOfDay: true });
-                const validMeals = diet.meals.filter(meal => meal.isValidForDate(normalizedDate))
-                const clonedMeals = validMeals.map(meal => ({
+                const validMeals = diet.meals.filter((meal: Meal) => meal.isValidForDate(normalizedDate))
+                const clonedMeals = validMeals.map((meal: Meal) => ({
                     ...meal,
                     foods: meal.foods.filter(f => f.isValidForDate(normalizedDate))
                 }))
@@ -286,20 +290,20 @@ export class DietService implements ServiceContract<Diet> {
                 if (clonedMeals.length === 0) return null;
                 return {
                     relativeDate: new Date(normalizedDate),
-                    mealPlans: clonedMeals.map(meal => ({
+                    mealPlans: clonedMeals.map((meal: Meal) => ({
                         meal,
                         mealRecord: null
                     }))
                 };
             })
-        )
+        );
 
         return {
             diet: await this.fetchDietAliments(diet),
             startDate: diet.startDate,
             endDate: diet.endDate,
             plan: dayPlans.filter(p => p !== null)
-        }
+        };
     }
 
     async injectAlimentsIntoMeals(meals: any[]): Promise<any[]> {
@@ -342,10 +346,6 @@ export class DietService implements ServiceContract<Diet> {
         return meals
     }
 
-
-    /**
-     * Fetch aliment information for all foods in a diet
-     */
     private async fetchDietAliments(diet: Diet): Promise<Diet> {
         const allAlimentIds: string[] = []
         const foodPositions: { mealIndex: number, foodIndex: number, alimentId: string }[] = []
@@ -390,9 +390,6 @@ export class DietService implements ServiceContract<Diet> {
         return diet
     }
 
-    /**
-     * Public method to fetch aliment information for all foods in a diet
-     */
     async fetchDietAlimentsPublic(diet: Diet): Promise<Diet> {
         return await this.fetchDietAliments(diet);
     }

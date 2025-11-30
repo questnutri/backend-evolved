@@ -1,3 +1,1 @@
-export interface ResetPasswordResponse {
-    
-}
+export interface ResetPasswordResponse {}

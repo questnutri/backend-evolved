@@ -1,6 +1,6 @@
 import { Field, InputType } from "@nestjs/graphql";
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsBoolean, IsString, IsOptional, IsDateString } from "class-validator";
+import { IsString, IsOptional, IsDateString } from "class-validator";
 
 @InputType()
 export class CreateMealRecordDto {

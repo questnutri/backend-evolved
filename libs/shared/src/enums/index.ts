@@ -5,4 +5,5 @@ export * from './document-type.enum';
 export * from './gender.enum';
 export * from './level-of-activity.enum';
 export * from './event-origin.enum';
-export * from './track-type.enum';
+export * from './trigger-limit.enum';
+export * from './trigger-group.enum';

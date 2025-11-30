@@ -1,6 +1,9 @@
 import { ApiProperty } from "@nestjs/swagger";
 import { IsString, IsOptional, IsEnum } from "class-validator";
-import { Gender, LevelOfActivity } from "../../enums";
+import {
+    Gender,
+    LevelOfActivity
+} from "../../enums";
 
 export class UpdatePatientDto_Patient {
     @ApiProperty({

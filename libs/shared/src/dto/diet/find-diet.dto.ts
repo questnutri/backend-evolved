@@ -1,6 +1,6 @@
 import { IntersectionType } from "@nestjs/swagger";
 import { Diet } from "../../entities";
-import { SearchDto } from "../search/search.dto";
+import { SearchDto } from "../search";
 
 export class DietIncludeOptions {
     includeMeals?: boolean;

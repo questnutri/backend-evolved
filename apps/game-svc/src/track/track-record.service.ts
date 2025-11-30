@@ -2,32 +2,36 @@ import { Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { TrackRecord } from "@backend-evolved/shared";
-import { TrackService } from "./track.service";
+import { TrackTemplateService } from "./track-template.service";
 
 @Injectable()
 export class TrackRecordService {
     constructor(
         @InjectRepository(TrackRecord)
         private trackRecordRepository: Repository<TrackRecord>,
-        private readonly trackService: TrackService
-    ) {}
+        private trackTemplateService: TrackTemplateService
+    ) { }
 
-    async createOrUpdate(trackId: string, userId: string, value: any): Promise<TrackRecord> {
-        const track = await this.trackService.findOne(trackId);
+    async findOne({ trackId, userId }: { trackId: string, userId: string }): Promise<TrackRecord | null> {
+        return await this.trackRecordRepository.findOne({ where: { trackId, userId }, relations: ['track'] });
+    }
 
-        let trackRecord = await this.trackRecordRepository.findOne({ where: { trackId, userId } });
+    async createOrUpdate(trackId: string, log: any): Promise<TrackRecord> {
+        const template = await this.trackTemplateService.findOne(trackId);
 
-        if (trackRecord) {
-            trackRecord.currentValue = value;
-        } else {
-            trackRecord = this.trackRecordRepository.create({
-                trackId,
-                userId,
-                currentValue: value,
-                track,
-            });
+        let existingTrack = await this.trackRecordRepository.findOne({ where: { trackId, userId: log.user.id }, relations: ['track'] });
+
+        if (existingTrack) {
+            existingTrack.updateValue(log);
+            return await this.trackRecordRepository.save(existingTrack);
         }
 
-        return await this.trackRecordRepository.save(trackRecord);
+        const newTrack = this.trackRecordRepository.create({
+            trackId,
+            userId: log.user.id,
+            track: template,
+            currentValue: template.configuration.initialValue
+        });
+        return await this.trackRecordRepository.save(newTrack);
     }
 }

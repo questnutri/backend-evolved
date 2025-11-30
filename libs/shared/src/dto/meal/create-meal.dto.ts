@@ -1,7 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
-import { IsNotEmpty, IsNumber, IsOptional, IsString, ValidateNested } from "class-validator";
+import { IsNotEmpty, IsOptional, IsString, ValidateNested } from "class-validator";
 import { Type } from 'class-transformer';
-import { RepeatConfigurationDto } from '../repeat-configuration.dto';
+import { RepeatConfigurationDto } from './repeat-configuration.dto';
 
 export class CreateMealDto {
     @ApiProperty({
