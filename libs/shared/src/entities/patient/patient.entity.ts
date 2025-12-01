@@ -77,6 +77,9 @@ export class Patient {
     @ApiProperty({ type: () => [Nutritionist] })
     nutritionists: PatientNutritionist[];
 
+    @Column()
+    mainNutritionistId: string;
+
     @DeleteDateColumn()
     deletedAt?: Date | null;
 

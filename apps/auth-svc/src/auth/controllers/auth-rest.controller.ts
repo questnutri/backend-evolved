@@ -132,6 +132,7 @@ export class AuthRestController {
     }
 
     @Post(system.auth.controller.resetPassword.route)
+    @HttpCode(200)
     @ApiOperation({
         summary: 'Reset user password using reset token',
         description: ''
@@ -154,6 +155,13 @@ export class AuthRestController {
         },
     })
     @UseFilters(ControllerExceptionFilter)
+    @UseInterceptors(new CustomLoggingInterceptor<LoginResponse>({
+        transform: ({ payload, data, statusCode }) => {
+            if(statusCode === 200) {
+                payload({ user: { id: data.id, role: data.role }, data: null });
+            }
+        }
+    }))
     async resetPassword(@Body() body: ResetPasswordDto): Promise<LoginResponse> {
         return await this.authService.resetPassword(body);
     }

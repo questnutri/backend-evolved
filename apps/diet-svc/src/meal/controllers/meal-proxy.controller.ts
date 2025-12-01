@@ -1,9 +1,11 @@
 import { Controller, NotFoundException, UseFilters } from '@nestjs/common';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 
-import { ProxyMessengerFilter, proxyPattern, ProxyMessage, errorMessagePattern } from '@backend-evolved/shared';
-import { DietService } from '../../diet/diet.service';
-import { FoodService } from '../../food/food.service';
+import {
+    ProxyMessengerFilter,
+    proxyPattern,
+    errorMessagePattern
+} from '@backend-evolved/shared';
 import { MealService } from '../meal.service';
 
 
@@ -11,8 +13,6 @@ import { MealService } from '../meal.service';
 export class MealProxyController {
     constructor(
         private readonly mealService: MealService,
-        private readonly dietService: DietService,
-        private readonly foodService: FoodService,
 
     ) { }
 
@@ -22,13 +22,21 @@ export class MealProxyController {
         @Payload() payload: typeof proxyPattern.diet.meal.getOne.payload
     ) {
         const foundMeal = await this.mealService.findOneWhere({ id: payload.mealId });
+        console.log('foundMeal', foundMeal);
+
         if (
             (payload.patientId && foundMeal.diet.patientId !== payload.patientId) ||
             (payload.nutritionistId && foundMeal.diet.nutritionistId !== payload.nutritionistId)
         ) {
-            throw new NotFoundException(errorMessagePattern.meal.notFound);
+            throw new NotFoundException(errorMessagePattern.meal.notFound.fn());
         }
-        return { payload: await this.mealService.findOneWhere({ id: payload.mealId }) };
+        console.log(payload.dietStatus);
+        if (payload.dietStatus) {
+            if (foundMeal.diet.status !== payload.dietStatus) {
+                throw new NotFoundException(errorMessagePattern.meal.notFound.fn());
+            }
+        }
+        return { payload: foundMeal };
     }
 
     @MessagePattern('meal.getDetailedInfo') //TODO: Change to proxyPattern

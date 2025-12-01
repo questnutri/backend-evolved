@@ -1,6 +1,6 @@
 {
     "name": "@backend-evolved/game-svc",
-    "version": "0.0.1",
+    "version": "2.4.0",
     "private": true,
     "nx": {
         "targets": {
@@ -79,7 +79,8 @@
     },
     "dependencies": {
         "@nestjs/mapped-types": "*",
-        "json-logic-js": "^2.0.5"
+        "json-logic-js": "^2.0.5",
+        "pg": "^8.16.3"
     },
     "devDependencies": {
         "@types/json-logic-js": "^2.0.8"

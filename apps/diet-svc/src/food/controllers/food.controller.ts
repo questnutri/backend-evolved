@@ -150,7 +150,7 @@ export class FoodController {
         if(targetMealId) {
             const targetMeal = await this.mealService.findOneWhere({ id: targetMealId }, ['diet']);
             if(targetMeal.diet.nutritionistId !== ctxUser.id) {
-                throw new NotFoundException(errorMessagePattern.meal.notFound.key);
+                throw new NotFoundException(errorMessagePattern.meal.notFound.fn());
             }
             clonePayload.meal = targetMeal;
         }

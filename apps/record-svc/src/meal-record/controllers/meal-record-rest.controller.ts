@@ -31,7 +31,8 @@ import {
     sendProxyMessage, proxyPattern,
     SchedulerHelper,
     GenerateAccessResponse,
-    LoggingInterceptor
+    LoggingInterceptor,
+    DietStatus
 } from '@backend-evolved/shared';
 import { ClientProxy } from '@nestjs/microservices';
 
@@ -244,7 +245,8 @@ export class MealRecordRestController {
             pattern: proxyPattern.diet.meal.getOne.key,
             data: {
                 mealId,
-                patientId: ctxUser.id
+                patientId: ctxUser.id,
+                dietStatus: DietStatus.ACTIVE
             }
         });
 
@@ -323,7 +325,8 @@ export class MealRecordRestController {
             pattern: proxyPattern.diet.meal.getOne.key,
             data: {
                 mealId,
-                patientId: ctxUser.id
+                patientId: ctxUser.id,
+                dietStatus: DietStatus.ACTIVE
             }
         });
         const scheduler = new SchedulerHelper(foundMeal.diet.timeZone);

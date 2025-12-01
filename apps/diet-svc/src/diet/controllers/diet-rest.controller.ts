@@ -1,4 +1,4 @@
-import { Headers, Body, Controller, Get, Post, UseGuards, Param, Put, Delete, UseFilters, Query, BadRequestException, HttpCode, Inject, NotFoundException, Patch } from '@nestjs/common';
+import { Body, Controller, Get, Post, UseGuards, Param, Delete, UseFilters, Query, BadRequestException, HttpCode, Inject, NotFoundException, Patch } from '@nestjs/common';
 import {
     ApiBearerAuth,
     ApiCreatedResponse, ApiNoContentResponse,
@@ -13,8 +13,8 @@ import {
 } from '@nestjs/swagger';
 import { DietService } from '../diet.service';
 import {
-    ControllerExceptionFilter,
-    CreateDietDto, Diet,
+    CreateDietDto,
+    Diet,
     JwtRoleGuard,
     UpdateDietDto,
     DietPlan,
@@ -27,23 +27,14 @@ import {
     errorMessagePattern,
     PATIENT_SERVICE_PROXY_NAME,
     proxyPattern,
-    sendProxyMessage,
-    DietPlanFindOptions,
-    DietPlanQueryOptions,
-    DietPlanIncludeOptions
+    sendProxyMessage, DietPlanQueryOptions,
+    DietPlanIncludeOptions,
+    ControllerExceptionFilter
 } from '@backend-evolved/shared';
 import { FoodService } from '../../food/food.service';
 import { MealService } from '../../meal/meal.service';
 import { ClientProxy } from '@nestjs/microservices';
-
-// Use a UTC-based date-only formatter here to avoid timezone shifts
-function toDateOnlyString(date: Date | string | number): string {
-    const d = new Date(date);
-    const y = d.getUTCFullYear();
-    const m = String(d.getUTCMonth() + 1).padStart(2, '0');
-    const day = String(d.getUTCDate()).padStart(2, '0');
-    return `${y}-${m}-${day}`;
-}
+import { LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
 
 @Controller()
 @ApiTags('Diets')
@@ -91,6 +82,7 @@ export class DietRestController {
     async getAllDiets(
         @Param('patientId') patientId: string,
         @Query('nutritionistId') nutritionistId: string,
+        @Query('includeCompliance') includeCompliance: boolean,
         @ContextUser() ctxUser: ContextUser,
     ): Promise<Diet[]> {
         let query: any = {};
@@ -102,21 +94,33 @@ export class DietRestController {
             query['nutritionistId'] = ctxUser.id;
             if (patientId) query['patientId'] = patientId;
         }
-        return await this.dietService.findAll(query);
+        if(includeCompliance) {
+            query['includeMeals'] = true;
+        }
+        let foundDiets = await this.dietService.findAll(query);
+        if (includeCompliance) {
+            const dietsWithCompliance = await Promise.all(
+                foundDiets.map(async (diet) => {
+                    const compliance = await this.dietService.calculateDietCompliance(diet);
+                    console.log(compliance);
+                    return {
+                        ...diet,
+                        compliance: {
+                            totalDays: compliance.totalDays,
+                            totalMeals: compliance.totalMeals,
+                            completedMeals: compliance.completedMeals,
+                            missedMeals: compliance.missedMeals,
+                            complianceRate: compliance.complianceRate
+                        }
+                    };
+                })
+            );
+            return dietsWithCompliance;
+        }
+
+        return foundDiets;
     }
 
-    /**
-     * Create a full diet structure in a single request.
-     * Expected payload shape:
-     * {
-     *   name?: string,
-     *   description?: string,
-     *   patientId: string,
-     *   startDate?: Date | string (YYYY-MM-DD),
-     *   endDate?: Date | string (YYYY-MM-DD),
-     *   meals?: [ { name, description?, hour?, repeatConfiguration?, foods?: [ { alimentId?, quantity?, portion?, description? } ] } ]
-     * }
-     */
     @Post('full')
     @ApiOperation({ summary: 'Create a full diet with meals and foods', description: 'Create diet, its meals and foods in a single JSON payload. The authenticated nutritionist will be set as nutritionistId.' })
     @ApiBody({
@@ -134,7 +138,7 @@ export class DietRestController {
                         hour: '19:00',
                         repeatConfiguration: {
                             type: 'WEEKLY',
-                            daysOfWeek: [1, 2] // Monday, Tuesday (DayOfWeek numbering uses JS getUTCDay mapping)
+                            daysOfWeek: [1, 2]
                         },
                         foods: [
                             { alimentId: 'alim-123', quantity: 1 }
@@ -154,9 +158,7 @@ export class DietRestController {
         @Body() payload: any,
         @ContextUser() ctxUser: ContextUser,
     ): Promise<any> {
-        // Ensure startDate default
         if (!payload.startDate) payload.startDate = new Date();
-        // Attach nutritionistId from authenticated user
         payload.nutritionistId = ctxUser.id;
 
         const createdMeals: any[] = [];
@@ -167,10 +169,8 @@ export class DietRestController {
 
         let createdDiet: any = null;
         try {
-            // Create diet
             createdDiet = await this.dietService.createOne(payload);
 
-            // If there are meals, create them and their foods
             if (payload.meals && Array.isArray(payload.meals)) {
                 for (const mealPayload of payload.meals) {
                     const mealToCreate = { ...mealPayload, diet: createdDiet };
@@ -194,7 +194,6 @@ export class DietRestController {
                 }
             }
 
-            // Return the full created structure
             const dietWithRelations = await this.dietService.findOne({ where: { id: createdDiet.id }, relations: ['meals', 'meals.foods'] });
             const publicDiet = await this.dietService.fetchDietAlimentsPublic(dietWithRelations as Diet);
             return {
@@ -208,29 +207,94 @@ export class DietRestController {
                 }
             }
         } catch (err) {
-            // Attempt compensation: delete created foods, meals and diet where possible
             try {
                 for (const f of createdFoods) {
                     if (f && f.id) await this.foodService.deleteOne({ id: f.id } as any);
                 }
             } catch (e) {
-                // swallow
             }
             try {
                 for (const m of createdMeals) {
                     if (m && m.id) await this.mealService.deleteById(m.id);
                 }
             } catch (e) {
-                // swallow
             }
             try {
                 if (createdDiet && createdDiet.id) await this.dietService.deleteOne({ id: createdDiet.id });
             } catch (e) {
-                // swallow
             }
             throw err;
         }
     }
+
+    @Get('current')
+    @UseFilters(ControllerExceptionFilter)
+    @UseGuards(JwtRoleGuard(['patient']))
+    async getCurrentDiet(
+        @ContextUser() ctxUser: ContextUser,
+    ) {
+        const foundPatient = await sendProxyMessage<
+            typeof proxyPattern.patient.getById.response,
+            typeof proxyPattern.patient.getById.payload
+        >({
+            proxy: this.patientProxy,
+            pattern: proxyPattern.patient.getById.key,
+            data: {
+                id: ctxUser.id,
+                ctxUser
+            }
+        });
+
+        const now = new Date();
+
+        const foundDiets = await this.dietService.findAll({
+            where: [
+                {
+                    nutritionistId: foundPatient.mainNutritionistId,
+                    status: DietStatus.ACTIVE,
+                    patientId: ctxUser.id,
+                    startDate: LessThanOrEqual(now),
+                    endDate: MoreThanOrEqual(now)
+                },
+                {
+                    nutritionistId: foundPatient.mainNutritionistId,
+                    status: DietStatus.ACTIVE,
+                    patientId: ctxUser.id,
+                    startDate: LessThanOrEqual(now),
+                    endDate: null
+                }
+            ],
+            includeFoods: true,
+            includeMeals: true
+        });
+
+        if (!foundDiets || foundDiets.length === 0) {
+            throw new NotFoundException('No active diet found for the current period');
+        }
+
+        const currentDiet = foundDiets.reduce((latest, diet) => {
+            const latestUpdatedAt = new Date(latest.updatedAt);
+            const dietUpdatedAt = new Date(diet.updatedAt);
+            return dietUpdatedAt > latestUpdatedAt ? diet : latest;
+        });
+
+        return await this.dietService.fetchDietAlimentsPublic(currentDiet);
+    }
+
+    @Get('current/plan')
+    @UseFilters(ControllerExceptionFilter)
+    @UseGuards(JwtRoleGuard(['patient']))
+    async getCurrentDietPlan(
+        @ContextUser() ctxUser: ContextUser,
+        @Query() query: DietPlanQueryOptions & DietPlanIncludeOptions
+    ): Promise<DietPlan[]> {
+        const currentDiet = await this.getCurrentDiet(ctxUser);
+        return await this.dietService.getDietPlan({
+            diet: currentDiet,
+            ...query,
+        });
+    }
+
 
     @Get(':dietId/plan')
     @UseGuards(
@@ -475,6 +539,7 @@ export class DietRestController {
             overrideProperties
         });
     }
+
 
     @Patch(':dietId')
     @ApiOperation({

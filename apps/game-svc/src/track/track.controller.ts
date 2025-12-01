@@ -1,15 +1,13 @@
-import { Body, Controller, Get, Post } from '@nestjs/common';
-import { TrackTemplateService } from './track-template.service';
-import { TrackTemplate } from '@backend-evolved/shared';
+import { Body, Controller, Get, Post, UseFilters, UseGuards } from '@nestjs/common';
+import { ContextUser, ControllerExceptionFilter, JwtRoleGuard, TrackTemplate } from '@backend-evolved/shared';
 import { ApiCreatedResponse, ApiOkResponse, ApiOperation } from '@nestjs/swagger';
 import { TrackService } from './track.service';
 
 @Controller('tracks')
 export class TrackController {
     constructor(
-        private readonly trackTemplateService: TrackTemplateService,
         private readonly trackService: TrackService
-    ) {}
+    ) { }
 
     @Get('all')
     @ApiOperation({
@@ -20,6 +18,8 @@ export class TrackController {
         description: 'A list of track templates has been successfully retrieved.',
         type: [TrackTemplate],
     })
+    @UseGuards(JwtRoleGuard(['admin']))
+    @UseFilters(ControllerExceptionFilter)
     async getAll() {
         return await this.trackService.findAllTemplates();
     }
@@ -33,11 +33,23 @@ export class TrackController {
         description: 'The track template has been successfully created.',
         type: TrackTemplate,
     })
+    @UseGuards(JwtRoleGuard(['admin']))
+    @UseFilters(ControllerExceptionFilter)
     async postOne(
         @Body() body: any
     ) {
         return await this.trackService.createTemplate(body);
+    }
 
-        // return await this.trackTemplateService.create(body);
+    @Get('me')
+    @UseGuards(JwtRoleGuard(['patient']))
+    async getMe(
+        @ContextUser() ctxUser: ContextUser
+    ) {
+        return await this.trackService.findAllRecords({
+            where: {
+                userId: ctxUser.id
+            }
+        })
     }
 }

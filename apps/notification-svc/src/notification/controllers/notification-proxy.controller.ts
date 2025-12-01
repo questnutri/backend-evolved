@@ -7,13 +7,13 @@ import { ProxyMessengerFilter, proxyPattern } from '@backend-evolved/shared';
 export class NotificationProxyController {
     constructor(private readonly notificationService: NotificationService) { }
 
-    @MessagePattern(proxyPattern.notification.create)
+    @MessagePattern(proxyPattern.notification.create.key)
     @UseFilters(ProxyMessengerFilter)
     async handleCreateNotification(
         @Payload() payload: typeof proxyPattern.notification.create.payload
     ): Promise<typeof proxyPattern.notification.create.response> {
+        console.log("Creating notification with payload:", payload);
         const createdNotification = await this.notificationService.create(payload);
         console.log(createdNotification);
     }
-
 }

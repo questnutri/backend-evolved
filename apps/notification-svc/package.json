@@ -1,6 +1,6 @@
 {
     "name": "@backend-evolved/notification-svc",
-    "version": "0.0.1",
+    "version": "2.4.0",
     "private": true,
     "nx": {
         "targets": {
@@ -78,6 +78,7 @@
         }
     },
     "dependencies": {
-      "@nestjs/mapped-types": "*"
+        "@nestjs/mapped-types": "*",
+        "pg": "^8.16.3"
     }
 }

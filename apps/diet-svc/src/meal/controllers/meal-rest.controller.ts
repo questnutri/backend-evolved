@@ -3,7 +3,6 @@ import {
 	Controller,
 	Post,
 	UseGuards,
-	Headers,
 	NotFoundException,
 	Param, Delete,
 	Get,
@@ -317,7 +316,7 @@ When creating meal records, the system validates that the \`date\` matches the m
 	) {
 		const meal = await this.mealService.findOneWhere({ id: mealId }, ['diet']);
 		if (meal.diet.nutritionistId !== ctxUser.id) {
-			throw new NotFoundException(errorMessagePattern.meal.notFound.key);
+			throw new NotFoundException(errorMessagePattern.meal.notFound.fn());
 		};
 		return meal;
 	}
@@ -332,7 +331,7 @@ When creating meal records, the system validates that the \`date\` matches the m
 		type: Meal
 	})
 	@ApiNotFoundResponse({
-		description: errorMessagePattern.meal.notFound.key
+		description: errorMessagePattern.meal.notFound.fn()
 	})
 	@ApiQuery({
 		name: 'includeFoods',
@@ -361,7 +360,7 @@ When creating meal records, the system validates that the \`date\` matches the m
 				errorMessagePattern
 					.meal
 					.notFound
-					.key
+					.fn()
 			);
 		}
 		if (targetDietId) {
@@ -397,7 +396,7 @@ When creating meal records, the system validates that the \`date\` matches the m
 		console.log('updateData', updateData);
 		const foundMeal = await this.mealService.findOneWhere({ id: mealId }, ['diet', 'foods']);
 		if (foundMeal.diet.nutritionistId !== ctxUser.id) {
-			throw new NotFoundException(errorMessagePattern.meal.notFound.key);
+			throw new NotFoundException(errorMessagePattern.meal.notFound.fn());
 		}
 		return await this.mealService.updateOne(foundMeal, updateData);
 	}
@@ -431,7 +430,7 @@ When creating meal records, the system validates that the \`date\` matches the m
 	) {
 		const foundMeal = await this.mealService.findOneWhere({ id: mealId }, ['diet', 'foods']);
 		if (foundMeal.diet.nutritionistId !== ctxUser.id) {
-			throw new NotFoundException(errorMessagePattern.meal.notFound.key);
+			throw new NotFoundException(errorMessagePattern.meal.notFound.fn());
 		}
 		const scheduler = new SchedulerHelper(foundMeal.diet.timeZone);
 		const requestDate = scheduler.buildDate({ startOfDay: true });

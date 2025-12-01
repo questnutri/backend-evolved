@@ -7,3 +7,4 @@ export * from './level-of-activity.enum';
 export * from './event-origin.enum';
 export * from './trigger-limit.enum';
 export * from './trigger-group.enum';
+export * from './notification-type.enum';

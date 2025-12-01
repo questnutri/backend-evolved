@@ -1,5 +1,5 @@
 import { IntersectionType } from "@nestjs/swagger";
-import { Diet } from "../../entities";
+import { Diet } from "../../../entities";
 
 export class DietPlanQueryOptions {
     length?: number = 1;
@@ -9,6 +9,7 @@ export class DietPlanQueryOptions {
 
 export class DietPlanIncludeOptions {
     includeRecords?: boolean;
+    dontIncludeAliments?: boolean;
 }
 
 export class DietPlanFindOptions extends IntersectionType(

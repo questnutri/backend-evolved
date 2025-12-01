@@ -3,9 +3,7 @@ import {
     Get,
     Post,
     Body,
-    Patch,
     Param,
-    Delete,
     UseGuards,
     UseFilters,
     Query
@@ -13,11 +11,11 @@ import {
 import { WaterRecordService } from './water-record.service';
 import { Body_CreateWaterRecord } from './dto/create-water-record.dto';
 
-import { 
+import {
     ContextUser,
     ControllerExceptionFilter,
     JwtRoleGuard,
- } from '@backend-evolved/shared';
+} from '@backend-evolved/shared';
 
 //FIXME: REFACTOR
 @Controller('water')

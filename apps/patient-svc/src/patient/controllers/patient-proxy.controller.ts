@@ -1,21 +1,13 @@
-import { Controller, NotFoundException, UseFilters } from '@nestjs/common';
-import { PatientService, TreatedPatient } from '../patient.service';
+import { Controller, UseFilters } from '@nestjs/common';
+import { PatientService } from '../patient.service';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import {
     ProxyMessengerFilter,
-    ProxyMessage,
-    Patient,
-    proxyPattern,
-    BodyCreatePatientDto,
-    ProxyWaterGoalDto,
-    WaterGoal,
-    normalizeToStartOfDay,
-    FindCurrentWaterGoalDto,
+    ProxyMessage, proxyPattern, WaterGoal, FindCurrentWaterGoalDto
 } from '@backend-evolved/shared';
 import { WaterGoalService } from '../../water-goal/water-goal.service';
 import { PatientNutritionistService } from '../../patient-nutritionist/patient-nutritionist.service';
 
-//FIXME: FIX THIS PROXY TO BE USED ON ADMIN-SVC
 @Controller()
 export class PatientProxyController {
     constructor(

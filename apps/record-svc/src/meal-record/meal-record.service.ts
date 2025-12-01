@@ -1,23 +1,18 @@
-import { Injectable, NotFoundException, Inject, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import {
     KeysOf,
-    MealRecord,
-    DIET_SERVICE_PROXY_NAME,
-    Meal,
+    MealRecord, Meal,
     RepeatType,
     SchedulerHelper
 } from '@backend-evolved/shared';
-import { ClientProxy } from '@nestjs/microservices';
 
 @Injectable()
 export class MealRecordService {
     constructor(
         @InjectRepository(MealRecord)
         private readonly mealRecordRepository: Repository<MealRecord>,
-        @Inject(DIET_SERVICE_PROXY_NAME)
-        private readonly dietServiceProxy: ClientProxy
     ) { }
 
     async findAll(where: any): Promise<MealRecord[]> {
@@ -28,7 +23,6 @@ export class MealRecordService {
         return await this.mealRecordRepository.findOne({ where: query });
     }
 
-    //FIXME: CHECK IF IS WORKING
     async createOrUpdate(meal: Meal, date?: string, time?: string): Promise<any> {
         const scheduler = new SchedulerHelper(meal.diet.timeZone);
         const requestDate = scheduler.buildDate({
@@ -42,7 +36,7 @@ export class MealRecordService {
                 patientId: meal.diet.patientId,
                 dietId: meal.diet.id,
                 nutritionistId: meal.diet.nutritionistId,
-                relativeDate: scheduler.buildDate({ date: requestDate, startOfDay: true, offset: { day: -1 } })
+                relativeDate: scheduler.buildDate({ date: requestDate, startOfDay: true })
             }
         });
         if (foundPreviousRecord) {
@@ -106,9 +100,6 @@ export class MealRecordService {
                         );
                     }
                 }
-
-
-
 
                 const daysFromMealStart = scheduler.getDaysDifference(
                     start,
@@ -213,99 +204,12 @@ export class MealRecordService {
             dietId: meal.diet.id,
             nutritionistId: meal.diet.nutritionistId,
             isCompleted: true,
-            relativeDate: scheduler.buildDate({ date: requestDate, startOfDay: true, offset: { day: -1 } }),
+            relativeDate: scheduler.buildDate({ date: requestDate, startOfDay: true }),
             expectedHour: meal.hour!,
             conclusionHour: scheduler.format(requestDate, 'HH:mm:ss'),
         });
 
         return await this.mealRecordRepository.save(createdRecord);
-    }
-
-    // // Enhanced method for patient meal record creation with meal service integration
-    // async createPatientMealRecord(
-    //     mealId: string,
-    //     patientId: string,
-    //     mealRelativeDate: Date,
-    // ): Promise<MealRecord> {
-    //     try {
-    //         // First, validate if the mealRelativeDate is valid for this meal's repeat configuration
-    //         await this.validateMealRelativeDate(mealId, mealRelativeDate, patientId);
-
-    //         // Get meal information from diet service with patient validation
-    //         const mealInfo = await firstValueFrom(
-    //             this.dietServiceProxy.send<ProxyMessage<{ dietId: string, nutritionistId: string }>, { mealId: string, patientId: string }>('meal.getInfo', {
-    //                 mealId,
-    //                 patientId
-    //             })
-    //         );
-
-    //         if (mealInfo && 'error' in mealInfo) {
-    //             throw new RpcException(mealInfo);
-    //         }
-
-    //         if (!mealInfo || !mealInfo.payload) {
-    //             throw new NotFoundException(`Meal with ID ${mealId} not found`);
-    //         }
-
-    //         const { dietId, nutritionistId } = mealInfo.payload;
-
-    //         // Normalize the date to ignore time part - only consider the date
-    //         const normalizedDate = new Date(mealRelativeDate);
-    //         normalizedDate.setHours(0, 0, 0, 0);
-
-    //         // Check if a meal record already exists with the same parameters
-    //         const existingRecord = await this.mealRecordRepository.findOne({
-    //             where: {
-    //                 dietId,
-    //                 mealId,
-    //                 patientId,
-    //                 nutritionistId,
-    //                 mealRelativeDate: normalizedDate
-    //             }
-    //         });
-
-    //         if (existingRecord) {
-    //             existingRecord.isCompleted = !existingRecord.isCompleted;
-    //             return await this.mealRecordRepository.save(existingRecord);
-    //         }
-
-    //         const mealRecordData = {
-    //             dietId,
-    //             mealId,
-    //             patientId,
-    //             nutritionistId,
-    //             isCompleted: true,
-    //             mealRelativeDate: normalizedDate
-    //         };
-
-    //         const mealRecord = this.mealRecordRepository.create(mealRecordData);
-    //         const createdMealRecord = await this.mealRecordRepository.save(mealRecord);
-
-    //         //NOTIFIES GAME-SVC HERE!
-
-    //         return createdMealRecord;
-    //     } catch (error) {
-    //         if (error instanceof NotFoundException || error instanceof RpcException || error instanceof BadRequestException) {
-    //             throw error;
-    //         }
-    //         throw new BadRequestException(`Failed to create meal record: ${error instanceof Error ? error.message : 'Unknown error'}`);
-    //     }
-    // }
-
-    // async updateOne(query: Partial<KeysOf<MealRecord>>, data: UpdateMealRecordDto): Promise<MealRecord> {
-    //     const mealRecord = await this.mealRecordRepository.findOne({ where: query });
-    //     if (!mealRecord) {
-    //         throw new NotFoundException('Meal record not found');
-    //     }
-    //     this.mealRecordRepository.merge(mealRecord, data);
-    //     return await this.mealRecordRepository.save(mealRecord);
-    // }
-
-    async deleteOne(query: Partial<KeysOf<MealRecord>>): Promise<void> {
-        const result = await this.mealRecordRepository.delete(query);
-        if (result.affected === 0) {
-            throw new NotFoundException('Meal record not found');
-        }
     }
 
     // Additional methods specific to meal records

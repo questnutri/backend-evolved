@@ -1,4 +1,4 @@
-import { Controller, Get, Post, Body, Param, UseGuards, UseFilters, Query, Inject, BadRequestException, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Post, Body, Param, UseGuards, UseFilters, Query, Inject, BadRequestException, NotFoundException, UseInterceptors } from '@nestjs/common';
 import { WeightRecordService } from '../weight-record.service';
 import { CreateWeightRecordDto } from '../dto/create-weight-record.dto';
 import { ApiBearerAuth, ApiOperation, ApiSecurity } from '@nestjs/swagger';
@@ -9,6 +9,7 @@ import {
     FindWeightOptions,
     JwtRoleGuard,
     ListResponse,
+    LoggingInterceptor,
     PaginationQuery,
     PATIENT_SERVICE_PROXY_NAME,
     proxyPattern,
@@ -34,6 +35,7 @@ export class WeightRecordRestController {
     @ApiSecurity('bearer')
     @UseGuards(JwtRoleGuard(['patient', 'nutritionist']))
     @UseFilters(ControllerExceptionFilter)
+    @UseInterceptors(LoggingInterceptor)
     async create(
         @ContextUser() ctxUser: ContextUser,
         @Body() createWeightRecordDto: CreateWeightRecordDto

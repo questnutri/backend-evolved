@@ -218,14 +218,14 @@ export class PatientService {
                 data.levelOfActivity = LevelOfActivity.ONE;
             }
 
-            const patient = this.patientRepository.create({ ...data, id });
+            const patient = this.patientRepository.create({ ...data, id, mainNutritionistId: data.nutritionistId });
             let savedPatient = await this.patientRepository.save(patient);
             const patientNutritionist = this.patientNutritionistRepository.create({
                 patientId: savedPatient.id,
                 nutritionistId: data.nutritionistId
             });
             await this.patientNutritionistRepository.save(patientNutritionist);
-            savedPatient = removePropertyForOne(savedPatient, ['deletedAt']);
+            savedPatient = removePropertyForOne(savedPatient, ['deletedAt', 'mainNutritionistId']);
             return savedPatient;
         } catch (error: any) {
             if (!(error instanceof ConflictException)) {

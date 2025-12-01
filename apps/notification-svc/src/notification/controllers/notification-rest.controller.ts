@@ -1,4 +1,4 @@
-import { Controller, Get, UseFilters, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, UseFilters, UseGuards } from '@nestjs/common';
 import { NotificationService } from '../notification.service';
 import { ApiExcludeEndpoint } from '@nestjs/swagger';
 import {
@@ -30,4 +30,27 @@ export class NotificationRestController {
         });
     }
 
+    @Post('ack')
+    @UseGuards(JwtRoleGuard(['patient', 'nutritionist', 'admin']))
+    @UseFilters(ControllerExceptionFilter)
+    async ackNotifications(
+        @ContextUser() user: ContextUser,
+        @Body() body: { ids: string[] }
+    ) {
+        return await this.notificationService.deleteManyByIds(body.ids);
+    }
+
+    @Post('ack/all')
+    @UseGuards(JwtRoleGuard(['patient', 'nutritionist', 'admin']))
+    @UseFilters(ControllerExceptionFilter)
+    async ackAllNotifications(
+        @ContextUser() user: ContextUser
+    ) {
+        const notifications = await this.notificationService.findAll({
+            where: {
+                userId: user.id
+            }
+        });
+        return await this.notificationService.remove(notifications);
+    }
 }

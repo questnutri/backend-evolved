@@ -1,4 +1,4 @@
-import { Aliment, Diet, Meal, Nutritionist, Patient, User, WaterGoal, WeightRecord } from "../../entities";
+import { Aliment, Diet, Meal, MealRecord, Nutritionist, Patient, User, WaterGoal, WeightRecord } from "../../entities";
 import { Payload_GetWaterGoalById } from "../../interfaces/proxy";
 import {
     ProxyBodyCreatePatientDto,
@@ -8,9 +8,10 @@ import {
     RegisterUserDto,
     NutritionistFindOptions,
     FindUserOptions,
+    CreateNotificationDto,
 } from "../../dto";
 import { ContextUser } from "../context-user";
-import { AlimentSource } from "../../enums";
+import { AlimentSource, DietStatus } from "../../enums";
 
 const pattern = <SEND = any, RECEIVE = any>(key: string) => {
     return {
@@ -30,7 +31,7 @@ export const proxyPattern = {
     },
     patient: {
         creation: pattern<ProxyBodyCreatePatientDto, Patient>('patient.creation'),
-        getById: pattern<{ id: string, options?: PatientFindOptions, ctxUser: ContextUser }>('patient.getById'), //data: { id: string }
+        getById: pattern<{ id: string, options?: PatientFindOptions, ctxUser: ContextUser }, Patient>('patient.getById'), //data: { id: string }
         getManyByIds: pattern<{ ids: string[], options?: PatientFindOptions & PaginationQuery }, Patient[]>('patient.getManyByIds'),
         getAll: pattern<{
             where: {
@@ -67,7 +68,7 @@ export const proxyPattern = {
         getOne: pattern<Partial<Diet>, Diet>('diet.getOne'),
         activate: pattern<{ id: string }, Diet>('diet.activate'),
         meal: {
-            getOne: pattern<{ mealId: string, patientId?: string, nutritionistId?: string }, Meal>('diet.meal.getOne'),
+            getOne: pattern<{ mealId: string, patientId?: string, nutritionistId?: string, dietStatus?: DietStatus}, Meal>('diet.meal.getOne'),
         },
         deleteById: pattern<{ id: string }, { result: boolean }>('diet.deletionById')
     },
@@ -77,6 +78,12 @@ export const proxyPattern = {
                 patientId: string,
                 ctxUser: ContextUser
             }, WeightRecord | null>('record.weight.getLast'),
+        },
+        meal: {
+            dietRequest: {
+                getAllForMealId: pattern<{ mealId: string, date?: string, timezone?: number }, MealRecord[]>('record.meal.dietRequest.getAllForMealId')
+            },
+            getAllForMealId: pattern<{ mealId: string, date?: string, patientId?: string }, MealRecord[]>('record.meal.getAllForMealId')
         }
     },
     aliment: {
@@ -90,6 +97,6 @@ export const proxyPattern = {
         message: pattern('log.message')
     },
     notification: {
-        create: pattern<any, void>('notification.create')
+        create: pattern<CreateNotificationDto, void>('notification.create')
     }
 }

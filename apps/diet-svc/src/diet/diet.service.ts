@@ -10,10 +10,10 @@ import {
     proxyPattern,
     DietStatus,
     errorMessagePattern,
-    DietIncludeOptions,
     DietFindOptions,
     DietPlanFindOptions,
-    Meal
+    Meal,
+    MealRecord
 } from '@backend-evolved/shared';
 import { Injectable, NotFoundException, Inject, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -31,17 +31,18 @@ export class DietService {
         private readonly mealService: MealService
     ) { }
 
-    async findAll(where?: any, options?: {
-        includes?: DietIncludeOptions
-    }): Promise<Diet[]> {
-        const relations = [];
-        if (options?.includes?.includeMeals) relations.push('meals');
-        if (options?.includes?.includeFoods) relations.push('meals.foods');
-        const foundDiets = await this.dietRepository.find({ where, relations, order: {
-            createdAt: 'DESC',
-            startDate: 'DESC'
-        } });
-        if (options?.includes?.includeFoods) {
+    async findAll(options?: DietFindOptions): Promise<Diet[]> {
+        let { where, relations, order, includeFoods, includeMeals } = options || {};
+        if (!relations) relations = [];
+        if (includeMeals) relations.push('meals');
+        if (includeFoods) relations.push('meals.foods');
+        if (!order) order = {
+            createdAt: "DESC",
+            startDate: "DESC"
+        };
+
+        const foundDiets = await this.dietRepository.find({ where, relations, order });
+        if (includeMeals && includeFoods) {
             const fetchedDiets: Diet[] = [];
             for (const diet of foundDiets) {
                 fetchedDiets.push(await this.fetchDietAliments(diet));
@@ -50,8 +51,6 @@ export class DietService {
         }
         return foundDiets;
     }
-
-    //TODO: FINISH DIET PLAN
 
     async findOne(
         find?: DietFindOptions
@@ -183,7 +182,7 @@ export class DietService {
                     errorMessagePattern
                         .diet
                         .cannotChangeStartDateOfActiveOrEndedDiet
-                        .key
+                        .fn()
                 );
             };
             if ( //Here diet HAVE NOT started yet, and sent date is not after a possible end date
@@ -234,8 +233,7 @@ export class DietService {
     }
 
     async getDietPlan(find: DietPlanFindOptions): Promise<any> {
-        //TODO: Add meal records if includeRecords is true
-        let { diet, date, length, monthlyView } = find;
+        let { diet, date, length, monthlyView, includeRecords, dontIncludeAliments } = find;
         const scheduler = new SchedulerHelper(diet.timeZone);
         date = scheduler.buildDate({ date: date, startOfDay: true });
         if (!length || length === 0) length = 1;
@@ -253,8 +251,6 @@ export class DietService {
         if (!diet.meals || diet.meals.length === 0) {
             return {
                 diet: await this.fetchDietAliments(diet),
-                startDate: diet.startDate,
-                endDate: diet.endDate,
                 plan: []
             };
         };
@@ -285,23 +281,50 @@ export class DietService {
                 const clonedMeals = validMeals.map((meal: Meal) => ({
                     ...meal,
                     foods: meal.foods.filter(f => f.isValidForDate(normalizedDate))
-                }))
-                await this.injectAlimentsIntoMeals(clonedMeals)
+                })) as Meal[];
+                if (!dontIncludeAliments) {
+                    await this.injectAlimentsIntoMeals(clonedMeals)
+                }
                 if (clonedMeals.length === 0) return null;
+                const mealPlans = await Promise.all(
+                    clonedMeals.map(async (meal: Meal) => {
+                        const mealPlan: { meal: Meal; mealRecords?: MealRecord[] } = { meal };
+
+                        if (includeRecords) {
+                            try {
+                                const response = await sendProxyMessage<
+                                    typeof proxyPattern.record.meal.dietRequest.getAllForMealId.response,
+                                    typeof proxyPattern.record.meal.dietRequest.getAllForMealId.payload
+                                >({
+                                    proxy: this.recordProxyService,
+                                    pattern: proxyPattern.record.meal.dietRequest.getAllForMealId.key,
+                                    data: {
+                                        mealId: meal.id,
+                                        date: normalizedDate.toISOString(),
+                                        timezone: diet.timeZone
+                                    },
+                                    options: { retry: { count: 2, delay: 50 } }
+                                });
+                                mealPlan.mealRecords = response || [];
+                            } catch (error) {
+                                // If fetching records fails, continue with empty records
+                                mealPlan.mealRecords = [];
+                            }
+                        }
+
+                        return mealPlan;
+                    })
+                );
+
                 return {
                     relativeDate: new Date(normalizedDate),
-                    mealPlans: clonedMeals.map((meal: Meal) => ({
-                        meal,
-                        mealRecord: null
-                    }))
+                    mealPlans
                 };
             })
         );
 
         return {
-            diet: await this.fetchDietAliments(diet),
-            startDate: diet.startDate,
-            endDate: diet.endDate,
+            diet: !dontIncludeAliments ? await this.fetchDietAliments(diet) : diet,
             plan: dayPlans.filter(p => p !== null)
         };
     }
@@ -344,6 +367,149 @@ export class DietService {
         })
 
         return meals
+    }
+
+    async calculateDietCompliance(diet: Diet): Promise<{
+        totalDays: number;
+        totalMeals: number;
+        completedMeals: number;
+        missedMeals: number;
+        complianceRate: number;
+        dailyCompliance: Array<{
+            date: Date;
+            totalMeals: number;
+            completedMeals: number;
+            missedMeals: number;
+        }>;
+    }> {
+        const scheduler = new SchedulerHelper(diet.timeZone);
+        const requestDate = scheduler.buildDate({ startOfDay: true });
+        const startDate = scheduler.buildDate({ date: diet.startDate, startOfDay: true });
+
+        // Don't calculate if diet hasn't started yet
+        if (startDate > requestDate) {
+            return {
+                totalDays: 0,
+                totalMeals: 0,
+                completedMeals: 0,
+                missedMeals: 0,
+                complianceRate: 0,
+                dailyCompliance: []
+            };
+        }
+
+        // Determine end date for compliance calculation (either today or diet end date, whichever is earlier)
+        let effectiveEndDate = requestDate;
+        if (diet.endDate) {
+            const dietEndDate = scheduler.buildDate({ date: diet.endDate, endOfDay: true });
+            if (dietEndDate < requestDate) {
+                effectiveEndDate = dietEndDate;
+            }
+        }
+
+        // Build array of days from start to effective end
+        const days: Date[] = [];
+        const cursor = new Date(startDate);
+        while (cursor <= effectiveEndDate) {
+            days.push(new Date(cursor));
+            cursor.setDate(cursor.getDate() + 1);
+        }
+
+        // Ensure diet has meals loaded
+        if (!diet.meals || diet.meals.length === 0) {
+            return {
+                totalDays: days.length,
+                totalMeals: 0,
+                completedMeals: 0,
+                missedMeals: 0,
+                complianceRate: 0,
+                dailyCompliance: []
+            };
+        }
+
+        let totalMeals = 0;
+        let completedMeals = 0;
+        let missedMeals = 0;
+        const dailyCompliance: Array<{
+            date: Date;
+            totalMeals: number;
+            completedMeals: number;
+            missedMeals: number;
+        }> = [];
+
+        // Process each day synchronously
+        for (const day of days) {
+            const normalizedDate = scheduler.buildDate({ date: day, startOfDay: true });
+
+            // Get valid meals for this day
+            const validMeals = diet.meals.filter((meal: Meal) => meal.isValidForDate(normalizedDate));
+
+            if (validMeals.length === 0) {
+                continue;
+            }
+
+            let dayTotalMeals = validMeals.length;
+            let dayCompletedMeals = 0;
+            let dayMissedMeals = 0;
+
+            // Fetch records for each meal on this day
+            for (const meal of validMeals) {
+                try {
+                    const records = await sendProxyMessage<
+                        typeof proxyPattern.record.meal.dietRequest.getAllForMealId.response,
+                        typeof proxyPattern.record.meal.dietRequest.getAllForMealId.payload
+                    >({
+                        proxy: this.recordProxyService,
+                        pattern: proxyPattern.record.meal.dietRequest.getAllForMealId.key,
+                        data: {
+                            mealId: meal.id,
+                            date: normalizedDate.toISOString(),
+                            timezone: diet.timeZone
+                        },
+                        options: { retry: { count: 2, delay: 50 } }
+                    });
+
+                    // Check if record exists and is completed
+                    if (!records || records.length === 0) {
+                        // No record exists - missed meal
+                        dayMissedMeals++;
+                    } else {
+                        // Check if any record is completed
+                        const hasCompletedRecord = records.some((record: MealRecord) => record.isCompleted === true);
+                        if (hasCompletedRecord) {
+                            dayCompletedMeals++;
+                        } else {
+                            dayMissedMeals++;
+                        }
+                    }
+                } catch (error) {
+                    // On error, consider as missed
+                    dayMissedMeals++;
+                }
+            }
+
+            totalMeals += dayTotalMeals;
+            completedMeals += dayCompletedMeals;
+            missedMeals += dayMissedMeals;
+
+            dailyCompliance.push({
+                date: normalizedDate,
+                totalMeals: dayTotalMeals,
+                completedMeals: dayCompletedMeals,
+                missedMeals: dayMissedMeals
+            });
+        }
+
+        const complianceRate = totalMeals > 0 ? Math.round((completedMeals / totalMeals) * 10000) / 100 : 0;
+
+        return {
+            totalDays: dailyCompliance.length,
+            totalMeals,
+            completedMeals,
+            missedMeals,
+            complianceRate,
+            dailyCompliance
+        };
     }
 
     private async fetchDietAliments(diet: Diet): Promise<Diet> {

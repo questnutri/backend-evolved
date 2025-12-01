@@ -1,9 +1,14 @@
-import { Column, CreateDateColumn, Entity, PrimaryGeneratedColumn } from "typeorm";
+import type { i18n } from "../../interfaces";
+import { NotificationType } from "../../enums";
+import { Column, CreateDateColumn, DeleteDateColumn, Entity, PrimaryGeneratedColumn } from "typeorm";
 
-export enum NotificationSeverity {
-    INFO = 'info',
-    WARNING = 'warning',
-    ERROR = 'error'
+export interface NotificationMessage {
+    title?: string;
+    message: string;
+}
+
+export interface NotificationMessageI18N {
+    [language: string]: NotificationMessage;
 }
 
 @Entity('notifications')
@@ -18,30 +23,21 @@ export class NotificationEntity {
     userId: string;
 
     @Column({
-        type: 'varchar',
-        nullable: true
+        type: 'enum',
+        enum: NotificationType,
+        default: NotificationType.INFO
     })
-    title: string;
+    type: NotificationType;
 
     @Column({
-        type: 'text',
+        type: 'jsonb',
         nullable: false
     })
-    message: string;
-
-    @Column({
-        type: 'enum',
-        enum: NotificationSeverity,
-        default: NotificationSeverity.INFO
-    })
-    severity: NotificationSeverity;
-
-    @Column({
-        type: 'boolean',
-        default: false
-    })
-    read: boolean;
+    i18n: i18n<NotificationMessage>;
 
     @CreateDateColumn()
     createdAt: Date;
+
+    @DeleteDateColumn()
+    acknowledgeAt: Date | null;
 }

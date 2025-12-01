@@ -1,17 +1,13 @@
 import { Controller, Inject, UseFilters } from '@nestjs/common';
 import { WeightRecordService } from '../weight-record.service';
 import {
-    NUTRITIONIST_SERVICE_PROXY_NAME,
-    PATIENT_SERVICE_PROXY_NAME,
-    ProxyMessage,
+    NUTRITIONIST_SERVICE_PROXY_NAME, ProxyMessage,
     ProxyMessengerFilter,
     proxyPattern,
     sendProxyMessage,
     UserRole
 } from '@backend-evolved/shared';
 import { ClientProxy, MessagePattern, Payload } from '@nestjs/microservices';
-
-//TODO: Add game events!
 
 @Controller()
 export class WeightRecordProxyController {

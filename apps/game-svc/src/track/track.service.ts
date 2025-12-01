@@ -28,7 +28,7 @@ export class TrackService {
     async findOneTemplate(options?: any): Promise<TrackTemplate> {
         const { where, relations } = options || {};
         const foundTemplate = await this.trackTemplateRepository.findOne({ where, relations });
-        if(!foundTemplate) {
+        if (!foundTemplate) {
             throw new BadRequestException(
                 errorMessagePattern
                     .game
@@ -91,6 +91,13 @@ export class TrackService {
             configuration: effectiveConfiguration as TrackConfiguration
         });
         return await this.trackTemplateRepository.save(createdTrack, { reload: true });
+    }
+
+    async findAllRecords(options?: {
+        where: any
+    }) {
+        const { where } = options || {};
+        return await this.trackRecordRepository.find({ where, relations: ['track'] });
     }
 
     async findOneRecord(options: {

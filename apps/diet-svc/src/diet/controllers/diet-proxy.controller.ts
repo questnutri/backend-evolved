@@ -21,14 +21,12 @@ export class DietProxyController {
     async handleGetAllDiets(
         @Payload() payload: typeof proxyPattern.diet.getAll.payload
     ): Promise<ProxyMessage<typeof proxyPattern.diet.getAll.response>> {
-        const { where, includes } = payload;
+        let { where, includes } = payload;
         return {
-            payload: await this.dietService.findAll(
+            payload: await this.dietService.findAll({
                 where,
-                {
-                    includes
-                }
-            )
+                ...includes
+            })
         }
     }
 

@@ -51,10 +51,10 @@ export const errorMessagePattern = {
             key: 'This diet already ended'
         },
         cannotChangeStartDateOfActiveOrEndedDiet: {
-            key: 'Cannot change start date of an active or ended diet'
+            fn: () => 'Cannot change start date of an active or ended diet'
         },
         cannotChangeEndDateOfEndedDiet: {
-            fn: () =>'Cannot change end date of an ended diet'
+            fn: () => 'Cannot change end date of an ended diet'
         },
     },
     meal: {
@@ -62,7 +62,7 @@ export const errorMessagePattern = {
             key: 'Cannot add meal to a diet that has ended'
         },
         notFound: {
-            key: 'Meal not found or user does not have access to this meal.'
+            fn: () => 'Meal not found.'
         },
         startDateCannotBeInPast: {
             /** `Meal start date cannot be in the past of current request date: ${requestDate}.` */
@@ -195,13 +195,13 @@ export const errorMessagePattern = {
         },
         trigger: {
             triggerForListenerAndTrackAlreadyExists: {
-                fn: (details: {trackId: string, listenerId: string}) => {
+                fn: (details: { trackId: string, listenerId: string }) => {
                     return `Trigger for (trackId: ${details.trackId}) and (listenerId: ${details.listenerId}) already exists.`
                 }
             },
             invalidTriggerConditionConfiguration: {
                 fn: (
-                    type: 
+                    type:
                         'foundAtNotProvided' |
                         'mappingKeyNotFound' |
                         'noConditionOperationDefinedNeitherDate' |
@@ -210,7 +210,7 @@ export const errorMessagePattern = {
                     details?: any
                 ) => {
                     let message = '';
-                    switch(type) {
+                    switch (type) {
                         case 'foundAtNotProvided':
                             message = `'foundAt' not provided in search specification`;
                             break;
@@ -231,6 +231,11 @@ export const errorMessagePattern = {
                     return `Invalid trigger condition configuration: ${message}`
                 }
             },
+        },
+        achievement: {
+            notFound: {
+                fn: () => 'Achievement not found'
+            }
         }
     }
 }
