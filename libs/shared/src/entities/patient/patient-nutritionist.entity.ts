@@ -21,12 +21,29 @@ export class PatientNutritionist {
         type: 'varchar',
         nullable: true
     })
+    dailyWaterGoalInMl?: string;
+
+    @Column({
+        type: 'varchar',
+        nullable: true
+    })
     @ApiProperty({
         description: 'Patient goals. E.g., Lose weight, Gain muscle mass',
         example: 'Lose weight, Gain muscle mass',
         required: false
     })
     goals?: string | null;
+
+    @Column({
+        type: 'varchar',
+        nullable: true
+    })
+    @ApiProperty({
+        description: 'Additional notes about the patient',
+        example: 'Patient prefers morning consultations',
+        required: false
+    })
+    notes?: string | null;
 
     @ApiProperty({
         description: 'Medical conditions of the patient',
@@ -49,16 +66,4 @@ export class PatientNutritionist {
         required: false
     })
     preferences?: string | null;
-
-    @Column({
-        type: 'varchar',
-        nullable: true
-    })
-    @ApiProperty({
-        description: 'Additional notes about the patient',
-        example: 'Patient prefers morning consultations',
-        required: false
-    })
-    notes?: string | null;
-
 }

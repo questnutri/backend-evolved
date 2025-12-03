@@ -1,84 +1,50 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { Dto_CreateWaterRecord } from './dto/create-water-record.dto';
-import { UpdateWaterRecordDto } from './dto/update-water-record.dto';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { normalizeToStartOfDay, PATIENT_SERVICE_PROXY_NAME, proxyPattern, sendProxyMessage, WaterRecord } from '@backend-evolved/shared';
+import { RecordType, SchedulerHelper, WaterRecord } from '@backend-evolved/shared';
 import { Between, Repository } from 'typeorm';
-import { ClientProxy } from '@nestjs/microservices';
 
 @Injectable()
 export class WaterRecordService {
 	constructor(
-		@InjectRepository(WaterRecord)
-		private waterRecordRepository: Repository<WaterRecord>,
-		@Inject(PATIENT_SERVICE_PROXY_NAME) private readonly patientServiceProxy: ClientProxy,
+		@InjectRepository(WaterRecord) private waterRecordRepository: Repository<WaterRecord>,
 	) { }
 
-	async create(createWaterRecordDto: Dto_CreateWaterRecord) {
-		const { patientId, waterGoalId, amountInMl } = createWaterRecordDto;
-		const foundWaterGoal = await sendProxyMessage<
-			typeof proxyPattern.patient.water.getById.response,
-			typeof proxyPattern.patient.water.getById.payload
-		>({
-			proxy: this.patientServiceProxy,
-			pattern: proxyPattern.patient.water.getById.key,
-			data: {
-				patientId,
-				waterGoalId
-			}
-		});
-		const newWaterRecord = this.waterRecordRepository.create({
-			patientId: foundWaterGoal.patientId,
-			waterGoalId: foundWaterGoal.id,
-			nutritionistId: foundWaterGoal.nutritionistId,
-			amountInMl,
-		});
-		return await this.waterRecordRepository.save(newWaterRecord);
+	async create(data: Partial<WaterRecord>): Promise<WaterRecord> {
+		const newRecord = this.waterRecordRepository.create(data);
+		return await this.waterRecordRepository.save(newRecord);
 	}
 
-	async findAllFromWaterGoal({ waterGoalId, patientId, relativeDate }: { waterGoalId: string; patientId: string; relativeDate: Date }) {
-		const foundWaterGoal = await sendProxyMessage<
-			typeof proxyPattern.patient.water.getById.response,
-			typeof proxyPattern.patient.water.getById.payload
-		>({
-			proxy: this.patientServiceProxy,
-			pattern: proxyPattern.patient.water.getById.key,
-			data: {
-				patientId,
-				waterGoalId
-			}
-		});
+	async totalDailyIntake(patientId: string, date: Date, includeRegisters: boolean = false): Promise<any> {
+		const scheduler = new SchedulerHelper();
+		const startOfDay = scheduler.buildDate({ date, startOfDay: true });
+		const endOfDay = scheduler.buildDate({ date, endOfDay: true });
+		console.log({ startOfDay, endOfDay });
 
-		const start = normalizeToStartOfDay(relativeDate)
-		const end = new Date(start.getTime() + 86399999)
-
-		const foundWaterGoals = await this.waterRecordRepository.find({
+		const allRegistersOfToday = await this.waterRecordRepository.find({
 			where: {
-				patientId: foundWaterGoal.patientId,
-				waterGoalId: foundWaterGoal.id,
-        	createdAt: Between(start, end)
+				patientId,
+				relativeDate: Between(startOfDay, endOfDay),
 			},
-			order: {
-				createdAt: 'DESC'
-			}
+			order: { createdAt: 'ASC' }
 		});
-		const totalRegistered = foundWaterGoals.reduce((sum, record) => sum + record.amountInMl, 0);
-		return {
-			...foundWaterGoal,
-			records: foundWaterGoals,
-			totalRegistered
+
+		const total = allRegistersOfToday.reduce(
+			(acc, r) => acc + ((Number(r.amountInMl) || 0) * (r.operation === RecordType.ADD ? 1 : -1)),
+			0);
+
+		const currentDailyWaterGoal =
+			allRegistersOfToday.length > 0
+				? allRegistersOfToday[allRegistersOfToday.length - 1].currentDailyWaterGoal ?? null
+				: null;
+
+		const response = {
+			totalIntake: total,
+			currentDailyWaterGoal
 		};
-	}
+		if (includeRegisters) {
+			Object.assign(response, { registers: allRegistersOfToday });
+		}
 
-	findOne(id: number) {
-		return `This action returns a #${id} waterRecord`;
-	}
-
-	update(id: number, updateWaterRecordDto: UpdateWaterRecordDto) {
-		return `This action updates a #${id} waterRecord`;
-	}
-
-	remove(id: number) {
-		return `This action removes a #${id} waterRecord`;
+		return response;
 	}
 }

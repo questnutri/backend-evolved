@@ -3,9 +3,8 @@ import { PatientService } from '../patient.service';
 import { MessagePattern, Payload } from '@nestjs/microservices';
 import {
     ProxyMessengerFilter,
-    ProxyMessage, proxyPattern, WaterGoal, FindCurrentWaterGoalDto
+    ProxyMessage, proxyPattern
 } from '@backend-evolved/shared';
-import { WaterGoalService } from '../../water-goal/water-goal.service';
 import { PatientNutritionistService } from '../../patient-nutritionist/patient-nutritionist.service';
 
 @Controller()
@@ -13,7 +12,6 @@ export class PatientProxyController {
     constructor(
         private readonly patientService: PatientService,
         private readonly patientNutritionistService: PatientNutritionistService,
-        private readonly waterGoalService: WaterGoalService,
     ) { }
 
     @MessagePattern(proxyPattern.patient.creation.key)
@@ -61,20 +59,6 @@ export class PatientProxyController {
         };
     }
 
-    // @MessagePattern(proxyPattern.patient.getManyByIds.key)
-    // @UseFilters(ProxyMessengerFilter)
-    // async getManyByIds(
-    //     @Payload() payload: typeof proxyPattern.patient.getManyByIds.payload
-    // ): Promise<ProxyMessage<typeof proxyPattern.patient.getManyByIds.response>> {
-    //     const patientsList = await this.patientService.findManyByIds(
-    //         payload.ids, {
-    //         ...payload.options
-    //     });
-    //     return {
-    //         payload: patientsList.items
-    //     };
-    // }
-
     @MessagePattern(proxyPattern.patient.softDeletionById.key)
     @UseFilters(ProxyMessengerFilter)
     async handleSoftDeletionById(
@@ -83,38 +67,5 @@ export class PatientProxyController {
         // const result = await this.patientService.softDeleteById(payload.id);
         // return { payload: result };
         return { payload: true };
-    }
-
-    // @MessagePattern(proxyPattern.patient.water.creation)
-    // @UseFilters(ProxyMessengerFilter)
-    // async createWaterGoal(
-    //     @Payload() payload: ProxyWaterGoalDto
-    // ): Promise<ProxyMessage<WaterGoal>> {
-    //     const foundPatient = await this.patientService.findOne({ where: { id: payload.patientId } });
-    //     if (foundPatient && foundPatient.hasNutritionist?.(payload.nutritionistId)) {
-    //         return { payload: await this.waterGoalService.createWaterGoal(payload) };
-    //     } else {
-    //         throw new NotFoundException('Patient not found or not related to nutritionist');
-    //     }
-    // }
-
-    @MessagePattern(proxyPattern.patient.water.findCurrent)
-    @UseFilters(ProxyMessengerFilter)
-    async findCurrentWaterGoal(
-        @Payload() payload: FindCurrentWaterGoalDto
-    ): Promise<ProxyMessage<WaterGoal | null>> {
-        const foundWaterGoal = await this.waterGoalService.findCurrent(payload);
-        console.log(foundWaterGoal);
-        return { payload: foundWaterGoal };
-    }
-
-    @MessagePattern(proxyPattern.patient.water.getById.key)
-    @UseFilters(ProxyMessengerFilter)
-    async isWaterGoalRelatedToPatient(
-        @Payload() payload: typeof proxyPattern.patient.water.getById.payload
-    ): Promise<ProxyMessage<typeof proxyPattern.patient.water.getById.response>> {
-        return {
-            payload: await this.waterGoalService.findOne({ patientId: payload.patientId })
-        };
     }
 }

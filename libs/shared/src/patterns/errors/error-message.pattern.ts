@@ -231,6 +231,9 @@ export const errorMessagePattern = {
                     return `Invalid trigger condition configuration: ${message}`
                 }
             },
+            notFound: {
+                fn: () => 'Trigger not found'
+            }
         },
         achievement: {
             notFound: {

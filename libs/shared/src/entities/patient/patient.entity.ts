@@ -1,6 +1,5 @@
 import { Column, DeleteDateColumn, Entity, OneToMany, PrimaryColumn } from 'typeorm';
 import { PatientNutritionist } from './patient-nutritionist.entity';
-import { WaterGoal } from './water-goal.entity';
 import { ApiProperty } from '@nestjs/swagger';
 import { Nutritionist } from '../nutritionist/nutritionist.entity';
 import { LevelOfActivity, Gender } from '../../enums';
@@ -68,10 +67,6 @@ export class Patient {
     })
     @ApiProperty({ example: LevelOfActivity.ONE })
     levelOfActivity?: LevelOfActivity = LevelOfActivity.ONE;
-
-    @OneToMany(() => WaterGoal, wg => wg.patient)
-    @ApiProperty({ type: () => [WaterGoal] })
-    waterGoals: WaterGoal[];
 
     @OneToMany(() => PatientNutritionist, pn => pn.patient)
     @ApiProperty({ type: () => [Nutritionist] })

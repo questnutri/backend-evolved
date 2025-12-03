@@ -1,5 +1,6 @@
-import { ApiProperty } from "@nestjs/swagger";
-import { IsNotEmpty } from "class-validator";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { IsEnum, IsNotEmpty, IsOptional } from "class-validator";
+import { RecordType } from "@backend-evolved/shared";
 
 export class Body_CreateWaterRecord {
     @ApiProperty({
@@ -8,14 +9,16 @@ export class Body_CreateWaterRecord {
         example: 500,
     })
     @IsNotEmpty()
-    amountInMl: number;
+    amountInMl: string;
 
-    @ApiProperty({
-        description: 'The relative date and time when the water was consumed',
+    @ApiPropertyOptional({
+        description: 'Operation type: ADD to add water intake, SUB to subtract water intake',
         required: false,
-        example: '2024-06-15T10:30:00Z',
+        example: RecordType.ADD,
     })
-    waterRelativeDate: Date;
+    @IsOptional()
+    @IsEnum(RecordType)
+    operation: RecordType;
 }
 
 export class Dto_CreateWaterRecord extends Body_CreateWaterRecord{

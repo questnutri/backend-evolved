@@ -4,6 +4,11 @@ import { Patient } from "../../entities";
 import { SearchDto } from "../search";
 import { DietIncludeOptions } from "../diet";
 
+export class InternalPatientIncludeOptions {
+    @IsOptional()
+    keepRawNutritionists?: boolean;
+}
+
 export class PatientIncludeOptions extends IntersectionType(DietIncludeOptions) {
     @IsOptional()
     includeNutritionists?: boolean;
@@ -16,6 +21,7 @@ export class PatientIncludeOptions extends IntersectionType(DietIncludeOptions) 
 export class PatientFindOptions extends
     IntersectionType(
         SearchDto<Patient>,
-        PatientIncludeOptions
+        PatientIncludeOptions,
+        InternalPatientIncludeOptions
     ) {
 }

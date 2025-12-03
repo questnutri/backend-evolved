@@ -74,4 +74,58 @@ export class UpdatePatientDto_Nutritionist extends UpdatePatientDto_Patient {
     })
     @IsOptional()
     levelOfActivity?: LevelOfActivity;
+
+    @ApiProperty({
+        description: 'Water goal of the patient in milliliters',
+        required: false,
+        example: '2000',
+    })
+    @IsOptional()
+    dailyWaterGoalInMl?: string;
+}
+
+export class UpdatePatientNutritionistDto {
+    @ApiProperty({
+        description: 'Daily water goal of the patient in milliliters',
+        required: false,
+        example: '2000',
+    })
+    @IsOptional()
+    dailyWaterGoalInMl?: string;
+
+    @ApiProperty({
+        description: 'Goals set for the patient by the nutritionist',
+        required: false,
+        example: 'Lose 5kg in 3 months',
+    })
+    @IsString()
+    @IsOptional()
+    goals?: string;
+
+    @ApiProperty({
+        description: 'Notes about the patient by the nutritionist',
+        required: false,
+        example: 'Patient has a history of hypertension.',
+    })
+    @IsString()
+    @IsOptional()
+    notes?: string;
+
+    @ApiProperty({
+        description: 'Medical conditions of the patient',
+        required: false,
+        example: 'Diabetes, Hypertension',
+    })
+    @IsString()
+    @IsOptional()
+    medicalConditions?: string;
+
+    @ApiProperty({
+        description: 'Preferences of the patient',
+        required: false,
+        example: 'Vegetarian, Lactose intolerant',
+    })
+    @IsString()
+    @IsOptional()
+    preferences?: string;
 }

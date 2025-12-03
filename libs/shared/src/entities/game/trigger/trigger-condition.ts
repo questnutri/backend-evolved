@@ -6,6 +6,8 @@ export enum ConditionOperation {
     NOT_EQUAL = 'NOT_EQUAL',
     GREATER_THAN = 'GREATER_THAN',
     LESS_THAN = 'LESS_THAN',
+    GREATER_OR_EQUAL = 'GREATER_OR_EQUAL',
+    LESS_OR_EQUAL = 'LESS_OR_EQUAL',
     INCLUDES = 'INCLUDES',
     EXCLUDES = 'EXCLUDES'
 }

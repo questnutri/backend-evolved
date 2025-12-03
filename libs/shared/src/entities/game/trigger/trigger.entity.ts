@@ -8,6 +8,7 @@ import { TrackRecord } from "../track"
 import { InternalServerErrorException } from "@nestjs/common"
 import { errorMessagePattern } from "../../../patterns"
 import { castProperty } from "../../../utils"
+import { extractDatePart } from "../../../utils"
 
 @Entity("triggers")
 export class Trigger {
@@ -53,7 +54,6 @@ export class Trigger {
                     comparisonValue = this.getMappingValue(foundAtSource, condition.compare);
                 }
 
-
                 if (condition.propertyType) {
                     mainMapValue = castProperty(mainMapValue, condition.propertyType);
                     comparisonValue = castProperty(comparisonValue, condition.propertyType);
@@ -64,8 +64,8 @@ export class Trigger {
                         const a = mainMapValue as unknown as Date;
                         const b = comparisonValue as unknown as Date;
 
-                        mainMapValue = this.extractDatePart(a, condition.applyOperationOnDate);
-                        comparisonValue = this.extractDatePart(b, condition.applyOperationOnDate);
+                        mainMapValue = extractDatePart(a, condition.applyOperationOnDate);
+                        comparisonValue = extractDatePart(b, condition.applyOperationOnDate);
                     } catch (error) {
                         console.log(error);
                     }
@@ -88,7 +88,12 @@ export class Trigger {
                     case ConditionOperation.GREATER_THAN:
                         if ((mainMapValue as number) > (comparisonValue as number)) continue;
                         return false;
-
+                    case ConditionOperation.LESS_THAN:
+                        if ((mainMapValue as number) < (comparisonValue as number)) continue;
+                        return false;
+                    case ConditionOperation.GREATER_OR_EQUAL:
+                        if ((mainMapValue as number) >= (comparisonValue as number)) continue;
+                        return false;
                     default:
                         continue
                 }
@@ -118,43 +123,5 @@ export class Trigger {
                     'foundAtNotProvided'
                 )
         )
-    }
-
-    private extractDatePart(date: Date, part: DateConditionOperation): number {
-        if (!date) {
-            throw new InternalServerErrorException(
-                errorMessagePattern
-                    .game
-                    .trigger
-                    .invalidTriggerConditionConfiguration
-                    .fn('dateNotProvided')
-            );
-        }
-
-        switch (part) {
-            case DateConditionOperation.YEAR:
-                return date.getFullYear();
-            case DateConditionOperation.MONTH:
-                return date.getMonth() + 1;
-            case DateConditionOperation.DAY:
-                return date.getDate();
-            case DateConditionOperation.HOUR:
-                return date.getHours();
-            case DateConditionOperation.MINUTE:
-                return date.getMinutes();
-            case DateConditionOperation.SECOND:
-                return date.getSeconds();
-            case DateConditionOperation.WEEK:
-                const d = new Date(date.getTime());
-                d.setHours(0, 0, 0, 0);
-                const day = d.getDay();
-                const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-                const monday = new Date(d.setDate(diff));
-                const start = new Date(monday.getTime());
-                const weekNum = Math.ceil((((date.getTime() - start.getTime()) / 86400000) + 1) / 7);
-                return weekNum;
-            default:
-                return 0;
-        }
     }
 }

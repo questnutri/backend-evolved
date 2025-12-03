@@ -6,9 +6,11 @@ import {
     errorMessagePattern,
     Patient,
     PaginationQuery,
-    PatientFindOptions
+    PatientFindOptions,
+    UpdatePatientNutritionistDto
 } from '@backend-evolved/shared';
 import { Repository } from 'typeorm';
+import { async } from 'rxjs';
 
 @Injectable()
 export class PatientNutritionistService {
@@ -54,8 +56,9 @@ export class PatientNutritionistService {
         return await this.patientNutritionistRepository.save(created);
     }
 
-    async updateOne(query: KeysOf<PatientNutritionist>, data: Partial<PatientNutritionist>): Promise<PatientNutritionist | null> {
-        throw new Error('Method not implemented.');
+    async update(patientNutritionist: PatientNutritionist, data: UpdatePatientNutritionistDto): Promise<PatientNutritionist> {
+        const updated = this.patientNutritionistRepository.merge(patientNutritionist, data);
+        return await this.patientNutritionistRepository.save(updated);
     }
 
     async deleteOne(relation: PatientNutritionist): Promise<void> {

@@ -8,3 +8,4 @@ export * from './event-origin.enum';
 export * from './trigger-limit.enum';
 export * from './trigger-group.enum';
 export * from './notification-type.enum';
+export * from './record-type.enum';

@@ -39,4 +39,23 @@ export class TriggerService {
     async find() {
         return await this.triggerRepository.find({ relations: ['track', 'listener'] });
     }
+
+    async findOne(options?: any) {
+        const { where, relations } = options || {};
+        const foundTrigger = await this.triggerRepository.findOne({ where, relations });
+        if(!foundTrigger) {
+            throw new BadRequestException(
+                errorMessagePattern
+                .game
+                .trigger
+                .notFound
+                .fn()
+            );
+        }
+        return foundTrigger;
+    }
+
+    async delete(trigger: Trigger) {
+        return await this.triggerRepository.remove(trigger);
+    }
 }

@@ -31,7 +31,7 @@ export class ListenerController {
 
     @MessagePattern(proxyPattern.log.message.key)
     async listenToControllers(@Payload() log: any): Promise<void> {
-        console.log(log);
+        // console.log(log);
         if (!log.user) return;
         if (log.origin === EventOrigin.CONTROLLER) {
             const foundListeners = await this.listenerService.find({
@@ -43,7 +43,7 @@ export class ListenerController {
                 },
                 includeTriggers: true
             });
-            console.log("Found listener for call", foundListeners);
+            // console.log("Found listener for call", foundListeners);
             for (const listener of foundListeners) {
                 for (const trigger of listener.triggers) {
                     const { track } = trigger;

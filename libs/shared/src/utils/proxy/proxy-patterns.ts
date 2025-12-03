@@ -1,4 +1,4 @@
-import { Aliment, Diet, Meal, MealRecord, Nutritionist, Patient, User, WaterGoal, WeightRecord } from "../../entities";
+import { Aliment, Diet, Meal, MealRecord, Nutritionist, Patient, User, WeightRecord } from "../../entities";
 import { Payload_GetWaterGoalById } from "../../interfaces/proxy";
 import {
     ProxyBodyCreatePatientDto,
@@ -43,11 +43,6 @@ export const proxyPattern = {
         softDeletionById: pattern<{ id: string }, boolean>('patient.softDeletionById'),
         findAllFromNutritionist: pattern<{ nutritionistId: string }, Patient[]>('patient.findAllFromNutritionist'),
         isRelatedToNutritionist: pattern<{ patientId: string, nutritionistId: string }, boolean>('patient.isRelatedToNutritionist'),
-        water: {
-            creation: 'patient.water.creation', //data: ProxyWaterGoalDto
-            findCurrent: 'patient.water.findCurrent', //data: { patientId: string, nutritionistId: string, requestDate: Date }
-            getById: pattern<Payload_GetWaterGoalById, WaterGoal>('patient.water.getById'),
-        }
     },
     user: {
         getOneById: 'user.getOneById', //data: { id: string }

@@ -48,9 +48,7 @@ export class NestApplicationBuilder {
     }
 
     setPort(port: string): NestApplicationBuilder {
-        console.log(`Port received: `, port);
         this.servicePort = Number(port);
-        console.log(`this.servicePort = ${this.servicePort}`)
         return this;
     }
 
@@ -105,17 +103,12 @@ export class NestApplicationBuilder {
 
         if (this.swaggerConfig) {
             const swagger = this.swaggerConfig.build();
-
             const documentFactory = () => SwaggerModule.createDocument(app, swagger);
             SwaggerModule.setup(this.swaggerApiUrl, app, documentFactory());
         }
         if (this.pipeOptions) {
             app.useGlobalPipes(new ValidationPipe(this.pipeOptions));
         }
-
-        // this.exceptionFilters.forEach((filter) => {
-        //     app.useGlobalFilters(filter);
-        // });
 
         if (this.rabbitMqQueue) {
             app.connectMicroservice<MicroserviceOptions>(
@@ -126,7 +119,6 @@ export class NestApplicationBuilder {
 
             await app.startAllMicroservices();
         }
-
 
         return app;
     }

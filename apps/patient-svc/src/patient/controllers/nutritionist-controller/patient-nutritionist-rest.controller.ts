@@ -17,7 +17,8 @@ import {
     removePropertyForOne,
     WeightRecord,
     UserRole,
-    LoggingInterceptor
+    LoggingInterceptor,
+    UpdatePatientNutritionistDto
 } from '@backend-evolved/shared';
 import { ApiOperation, ApiBearerAuth, ApiSecurity, ApiCreatedResponse, ApiTags, ApiOkResponse } from '@nestjs/swagger';
 import { PatientNutritionistService } from '../../../patient-nutritionist/patient-nutritionist.service';
@@ -167,6 +168,26 @@ export class PatientNutritionistRestController {
         return await this.patientService.updateOne(
             foundRelation,
             body as any
+        );
+    }
+
+    @Patch(':patientId/nutritionist')
+    @ApiBearerAuth('bearer')
+    @ApiSecurity('bearer')
+    @UseGuards(JwtRoleGuard(['nutritionist']))
+    @UseFilters(ControllerExceptionFilter)
+    async updatePatientNutritionistRelationById(
+        @ContextUser() ctxUser: ContextUser,
+        @Param('patientId') patientId: string,
+        @Body() body: UpdatePatientNutritionistDto
+    ): Promise<any> {
+        const foundRelation = await this.patientNutritionistService.findOne({
+            nutritionistId: ctxUser.id,
+            patientId
+        });
+        return await this.patientNutritionistService.update(
+            foundRelation,
+            body
         );
     }
 

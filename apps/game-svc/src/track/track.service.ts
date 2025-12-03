@@ -6,11 +6,13 @@ import {
     TrackTemplate,
     TrackType,
     UpdateOperation,
-    castProperty
+    castProperty,
+    DateConditionOperation
 } from "@backend-evolved/shared";
 import { BadRequestException, Injectable } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
+import { extractDatePart } from "@backend-evolved/shared";
 
 @Injectable()
 export class TrackService {
@@ -62,6 +64,13 @@ export class TrackService {
                 effectiveConfiguration.directValue = directValue || undefined;
                 effectiveConfiguration.updateValue = updateValue || undefined;
                 effectiveConfiguration.computedValue = computedValue || undefined;
+                break;
+            case TrackType.STREAK:
+                effectiveConfiguration.type = TrackType.STREAK;
+                effectiveConfiguration.initialValue = initialValue || '1';
+                effectiveConfiguration.updateValue = updateValue || undefined;
+                effectiveConfiguration.trackPropertyType = PropertyType.NUMBER;
+                effectiveConfiguration.updateOperation = UpdateOperation.ADD;
                 break;
             default:
                 effectiveConfiguration.type = TrackType.COUNTER;
@@ -139,6 +148,30 @@ export class TrackService {
                     trackRecord.currentValue = newValue.toString();
                     await this.trackRecordRepository.save(trackRecord, { reload: true });
                     return trackRecord;
+                case TrackType.STREAK:
+                    const rawLastUpdate = castProperty<Date>(trackRecord.lastUpdatedAt, PropertyType.DATE);
+                    const timestamp = castProperty<Date>(log.timestamp, PropertyType.DATE);
+
+                    console.log('Last Update:', rawLastUpdate);
+                    console.log('Current Log Timestamp:', timestamp);
+
+                    const lastUpdatedAt = extractDatePart(rawLastUpdate, DateConditionOperation.DAY);
+                    const dayRequest = extractDatePart(timestamp, DateConditionOperation.DAY);
+
+                    // If the last updated day is exactly one day before the current timestamp day, increment the streak
+                    if (lastUpdatedAt + 1 === dayRequest) {
+                        const currentStreak = castProperty<number>(trackRecord.currentValue, PropertyType.NUMBER);
+                        trackRecord.currentValue = (currentStreak + 1).toString();
+                        await this.trackRecordRepository.save(trackRecord, { reload: true });
+                        return trackRecord;
+                    } else if (lastUpdatedAt <= dayRequest) {
+                        return trackRecord;
+                    } else if (lastUpdatedAt + 1 > dayRequest) {
+                        trackRecord.currentValue = '1';
+                        await this.trackRecordRepository.save(trackRecord, { reload: true });
+                        return trackRecord;
+                    }
+                    break;
             }
         }
         const newRecord = this.trackRecordRepository.create({
@@ -147,7 +180,5 @@ export class TrackService {
             currentValue: trackTemplate.configuration.initialValue
         });
         return await this.trackRecordRepository.save(newRecord, { reload: true });
-
     }
-
 }

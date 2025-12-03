@@ -1,5 +1,5 @@
-import { Field, ID } from "@nestjs/graphql";
-import { 
+import { RecordType } from "../../enums";
+import {
     Column,
     CreateDateColumn,
     Entity,
@@ -9,29 +9,33 @@ import {
 @Entity('water-records')
 export class WaterRecord {
     @PrimaryGeneratedColumn('uuid')
-    @Field(() => ID, { nullable: true })
     id: string;
 
-    @CreateDateColumn()
-    @Field({ nullable: true })
-    createdAt: Date;
-
-    @Column({ type: 'timestamp' })
-    @Field()
-    waterRelativeDate: Date;
-
     @Column()
-    @Field()
-    waterGoalId: string;
-
-    @Column()
-    @Field()
     patientId: string;
 
     @Column()
-    @Field()
     nutritionistId: string;
 
     @Column()
-    amountInMl: number;
+    amountInMl: string;
+
+    @Column({
+        type: 'enum',
+        enum: RecordType,
+        default: RecordType.ADD
+    })
+    operation: RecordType
+
+    @CreateDateColumn()
+    createdAt: Date;
+
+    @Column({ type: 'time' })
+    registerHour: string;
+
+    @Column()
+    currentDailyWaterGoal: string;
+
+    @Column({ type: 'timestamp' })
+    relativeDate: Date;
 }

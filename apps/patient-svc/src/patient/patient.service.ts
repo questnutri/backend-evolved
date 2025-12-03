@@ -27,7 +27,8 @@ import {
     ListResponse,
     normalizeToList,
     RECORD_SERVICE_PROXY_NAME, RequestedBy,
-    removePropertyForOne
+    removePropertyForOne,
+    InternalPatientIncludeOptions
 } from '@backend-evolved/shared';
 import { In, Repository } from 'typeorm';
 import { error } from 'console';
@@ -114,7 +115,7 @@ export class PatientService {
                     .notFound
                     .fn()
             );
-        }
+        };
 
         patient = await this.applyIncludeOptionsOnOne({
             ...options,
@@ -288,14 +289,15 @@ export class PatientService {
     }
 
     async applyIncludeOptionsOnOne(
-        includes: PatientIncludeOptions,
+        includes: PatientIncludeOptions & InternalPatientIncludeOptions,
         patient: Patient,
         requestedBy: RequestedBy
     ): Promise<Patient> {
         let p = patient
         if (
             requestedBy.role !== UserRole.NUTRITIONIST && //always block nutritionists info
-            includes?.includeNutritionists
+            includes?.includeNutritionists &&
+            !includes?.keepRawNutritionists
         ) {
             p = await this.formatPatientWithNutritionists(p)
         }
@@ -321,6 +323,7 @@ export class PatientService {
     }
 
     async formatPatientWithNutritionists(patient: Patient): Promise<any> {
+        const waterGoalInMl = patient?.nutritionists?.find(n => n.nutritionistId === patient.mainNutritionistId)?.dailyWaterGoalInMl;
         const nutritionists = patient?.nutritionists?.map(n => n.nutritionistId) || [];
         let nutritionistsDetails: Partial<Nutritionist>[] = [];
         if (nutritionists && nutritionists.length > 0) {
@@ -350,6 +353,7 @@ export class PatientService {
         }
         return {
             ...patient,
+            waterGoalInMl,
             nutritionists: nutritionistsDetails
         };
     }

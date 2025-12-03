@@ -7,6 +7,8 @@ export enum TrackType {
 
     //Holds a specific value that can be set or modified
     PROPERTY = 'PROPERTY', //SET, ADD, SUB
+
+    STREAK = 'STREAK',
 }
 
 export enum UpdateOperation {
