@@ -22,6 +22,6 @@ export class AlimentResponse implements PageResponse<Aliment> {
     totalItems: number;
 
     @Field(() => [Aliment])
-    data: Aliment[];
+    items: Aliment[];
 
 }

@@ -56,6 +56,16 @@ export const errorMessagePattern = {
         cannotChangeEndDateOfEndedDiet: {
             fn: () => 'Cannot change end date of an ended diet'
         },
+        cannotSetDietEndDateBeforeStartDate: {
+            fn: (details: {endDate: string, startDate: string}) => {
+                return `Diet endDate (${details.endDate}) cannot be before startDate (${details.startDate}).`;
+            }
+        },
+        cannotEndInSameDayAsStarted: {
+            fn: (details: {endDate: string, startDate: string}) => {
+                return `Diet end date (${details.endDate}) cannot be the same as start date (${details.startDate})`;
+            }
+        }
     },
     meal: {
         cannotAddToEndedDiet: {

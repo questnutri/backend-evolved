@@ -1,7 +1,8 @@
-import { ApiProperty } from "@nestjs/swagger";
-import { IsNotEmpty, IsString, IsUUID } from "class-validator";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
+import { IsNotEmpty, IsString, IsUUID, IsOptional } from "class-validator";
 import type { i18n } from "../../../interfaces";
 import { AchievementTemplateInfo } from "./achievement-template-info.dto";
+import { AchievementRarity } from "../../../enums";
 
 export class CreateAchievementDto {
     @ApiProperty({
@@ -27,5 +28,15 @@ export class CreateAchievementDto {
         required: true
     })
     @IsNotEmpty()
-    i18n: i18n<AchievementTemplateInfo>
+    i18n: i18n<AchievementTemplateInfo>;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsString()
+    icon?: string;
+
+    @ApiPropertyOptional()
+    @IsOptional()
+    @IsString()
+    rarity?: AchievementRarity
 }

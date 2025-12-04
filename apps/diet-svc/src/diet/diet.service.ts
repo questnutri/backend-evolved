@@ -214,9 +214,35 @@ export class DietService {
                     }
                 }
             }
+            if (payload.endDate) {
+                const endDate = scheduler.buildDate({ date: payload.endDate, endOfDay: true });
+                if (updatePayload.startDate) {
+                    if (endDate < updatePayload.startDate) {
+                        throw new BadRequestException(
+                            errorMessagePattern
+                                .diet
+                                .cannotSetDietEndDateBeforeStartDate
+                                .fn({
+                                    endDate: scheduler.format(endDate, 'YYYY-MM-DD'),
+                                    startDate: scheduler.format(updatePayload.startDate, 'YYYY-MM-DD')
+                                })
+                        );
+                    }
+                    if(scheduler.isSameDate(endDate, updatePayload.startDate, true)) {
+                        throw new BadRequestException(
+                            errorMessagePattern
+                                .diet
+                                .cannotEndInSameDayAsStarted
+                                .fn({
+                                    endDate: scheduler.format(endDate, 'YYYY-MM-DD'),
+                                    startDate: scheduler.format(updatePayload.startDate, 'YYYY-MM-DD')
+                                })
+                        );
+                    }
+                }
+                updatePayload.endDate = endDate;
+            }
         }
-
-        //TODO: Validate endDate changes too
 
         this.dietRepository.merge(diet, updatePayload);
         return await this.dietRepository.save(diet);

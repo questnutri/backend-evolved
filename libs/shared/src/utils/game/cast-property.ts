@@ -1,6 +1,7 @@
 import { PropertyType } from "../../entities";
 
 export function castProperty<T>(value: any, type: PropertyType): T {
+    console.log(`[castProperty] Casting value "${value}" to type "${type}"`);
     if (value === null || value === undefined) return value as T
     switch (type) {
         case PropertyType.STRING:

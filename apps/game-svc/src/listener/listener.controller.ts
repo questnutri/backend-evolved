@@ -52,8 +52,11 @@ export class ListenerController {
                         trackId: track.id,
                         userId
                     });
+                    console.log(track);
+                    console.log(trackRecord);
                     const mustTrigger = trigger.test(trackRecord, log);
                     if (mustTrigger) {
+                        console.log("triggering", trigger);
                         const updatedRecord = await this.trackService.updateOrCreate(
                             trackRecord!,
                             track,

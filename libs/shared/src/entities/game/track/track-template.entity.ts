@@ -32,7 +32,7 @@ export class TrackTemplate {
     description?: string;
 
     @Column('jsonb')
-    configuration: TrackConfiguration
+    configuration: TrackConfiguration;
 
     @OneToMany(() => Trigger, (trigger) => trigger.track)
     triggers: Trigger[];

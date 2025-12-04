@@ -9,6 +9,8 @@ export enum TrackType {
     PROPERTY = 'PROPERTY', //SET, ADD, SUB
 
     STREAK = 'STREAK',
+
+    HISTORY = 'HISTORY',
 }
 
 export enum UpdateOperation {
@@ -32,4 +34,5 @@ export interface TrackConfiguration {
     directValue?: string;
     updateValue?: string;
     computedValue?: SearchSpec;
+    historyStreak?: string;
 }

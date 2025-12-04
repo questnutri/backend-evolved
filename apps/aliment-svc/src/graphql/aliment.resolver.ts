@@ -60,7 +60,7 @@ export class AlimentResolver {
             isLastPage,
             totalPages,
             totalItems,
-            data,
+            items: data,
         };
     }
 

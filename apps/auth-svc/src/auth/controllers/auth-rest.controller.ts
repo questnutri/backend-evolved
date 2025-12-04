@@ -3,7 +3,6 @@ import {
     Post,
     Body,
     UseFilters,
-    Res,
     Get,
     UseGuards,
     UseInterceptors,
@@ -23,7 +22,6 @@ import {
     ROOT_ADMIN_EMAIL,
     GenerateAccessResponse,
     system,
-    LoggingInterceptor,
     FirstLoginResponse,
     CustomLoggingInterceptor,
 } from '@backend-evolved/shared';
@@ -124,9 +122,17 @@ export class AuthRestController {
     }
 
     @Post(system.auth.controller.refresh.route)
+    @HttpCode(200)
     @ApiOperation({ summary: 'Refresh user authentication token' })
     @ApiOkResponse({ description: 'The user authentication token has been successfully refreshed.' })
     @UseFilters(ControllerExceptionFilter)
+    @UseInterceptors(new CustomLoggingInterceptor<LoginResponse>({
+        transform: ({ payload, data, statusCode }) => {
+            if (statusCode === 200) {
+                payload({ user: { id: data.id, role: data.role }, data: null });
+            }
+        }
+    }))
     async refresh(@Body() body: RefreshTokenDto): Promise<LoginResponse> {
         return await this.tokenService.refresh(body)
     }
@@ -157,7 +163,7 @@ export class AuthRestController {
     @UseFilters(ControllerExceptionFilter)
     @UseInterceptors(new CustomLoggingInterceptor<LoginResponse>({
         transform: ({ payload, data, statusCode }) => {
-            if(statusCode === 200) {
+            if (statusCode === 200) {
                 payload({ user: { id: data.id, role: data.role }, data: null });
             }
         }

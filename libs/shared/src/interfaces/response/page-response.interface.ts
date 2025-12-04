@@ -5,5 +5,5 @@ export interface PageResponse<T> {
     isLastPage: boolean;
     totalPages: number;
     totalItems: number;
-    data: T[];
+    items: T[];
 }

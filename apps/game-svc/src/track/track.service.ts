@@ -71,6 +71,18 @@ export class TrackService {
                 effectiveConfiguration.updateValue = updateValue || undefined;
                 effectiveConfiguration.trackPropertyType = PropertyType.NUMBER;
                 effectiveConfiguration.updateOperation = UpdateOperation.ADD;
+                const streakTrackHistory = this.trackTemplateRepository.create({
+                    name: `${data.name} - Personal Best`,
+                    description: `History of the best streak for track: ${data.name}`,
+                    configuration: {
+                        type: TrackType.HISTORY,
+                        initialValue: '0',
+                        trackPropertyType: PropertyType.NUMBER,
+                        updateOperation: UpdateOperation.SET
+                    } as TrackConfiguration
+                });
+                const savedStreakHistory = await this.trackTemplateRepository.save(streakTrackHistory, { reload: true });
+                effectiveConfiguration.historyStreak = savedStreakHistory.id;
                 break;
             default:
                 effectiveConfiguration.type = TrackType.COUNTER;
@@ -87,7 +99,7 @@ export class TrackService {
                                 allowedOperations
                             })
                     )
-                };
+                }
                 effectiveConfiguration.updateOperation = updateOperation || allowedOperations.at(0);
                 effectiveConfiguration.trackPropertyType = PropertyType.NUMBER;
                 effectiveConfiguration.initialValue = initialValue || '1';
@@ -102,32 +114,37 @@ export class TrackService {
         return await this.trackTemplateRepository.save(createdTrack, { reload: true });
     }
 
-    async findAllRecords(options?: {
-        where: any
-    }) {
+    async findAllRecords(options?: { where: any }) {
         const { where } = options || {};
         return await this.trackRecordRepository.find({ where, relations: ['track'] });
     }
 
-    async findOneRecord(options: {
-        trackId: string,
-        userId: string
-    }) {
+    async findOneRecord(options: { trackId: string, userId: string }) {
         const { trackId, userId } = options;
-        return await this.trackRecordRepository.findOne({
-            where: {
-                trackId,
-                userId
-            },
+        const foundRecord = await this.trackRecordRepository.findOne({
+            where: { trackId, userId },
             relations: ['track']
         });
+
+        if (foundRecord) {
+            const { configuration } = foundRecord.track;
+            if (configuration.type === TrackType.STREAK) {
+                const personalBest = await this.trackRecordRepository.findOne({
+                    where: {
+                        trackId: configuration.historyStreak,
+                        userId
+                    }
+                });
+                if (personalBest) {
+                    (foundRecord as any).personalBest = personalBest.currentValue;
+                }
+            }
+        }
+
+        return foundRecord;
     }
 
-    async updateOrCreate(
-        trackRecord: TrackRecord,
-        trackTemplate: TrackTemplate,
-        log: any,
-    ) {
+    async updateOrCreate(trackRecord: TrackRecord, trackTemplate: TrackTemplate, log: any) {
         if (trackRecord) {
             switch (trackRecord.track.configuration.type) {
                 case TrackType.COUNTER:
@@ -145,40 +162,86 @@ export class TrackService {
                             newValue = currentValue;
                             break;
                     }
-                    trackRecord.currentValue = newValue.toString();
-                    await this.trackRecordRepository.save(trackRecord, { reload: true });
-                    return trackRecord;
+
+                    await this.trackRecordRepository.update(
+                        { trackId: trackRecord.trackId, userId: trackRecord.userId },
+                        { currentValue: newValue.toString() }
+                    );
+
+                    return await this.findOneRecord({ trackId: trackRecord.trackId, userId: trackRecord.userId });
+
                 case TrackType.STREAK:
                     const rawLastUpdate = castProperty<Date>(trackRecord.lastUpdatedAt, PropertyType.DATE);
                     const timestamp = castProperty<Date>(log.timestamp, PropertyType.DATE);
 
-                    console.log('Last Update:', rawLastUpdate);
-                    console.log('Current Log Timestamp:', timestamp);
-
                     const lastUpdatedAt = extractDatePart(rawLastUpdate, DateConditionOperation.DAY);
                     const dayRequest = extractDatePart(timestamp, DateConditionOperation.DAY);
 
-                    // If the last updated day is exactly one day before the current timestamp day, increment the streak
                     if (lastUpdatedAt + 1 === dayRequest) {
                         const currentStreak = castProperty<number>(trackRecord.currentValue, PropertyType.NUMBER);
-                        trackRecord.currentValue = (currentStreak + 1).toString();
-                        await this.trackRecordRepository.save(trackRecord, { reload: true });
-                        return trackRecord;
-                    } else if (lastUpdatedAt <= dayRequest) {
-                        return trackRecord;
-                    } else if (lastUpdatedAt + 1 > dayRequest) {
-                        trackRecord.currentValue = '1';
-                        await this.trackRecordRepository.save(trackRecord, { reload: true });
-                        return trackRecord;
+
+                        await this.trackRecordRepository.update(
+                            { trackId: trackRecord.trackId, userId: trackRecord.userId },
+                            { currentValue: (currentStreak + 1).toString() }
+                        );
+
+                        return await this.findOneRecord({ trackId: trackRecord.trackId, userId: trackRecord.userId });
                     }
+
+                    if (lastUpdatedAt <= dayRequest) {
+                        await this.trackRecordRepository.update(
+                            { trackId: trackRecord.trackId, userId: trackRecord.userId },
+                            { currentValue: trackRecord.currentValue }
+                        );
+
+                        return await this.findOneRecord({ trackId: trackRecord.trackId, userId: trackRecord.userId });
+                    }
+
+                    if (lastUpdatedAt + 1 > dayRequest) {
+                        if (trackTemplate.configuration.historyStreak) {
+                            const historyStreakTrack = await this.findOneRecord({
+                                trackId: trackTemplate.configuration.historyStreak,
+                                userId: log.user.id
+                            });
+
+                            if (historyStreakTrack) {
+                                const currentStreak = castProperty<number>(trackRecord.currentValue, PropertyType.NUMBER);
+                                const lastStreak = castProperty<number>(historyStreakTrack.currentValue, PropertyType.NUMBER);
+
+                                if (currentStreak > lastStreak) {
+                                    await this.trackRecordRepository.update(
+                                        { trackId: historyStreakTrack.trackId, userId: log.user.id },
+                                        { currentValue: trackRecord.currentValue }
+                                    );
+                                }
+                            } else {
+                                const newHistoryStreak = this.trackRecordRepository.create({
+                                    trackId: trackTemplate.configuration.historyStreak,
+                                    userId: log.user.id,
+                                    currentValue: trackRecord.currentValue
+                                });
+                                await this.trackRecordRepository.save(newHistoryStreak, { reload: true });
+                            }
+                        }
+
+                        await this.trackRecordRepository.update(
+                            { trackId: trackRecord.trackId, userId: trackRecord.userId },
+                            { currentValue: '1' }
+                        );
+
+                        return await this.findOneRecord({ trackId: trackRecord.trackId, userId: trackRecord.userId });
+                    }
+
                     break;
             }
         }
+
         const newRecord = this.trackRecordRepository.create({
             trackId: trackTemplate.id,
             userId: log.user.id,
             currentValue: trackTemplate.configuration.initialValue
         });
+
         return await this.trackRecordRepository.save(newRecord, { reload: true });
     }
 }
