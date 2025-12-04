@@ -1,8 +1,8 @@
 import https from 'node:https';
 import http from 'node:http';
 import { loginListeners, dietListeners, waterListeners, weightListeners } from './listeners.ts';
-import { loginTracks, dietTracks, waterTracks, weightTracks } from './tracks.ts';
-import { loginTriggers, dietTriggers, waterTriggers, weightTriggers } from './triggers.ts';
+import { loginTracks, dietTracks, waterTracks, weightTracks, mealCompletionTrack } from './tracks.ts';
+import { loginTriggers, dietCountTriggers, waterTriggers, weightTriggers, dietTrackTriggers } from './triggers.ts';
 import { loginCount, loginStreak, dietCount, dietStreak, waterCount, waterStreak, weightLogCount } from './achievements.ts';
 
 const jwt = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI3ZDZlOTk2OC1iNGRiLTRiMzUtOGU2Ny03NTEzNDYzMmI5ZjkiLCJyb2xlIjoiYWRtaW4iLCJpYXQiOjE3NjQ4MTE4ODUsImV4cCI6MTc2NDg5ODI4NX0.OpQeuP0q7MQ_LplZ63oDSX44ZBU1a10KVfkn0zwpIEun8YQliM4upI7CSGA37AxeDNFcxWff_O8bnXcURoqUm_yL8FS-wZMlC6LD9naiCb5BMd_5aYcuz1NcCYvo5ECnw2zD8BGKxIOYlXl9NVNPka5pUB1TmVek58ePQ7PlmQ_hrJER2dFYZq5AU-Tc1Smj4YQyoRFrAJWMYFDkFxiBfX04lmVAWzsyfrFExexAiDObnnUkAi4Ucr4oLyWtu1vFOZrzqZFWljuMok_OHAv3PD2fTuLOh3G0_542HZk59flNR85YRYiSflOx2IwUj6u8C2JrzgKT92pwgEN7eWT-HA";
@@ -122,49 +122,74 @@ async function createLoginGame() {
 async function createDietGame() {
     const listenersId: string[] = [];
     for (const listener of dietListeners) {
-        try {
-            const response = await postWithAuth(listenersUrl, listener);
-            console.log("Created diet listener:", response);
-            listenersId.push(JSON.parse(response).id);
-        } catch (error) {
-            console.error("Error creating diet listener:", error);
-        }
+        const response = await postWithAuth(listenersUrl, listener);
+        listenersId.push(JSON.parse(response).id);
     }
 
-    const tracksIds: string[] = [];
+    const tracksIds: { id: string, type: string }[] = [];
     for (const track of dietTracks) {
-        try {
-            const response = await postWithAuth(tracksUrl, track);
-            console.log("Created diet track:", response);
-            const parsedResponse = JSON.parse(response);
-            const trackId = parsedResponse.id;
-            const trackType = parsedResponse.configuration?.type;
-            tracksIds.push(trackId);
+        const response = await postWithAuth(tracksUrl, track);
+        const parsed = JSON.parse(response);
+        tracksIds.push({ id: parsed.id, type: parsed.configuration?.type });
+        await createAchievementsForTrack(parsed.id, parsed.configuration?.type, dietCount, dietStreak);
+    }
 
-            if (trackType === 'COUNTER') {
-                await createAchievementsForTrack(trackId, trackType, dietCount, dietStreak);
-            } else if (trackType === 'STREAK') {
-                await createAchievementsForTrack(trackId, trackType, dietCount, dietStreak);
+    for (const listenerId of listenersId) {
+        for (const track of tracksIds) {
+            const triggersToUse = track.type === 'COUNTER' ? dietCountTriggers : dietTrackTriggers;
+            for (const trig of triggersToUse) {
+                const updated = JSON.parse(JSON.stringify(trig));
+                updated.listenerId = listenerId;
+                updated.trackId = track.id;
+                await postWithAuth(triggersUrl, updated);
             }
-        } catch (error) {
-            console.error("Error creating diet track:", error);
         }
     }
-    for (let trigger of dietTriggers) {
-        for (const listenerId of listenersId) {
-            for (const trackId of tracksIds) {
-                const updatedTrigger = JSON.parse(JSON.stringify(trigger));
-                updatedTrigger.listenerId = listenerId;
-                updatedTrigger.trackId = trackId;
-                try {
-                    const response = await postWithAuth(triggersUrl, updatedTrigger);
-                    console.log("Created diet trigger:", response);
-                } catch (error) {
-                    console.error("Error creating diet trigger:", error);
+
+    const mealCompletionCounter = await postWithAuth(tracksUrl, mealCompletionTrack);
+    const mealCompletionParsed = JSON.parse(mealCompletionCounter);
+    const mealCompletionTrackId = mealCompletionParsed.id;
+    // await createAchievementsForTrack(mealCompletionTrackId, 'COUNTER', dietCount, []);
+    await postWithAuth(triggersUrl, {
+        "trackId": mealCompletionTrackId,
+        "listenerId": listenersId[0],
+        "conditions": [
+            {
+                "foundAt": "statusCode",
+                "propertyType": "number",
+                "conditionOperation": "EQUAL",
+                "value": "201"
+            },
+            {
+                "foundAt": "user",
+                "mappedBy": "role",
+                "propertyType": "string",
+                "conditionOperation": "EQUAL",
+                "value": "patient"
+            },
+            {
+                "foundAt": "data",
+                "mappedBy": "totalMealsForDay",
+                "propertyType": "number",
+                "conditionOperation": "GREATER_OR_EQUAL",
+                "compare": {
+                    "foundAt": "data",
+                    "mappedBy": "completedMealsForDay"
+                }
+            },
+            {
+                "foundAt": "timestamp",
+                "propertyType": "date",
+                "conditionOperation": "GREATER_THAN",
+                "applyOperationOnDate": "day",
+                "compare": {
+                    "foundAt": "trackRecord",
+                    "mappedBy": "lastUpdatedAt"
                 }
             }
-        }
-    }
+        ]
+    })
+
 }
 
 async function createWaterGame() {

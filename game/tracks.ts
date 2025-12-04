@@ -28,7 +28,11 @@ export const dietTracks = [
             'type': "STREAK"
         }
     }
-]
+];
+
+export const mealCompletionTrack = {
+    'name': "Patient's all meal completion counter",
+};
 
 export const waterTracks = [
     {

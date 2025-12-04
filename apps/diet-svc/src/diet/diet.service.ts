@@ -228,7 +228,7 @@ export class DietService {
                                 })
                         );
                     }
-                    if(scheduler.isSameDate(endDate, updatePayload.startDate, true)) {
+                    if (scheduler.isSameDate(endDate, updatePayload.startDate, true)) {
                         throw new BadRequestException(
                             errorMessagePattern
                                 .diet
@@ -352,6 +352,47 @@ export class DietService {
         return {
             diet: !dontIncludeAliments ? await this.fetchDietAliments(diet) : diet,
             plan: dayPlans.filter(p => p !== null)
+        };
+    }
+
+    async getDietPlanForDay(dietId: string, date: string): Promise<{
+        diet: Diet;
+        relativeDate: Date;
+        meals: Meal[];
+    } | null> {
+        const diet = await this.dietRepository.findOne({
+            where: { id: dietId },
+            relations: ['meals']
+        });
+
+        if (!diet) {
+            throw new NotFoundException(errorMessagePattern.diet.notFound.key);
+        }
+
+        const scheduler = new SchedulerHelper(diet.timeZone);
+        const normalizedDate = scheduler.buildDate({ date, startOfDay: true });
+
+        if (normalizedDate < diet.startDate) {
+            return null;
+        }
+        if (diet.endDate && normalizedDate > diet.endDate) {
+            return null;
+        }
+
+        if (!diet.meals || diet.meals.length === 0) {
+            return {
+                diet,
+                relativeDate: normalizedDate,
+                meals: []
+            };
+        }
+
+        const validMeals = diet.meals.filter((meal: Meal) => meal.isValidForDate(normalizedDate));
+
+        return {
+            diet,
+            relativeDate: normalizedDate,
+            meals: validMeals
         };
     }
 

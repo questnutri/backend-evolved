@@ -74,5 +74,14 @@ export class DietProxyController {
         return { payload: { result: true } };
     }
 
+    @MessagePattern(proxyPattern.diet.getDietPlanForDay.key)
+    async handleGetDietPlanForDay(
+        @Payload() payload: typeof proxyPattern.diet.getDietPlanForDay.payload
+    ): Promise<ProxyMessage<typeof proxyPattern.diet.getDietPlanForDay.response>> {
+        return {
+            payload: await this.dietService.getDietPlanForDay(payload.dietId, payload.date)
+        };
+    }
+
 
 }

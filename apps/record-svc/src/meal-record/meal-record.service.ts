@@ -1,18 +1,24 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Between, In, Repository } from 'typeorm';
 import {
     KeysOf,
     MealRecord, Meal,
     RepeatType,
-    SchedulerHelper
+    SchedulerHelper,
+    DIET_SERVICE_PROXY_NAME,
+    sendProxyMessage,
+    proxyPattern
 } from '@backend-evolved/shared';
+import { ClientProxy } from '@nestjs/microservices';
 
 @Injectable()
 export class MealRecordService {
     constructor(
         @InjectRepository(MealRecord)
         private readonly mealRecordRepository: Repository<MealRecord>,
+        @Inject(DIET_SERVICE_PROXY_NAME)
+        private readonly dietServiceProxy: ClientProxy
     ) { }
 
     async findAll(where: any): Promise<MealRecord[]> {
@@ -40,7 +46,7 @@ export class MealRecordService {
             }
         });
         if (foundPreviousRecord) {
-            const updated = this.mealRecordRepository.merge(foundPreviousRecord, { isCompleted: !foundPreviousRecord.isCompleted, conclusionHour: scheduler.format(requestDate, 'HH:mm:ss'),});
+            const updated = this.mealRecordRepository.merge(foundPreviousRecord, { isCompleted: !foundPreviousRecord.isCompleted, conclusionHour: scheduler.format(requestDate, 'HH:mm:ss'), });
             return await this.mealRecordRepository.save(updated);
         }
 
@@ -198,6 +204,31 @@ export class MealRecordService {
                 break;
         }
 
+        const dayPlan = await sendProxyMessage<
+            typeof proxyPattern.diet.getDietPlanForDay.response,
+            typeof proxyPattern.diet.getDietPlanForDay.payload
+        >({
+            proxy: this.dietServiceProxy,
+            pattern: proxyPattern.diet.getDietPlanForDay.key,
+            data: { dietId: meal.diet.id, date: scheduler.format(requestDate, 'YYYY-MM-DD') }
+        })
+
+        const mealIdsForDay = dayPlan.meals.map((m: Meal) => m.id);
+
+        const recordsForDay = await this.mealRecordRepository.find({
+            where: {
+                mealId: In(mealIdsForDay),
+                patientId: meal.diet.patientId,
+                relativeDate: Between(
+                    scheduler.buildDate({ date: requestDate, startOfDay: true }),
+                    scheduler.buildDate({ date: requestDate, endOfDay: true })
+                )
+            }
+        })
+
+        const totalMeals = mealIdsForDay.length
+        const completedMeals = recordsForDay.filter(r => r.isCompleted).length
+
         const createdRecord = this.mealRecordRepository.create({
             mealId: meal.id,
             patientId: meal.diet.patientId,
@@ -209,7 +240,13 @@ export class MealRecordService {
             conclusionHour: scheduler.format(requestDate, 'HH:mm:ss'),
         });
 
-        return await this.mealRecordRepository.save(createdRecord);
+        const savedRecord = await this.mealRecordRepository.save(createdRecord);
+
+        return {
+            ...savedRecord,
+            totalMealsForDay: totalMeals,
+            completedMealsForDay: completedMeals + 1
+        }
     }
 
     // Additional methods specific to meal records

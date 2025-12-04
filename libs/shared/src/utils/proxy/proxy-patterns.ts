@@ -65,7 +65,8 @@ export const proxyPattern = {
         meal: {
             getOne: pattern<{ mealId: string, patientId?: string, nutritionistId?: string, dietStatus?: DietStatus}, Meal>('diet.meal.getOne'),
         },
-        deleteById: pattern<{ id: string }, { result: boolean }>('diet.deletionById')
+        deleteById: pattern<{ id: string }, { result: boolean }>('diet.deletionById'),
+        getDietPlanForDay: pattern<{dietId: string, date: string}>('diet.getDietPlanForDay')
     },
     record: {
         weight: {

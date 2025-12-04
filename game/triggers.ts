@@ -1,4 +1,4 @@
-export const dietTriggers = [
+export const dietCountTriggers = [
     {
         "trackId": "{{track_id}}",
         "listenerId": "{{listener_id}}",
@@ -28,7 +28,49 @@ export const dietTriggers = [
             }
         ]
     }
-]
+];
+
+export const dietTrackTriggers = [
+    {
+        "trackId": "{{track_id}}",
+        "listenerId": "{{listener_id}}",
+        "conditions": [
+            {
+                "foundAt": "statusCode",
+                "propertyType": "number",
+                "conditionOperation": "EQUAL",
+                "value": "201"
+            },
+            {
+                "foundAt": "user",
+                "mappedBy": "role",
+                "propertyType": "string",
+                "conditionOperation": "EQUAL",
+                "value": "patient"
+            },
+            {
+                "foundAt": "data",
+                "mappedBy": "totalMealsForDay",
+                "propertyType": "number",
+                "conditionOperation": "GREATER_OR_EQUAL",
+                "compare": {
+                    "foundAt": "data",
+                    "mappedBy": "completedMealsForDay"
+                }
+            },
+            {
+                "foundAt": "timestamp",
+                "propertyType": "date",
+                "conditionOperation": "GREATER_THAN",
+                "applyOperationOnDate": "day",
+                "compare": {
+                    "foundAt": "trackRecord",
+                    "mappedBy": "lastUpdatedAt"
+                }
+            }
+        ]
+    }
+];
 
 export const weightTriggers = [
     {
