@@ -9,7 +9,7 @@ import {
     castProperty,
     DateConditionOperation
 } from "@backend-evolved/shared";
-import { BadRequestException, Injectable } from "@nestjs/common";
+import { BadRequestException, Injectable, InternalServerErrorException } from "@nestjs/common";
 import { InjectRepository } from "@nestjs/typeorm";
 import { Repository } from "typeorm";
 import { extractDatePart } from "@backend-evolved/shared";
@@ -144,7 +144,7 @@ export class TrackService {
         return foundRecord;
     }
 
-    async updateOrCreate(trackRecord: TrackRecord, trackTemplate: TrackTemplate, log: any) {
+    async updateOrCreate(trackRecord: TrackRecord, trackTemplate: TrackTemplate, log: any): Promise<TrackRecord> {
         if (trackRecord) {
             switch (trackRecord.track.configuration.type) {
                 case TrackType.COUNTER:
@@ -165,10 +165,20 @@ export class TrackService {
 
                     await this.trackRecordRepository.update(
                         { trackId: trackRecord.trackId, userId: trackRecord.userId },
-                        { currentValue: newValue.toString() }
+                        { currentValue: newValue.toString() },
                     );
 
-                    return await this.findOneRecord({ trackId: trackRecord.trackId, userId: trackRecord.userId });
+                    const foundUpdatedRecord = await this.findOneRecord({ trackId: trackRecord.trackId, userId: trackRecord.userId });
+                    if(!foundUpdatedRecord) throw new InternalServerErrorException(
+                        errorMessagePattern
+                            .game
+                            .track
+                            .trackRecordFailedToBeFoundAfterUpdate
+                            .fn()
+                    );
+
+                    return foundUpdatedRecord;
+
 
                 case TrackType.STREAK:
                     const rawLastUpdate = castProperty<Date>(trackRecord.lastUpdatedAt, PropertyType.DATE);
@@ -185,7 +195,14 @@ export class TrackService {
                             { currentValue: (currentStreak + 1).toString() }
                         );
 
-                        return await this.findOneRecord({ trackId: trackRecord.trackId, userId: trackRecord.userId });
+                        const foundUpdatedRecord = await this.findOneRecord({ trackId: trackRecord.trackId, userId: trackRecord.userId });
+                        if(!foundUpdatedRecord) throw new InternalServerErrorException(
+                            errorMessagePattern
+                                .game
+                                .track
+                                .trackRecordFailedToBeFoundAfterUpdate
+                                .fn()
+                        );
                     }
 
                     if (lastUpdatedAt <= dayRequest) {
@@ -194,7 +211,16 @@ export class TrackService {
                             { currentValue: trackRecord.currentValue }
                         );
 
-                        return await this.findOneRecord({ trackId: trackRecord.trackId, userId: trackRecord.userId });
+                        const foundUpdatedRecord = await this.findOneRecord({ trackId: trackRecord.trackId, userId: trackRecord.userId });
+                        if(!foundUpdatedRecord) throw new InternalServerErrorException(
+                            errorMessagePattern
+                                .game
+                                .track
+                                .trackRecordFailedToBeFoundAfterUpdate
+                                .fn()
+                        );
+
+                        return foundUpdatedRecord;
                     }
 
                     if (lastUpdatedAt + 1 > dayRequest) {
@@ -229,7 +255,16 @@ export class TrackService {
                             { currentValue: '1' }
                         );
 
-                        return await this.findOneRecord({ trackId: trackRecord.trackId, userId: trackRecord.userId });
+                        const foundUpdatedRecord = await this.findOneRecord({ trackId: trackRecord.trackId, userId: trackRecord.userId });
+                        if(!foundUpdatedRecord) throw new InternalServerErrorException(
+                            errorMessagePattern
+                                .game
+                                .track
+                                .trackRecordFailedToBeFoundAfterUpdate
+                                .fn()
+                        );
+
+                        return foundUpdatedRecord;
                     }
 
                     break;

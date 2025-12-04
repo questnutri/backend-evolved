@@ -17,6 +17,7 @@ CREATE TABLE IF NOT EXISTS admin_management_level (
     "canDeleteAdmin" boolean DEFAULT false,
     "canViewManagementLevels" boolean DEFAULT false,
     "canGrantAdminPermissions" boolean DEFAULT false,
+    "canCreateNotifications" boolean DEFAULT false,
     CONSTRAINT fk_admin_mgmt_admin FOREIGN KEY (id) REFERENCES admin(id) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
@@ -104,10 +105,12 @@ INSERT INTO admin_management_level (
     "canUpdateAdmin",
     "canDeleteAdmin",
     "canViewManagementLevels",
-    "canGrantAdminPermissions"
+    "canGrantAdminPermissions",
+    "canCreateNotifications"
 )
 VALUES (
     '7d6e9968-b4db-4b35-8e67-75134632b9f9',
+    true,
     true,
     true,
     true,

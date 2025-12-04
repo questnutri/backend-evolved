@@ -75,7 +75,7 @@ export class ListenerController {
                             };
                             if (track.configuration.trackPropertyType === PropertyType.NUMBER) {
                                 if (Number(updatedRecord.currentValue) >= Number(achievementTemplate.targetValue)) {
-                                    await this.achievementService.createRecord({
+                                    const achievementRecord = await this.achievementService.createRecord({
                                         userId,
                                         achievementId: achievementTemplate.id
                                     });
@@ -90,7 +90,12 @@ export class ListenerController {
                                         data: {
                                             userId,
                                             type: NotificationType.ACHIEVEMENT,
-                                            i18n: notificationsI18n
+                                            i18n: notificationsI18n,
+                                            additionalData: {
+                                                achievement: achievementTemplate,
+                                                unlockedAt: achievementRecord.unlockedAt,
+                                            },
+                                            autoAcknowledged: true
                                         }
                                     });
                                 }

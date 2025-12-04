@@ -201,6 +201,9 @@ export const errorMessagePattern = {
             },
             templateNotFound: {
                 fn: () => `Track template not found.`
+            },
+            trackRecordFailedToBeFoundAfterUpdate: {
+                fn: () => `Track record failed to be found after update operation.`
             }
         },
         trigger: {

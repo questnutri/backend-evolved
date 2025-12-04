@@ -118,3 +118,175 @@ nx run-many -t serve -p auth-svc,another-svc,...
 
 # HELM CONFIG:
 helm upgrade --install questnutri ./helm/
+
+
+//Meal record trigger
+{
+  "trackId": "{{track_id}}",
+  "listenerId": "{{listener_id}}",
+  "conditions": [
+    {
+      "foundAt": "statusCode",
+      "propertyType": "number",
+      "conditionOperation": "EQUAL",
+      "value": "201"
+    },
+    {
+      "foundAt": "user",
+      "mappedBy": "role",
+      "propertyType": "string",
+      "conditionOperation": "EQUAL",
+      "value": "patient"
+    },
+    {
+      "foundAt": "data",
+      "mappedBy": "createdAt",
+      "propertyType": "date",
+      "conditionOperation": "EQUAL",
+      "compare": {
+        "foundAt": "data",
+        "mappedBy": "updatedAt"
+      }
+    }
+  ]
+}
+
+//Login record trigger
+{
+    "trackId": "{{track_id}}",
+    "listenerId": "{{listener_id}}",
+    "conditions": [
+        {
+            "foundAt": "statusCode",
+            "propertyType": "number",
+            "conditionOperation": "EQUAL",
+            "value": "200"
+        },
+        {
+            "foundAt": "user",
+            "mappedBy": "role",
+            "propertyType": "string",
+            "conditionOperation": "EQUAL",
+            "value": "patient"
+        },
+        {
+            "foundAt": "timestamp",
+            "propertyType": "date",
+            "conditionOperation": "GREATER_THAN",
+            "applyOperationOnDate": "day",
+            "compare": {
+                "foundAt": "trackRecord",
+                "mappedBy": "lastUpdatedAt"
+            }
+        }
+    ]
+}
+
+{
+    "trackId": "{{track_id}}",
+    "listenerId": "{{listener_id}}",
+    "conditions": [
+        {
+            "foundAt": "timestamp",
+            "propertyType": "date",
+            "conditionOperation": "GREATER_THAN",
+            "applyOperationOnDate": "day",
+            "compare": {
+                "foundAt": "trackRecord",
+                "mappedBy": "lastUpdatedAt"
+            }
+        },
+      {
+        "foundAt": "data",
+        "mappedBy": "totalIntake",
+        "propertyType": "number",
+        "conditionOperation": "GREATER_OR_EQUAL",
+        "compare": {
+          "foundAt": "data",
+          "mappedBy": "currentDailyWaterGoal"
+        }
+      }
+    ]
+}
+
+{
+    "trackId": "{{track_id}}",
+    "listenerId": "{{listener_id}}",
+    "conditions": [
+        {
+            "foundAt": "timestamp",
+            "propertyType": "date",
+            "conditionOperation": "GREATER_THAN",
+            "applyOperationOnDate": "day",
+            "compare": {
+                "foundAt": "trackRecord",
+                "mappedBy": "lastUpdatedAt"
+            }
+        },
+      {
+        "foundAt": "data",
+        "mappedBy": "totalIntake",
+        "propertyType": "number",
+        "conditionOperation": "GREATER_OR_EQUAL",
+        "compare": {
+          "foundAt": "data",
+          "mappedBy": "currentDailyWaterGoal"
+        }
+      }
+    ]
+}
+
+
+
+
+//   "configuration": {
+//       "type": "COUNTER",
+//       "updateOperation": "ADD",
+//       "trackPropertyType": "number",
+//       "updateValue": "1",
+//       "initialValue": "1"
+//   }
+// {
+//   "name": "Patient's meal records",
+//   "description": "Track patient records",
+//   "configuration": {
+//     "type": "PROPERTY",
+//     "updateOperation": "SET",
+//     "trackPropertyType": "string",
+//     "computedValue": {
+//       "foundAt": "data",
+//       "mappedBy": "id",
+//       "type": "string"
+//     }
+//   }
+// }
+// "userId": "abc"
+// TrackRecord => 123abc >> TrackTemplate.achievement? > P/ cada AchievementTemplate => AchievementTemplate.targetValue == TrackRecord.currentValue >> AchievementRecord => 
+//AchievementTemplate id = "xyz"
+//AchievementRecord => xyzabc
+//Lucas, usuario abc, desbloqueou AchievementTemplate.id >> notification-svc
+
+// https://questnutri.com.br/api/v1/nofication/me
+// https://questnutri.com.br/api/v1/notifation/:id/ack
+//id do usuario, severity: info, warn, error, success, message
+
+// PatientLogin => abc
+// | id | value: number |
+
+// PatientMealRecord => 123
+// | id | value: string |
+
+
+// TrackTemplate
+// | id      | propertyType |
+// +---------+--------------+
+// | abc     | number       | => PatientLogic
+// | 123     | string       | => PatientMealRecord
+
+
+// TrackRecord
+// | trackId | userId | currentValue |
+// +---------+--------+--------------+
+// | abc     | xyz    | "1"          |
+// | abc     | 456    | "3"          |
+// | 123     | xyz    | "test"       |

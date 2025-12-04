@@ -5,5 +5,6 @@ export class CreateNotificationDto {
     userId: string;
     i18n: NotificationMessageI18N;
     type?: NotificationType;
-    title?: string;
+    additionalData?: any;
+    autoAcknowledged?: boolean;
 }

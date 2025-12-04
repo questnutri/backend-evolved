@@ -49,4 +49,10 @@ export class AdminManagementLevel {
         default: false
     })
     canGrantAdminPermissions: boolean;
+
+
+    @Column({
+        default: false
+    })
+    canCreateNotifications: boolean;
 }

@@ -5,6 +5,7 @@ import { dbConnection } from '../database/db-connection';
 import { MealModule } from '../meal/meal.module';
 import { 
     ALIMENT_SERVICE_PROXY_NAME,
+    NOTIFICATION_SERVICE_PROXY_NAME,
     PATIENT_SERVICE_PROXY_NAME,
     RECORD_SERVICE_PROXY_NAME,
     provideProxyService
@@ -25,6 +26,7 @@ import { DietProxyController } from './controllers/diet-proxy.controller';
         provideProxyService(PATIENT_SERVICE_PROXY_NAME),
         provideProxyService(ALIMENT_SERVICE_PROXY_NAME),
         provideProxyService(RECORD_SERVICE_PROXY_NAME),
+        provideProxyService(NOTIFICATION_SERVICE_PROXY_NAME),
         DietService,
     ],
     exports: [DietService],

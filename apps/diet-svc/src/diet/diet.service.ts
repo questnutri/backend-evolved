@@ -13,7 +13,10 @@ import {
     DietFindOptions,
     DietPlanFindOptions,
     Meal,
-    MealRecord
+    MealRecord,
+    NOTIFICATION_SERVICE_PROXY_NAME,
+    emitProxyMessage,
+    NotificationType
 } from '@backend-evolved/shared';
 import { Injectable, NotFoundException, Inject, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -25,9 +28,10 @@ import { MealService } from '../meal/meal.service';
 export class DietService {
     constructor(
         @InjectRepository(Diet) private readonly dietRepository: Repository<Diet>,
-        @Inject(PATIENT_SERVICE_PROXY_NAME) private readonly patientProxyService: ClientProxy,
-        @Inject(RECORD_SERVICE_PROXY_NAME) private readonly recordProxyService: ClientProxy,
-        @Inject(ALIMENT_SERVICE_PROXY_NAME) private readonly alimentServiceProxy: ClientProxy,
+        @Inject(PATIENT_SERVICE_PROXY_NAME) private readonly patientProxy: ClientProxy,
+        @Inject(RECORD_SERVICE_PROXY_NAME) private readonly recordProxy: ClientProxy,
+        @Inject(ALIMENT_SERVICE_PROXY_NAME) private readonly alimentProxy: ClientProxy,
+        @Inject(NOTIFICATION_SERVICE_PROXY_NAME) private readonly notificationProxy: ClientProxy,
         private readonly mealService: MealService
     ) { }
 
@@ -78,7 +82,7 @@ export class DietService {
             typeof proxyPattern.patient.isRelatedToNutritionist.response,
             typeof proxyPattern.patient.isRelatedToNutritionist.payload
         >({
-            proxy: this.patientProxyService,
+            proxy: this.patientProxy,
             pattern: proxyPattern.patient.isRelatedToNutritionist.key,
             data: { patientId: data.patientId!, nutritionistId: data.nutritionistId! }
         })
@@ -117,6 +121,30 @@ export class DietService {
                 startDate: validStartDate,
                 endDate: validEndDate
             });
+            emitProxyMessage<
+                typeof proxyPattern.notification.create.payload
+            >({
+                proxy: this.notificationProxy,
+                pattern: proxyPattern.notification.create.key,
+                data: {
+                    i18n: {
+                        "pt-BR": {
+                            message: "Nova dieta atribuída a você.",
+                            title: "Nova dieta!",
+                        },
+                        "en-US": {
+                            message: "New diet assigned to you.",
+                            title: "New diet!",
+                        }
+                    },
+                    userId: data.patientId!,
+                    type: NotificationType.INFO,
+                    autoAcknowledged: false,
+                    additionalData: {
+                        dietId: diet.id
+                    }
+                }
+            })
             return await this.dietRepository.save(diet);
         }
         throw new NotFoundException('Patient not found or not related to the nutritionist');
@@ -322,7 +350,7 @@ export class DietService {
                                     typeof proxyPattern.record.meal.dietRequest.getAllForMealId.response,
                                     typeof proxyPattern.record.meal.dietRequest.getAllForMealId.payload
                                 >({
-                                    proxy: this.recordProxyService,
+                                    proxy: this.recordProxy,
                                     pattern: proxyPattern.record.meal.dietRequest.getAllForMealId.key,
                                     data: {
                                         mealId: meal.id,
@@ -417,7 +445,7 @@ export class DietService {
                     typeof proxyPattern.aliment.getManyByIds.payload
                 >
                 ({
-                    proxy: this.alimentServiceProxy,
+                    proxy: this.alimentProxy,
                     pattern: proxyPattern.aliment.getManyByIds.key,
                     data: { ids, source: null },
                     options: { retry: { count: 3, delay: 50 } }
@@ -526,7 +554,7 @@ export class DietService {
                         typeof proxyPattern.record.meal.dietRequest.getAllForMealId.response,
                         typeof proxyPattern.record.meal.dietRequest.getAllForMealId.payload
                     >({
-                        proxy: this.recordProxyService,
+                        proxy: this.recordProxy,
                         pattern: proxyPattern.record.meal.dietRequest.getAllForMealId.key,
                         data: {
                             mealId: meal.id,
@@ -598,7 +626,7 @@ export class DietService {
                 typeof proxyPattern.aliment.getManyByIds.response,
                 typeof proxyPattern.aliment.getManyByIds.payload
             >({
-                proxy: this.alimentServiceProxy,
+                proxy: this.alimentProxy,
                 pattern: proxyPattern.aliment.getManyByIds.key,
                 data: {
                     ids: allAlimentIds, source: null

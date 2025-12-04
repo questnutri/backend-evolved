@@ -31,9 +31,14 @@ export class NotificationRestController {
         if (type) {
             where.type = type;
         }
-        return await this.notificationService.findAll({
+        const notifications = await this.notificationService.findAll({
             where
         });
+
+        const autoAcknowledgeNotifications = notifications.filter(n => n.autoAcknowledged);
+        await this.notificationService.remove(autoAcknowledgeNotifications);
+
+        return notifications;
     }
 
     @Get('me/all')

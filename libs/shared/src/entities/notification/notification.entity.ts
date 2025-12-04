@@ -37,6 +37,18 @@ export class NotificationEntity {
     })
     i18n: i18n<NotificationMessage>;
 
+    @Column({
+        type: 'jsonb',
+        nullable: true
+    })
+    additionalData?: any;
+
+    @Column({
+        type: 'boolean',
+        default: false
+    })
+    autoAcknowledged: boolean = false;
+
     @CreateDateColumn()
     createdAt: Date;
 

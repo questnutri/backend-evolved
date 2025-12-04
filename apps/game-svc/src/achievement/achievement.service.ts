@@ -47,7 +47,7 @@ export class AchievementService {
         return await this.achievementRecordRepository.findOne(options);
     }
 
-    async createRecord(data: any) {
+    async createRecord(data: Partial<AchievementRecord>): Promise<AchievementRecord> {
         const record = this.achievementRecordRepository.create(data);
         return await this.achievementRecordRepository.save(record);
     }
