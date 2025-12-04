@@ -5,7 +5,7 @@ import { loginTracks, dietTracks, waterTracks, weightTracks, mealCompletionTrack
 import { loginTriggers, dietCountTriggers, waterTriggers, weightTriggers, dietTrackTriggers } from './triggers.ts';
 import { loginCount, loginStreak, dietCount, dietStreak, waterCount, waterStreak, weightLogCount } from './achievements.ts';
 
-const jwt = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI3ZDZlOTk2OC1iNGRiLTRiMzUtOGU2Ny03NTEzNDYzMmI5ZjkiLCJyb2xlIjoiYWRtaW4iLCJpYXQiOjE3NjQ4MTE4ODUsImV4cCI6MTc2NDg5ODI4NX0.OpQeuP0q7MQ_LplZ63oDSX44ZBU1a10KVfkn0zwpIEun8YQliM4upI7CSGA37AxeDNFcxWff_O8bnXcURoqUm_yL8FS-wZMlC6LD9naiCb5BMd_5aYcuz1NcCYvo5ECnw2zD8BGKxIOYlXl9NVNPka5pUB1TmVek58ePQ7PlmQ_hrJER2dFYZq5AU-Tc1Smj4YQyoRFrAJWMYFDkFxiBfX04lmVAWzsyfrFExexAiDObnnUkAi4Ucr4oLyWtu1vFOZrzqZFWljuMok_OHAv3PD2fTuLOh3G0_542HZk59flNR85YRYiSflOx2IwUj6u8C2JrzgKT92pwgEN7eWT-HA";
+const jwt = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI3ZDZlOTk2OC1iNGRiLTRiMzUtOGU2Ny03NTEzNDYzMmI5ZjkiLCJyb2xlIjoiYWRtaW4iLCJpYXQiOjE3NjQ4MjYwMzQsImV4cCI6MTc2NDgyNjkzNH0.gMNL_wB6du-FbdehZtYvNd2oQ-aM-4ST9NNbAwitvZryn8yNE7SMl7vD8AAVwaRxc4Ol4P0hUY9sE0fK-ZnowgeqafrSQcVA4pI-HzkY8rUxqlYETvI0ndeEjdKSG_rLH8nk9Q7BTcI-kXJLkoVkBcxmAsujgERunevUVpAev5u-ICtWTgZVjAQZPP8G91eIyKBe7fAssLKfMM2XDfmrAGgMCGfAZFtitWm7yk3pKl5hWfr-DJtz_o1R2wGKgDSajleNSthKso15DsEFgdjnCu2RgLKRRcOBLoHqhstuNQYJrVsBaf3UjyYuPFCZB1BYc31P5xUGdWZJsBCAvHWE4g";
 
 function postWithAuth(url: string, data: object): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -48,10 +48,12 @@ function postWithAuth(url: string, data: object): Promise<string> {
     });
 }
 
-const listenersUrl = "http://localhost:8080/api/v1/game/listeners";
-const tracksUrl = "http://localhost:8080/api/v1/game/tracks";
-const triggersUrl = "http://localhost:8080/api/v1/game/triggers";
-const achievementsUrl = "http://localhost:8080/api/v1/game/achievements";
+const gateway = "localhost:8080";
+
+const listenersUrl = `http://${gateway}/api/v1/game/listeners`;
+const tracksUrl = `http://${gateway}/api/v1/game/tracks`;
+const triggersUrl = `http://${gateway}/api/v1/game/triggers`;
+const achievementsUrl = `http://${gateway}/api/v1/game/achievements`;
 
 async function createAchievementsForTrack(trackId: string, trackType: string, countAchievements: object[], streakAchievements: object[]) {
     const achievements = trackType === 'COUNTER' ? countAchievements : streakAchievements;
