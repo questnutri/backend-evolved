@@ -11,6 +11,8 @@ export interface NotificationMessageI18N {
     [language: string]: NotificationMessage;
 }
 
+//TODO: Implement a more robust notification entity, to customize looking field of it.
+
 @Entity('notifications')
 export class NotificationEntity {
     @PrimaryGeneratedColumn('uuid')

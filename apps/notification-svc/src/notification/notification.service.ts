@@ -23,7 +23,8 @@ export class NotificationService {
             where,
             order: {
                 createdAt: 'DESC',
-            }
+            },
+            withDeleted: options?.withDeleted || false,
         });
     }
 

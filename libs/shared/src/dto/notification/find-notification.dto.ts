@@ -4,4 +4,6 @@ import { NotificationEntity } from "src/entities";
 
 export class NotificationFindOptions extends IntersectionType(
     SearchDto<NotificationEntity>,
-) {}
+) {
+    withDeleted?: boolean;
+}

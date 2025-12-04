@@ -1,10 +1,11 @@
-import { Body, Controller, Get, Post, UseFilters, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Post, Query, UseFilters, UseGuards } from '@nestjs/common';
 import { NotificationService } from '../notification.service';
 import { ApiExcludeEndpoint } from '@nestjs/swagger';
 import {
     ContextUser,
     ControllerExceptionFilter,
-    JwtRoleGuard
+    JwtRoleGuard,
+    NotificationType
 } from '@backend-evolved/shared';
 
 @Controller()
@@ -21,12 +22,36 @@ export class NotificationRestController {
     @UseGuards(JwtRoleGuard(['patient', 'nutritionist', 'admin']))
     @UseFilters(ControllerExceptionFilter)
     async getAllNotificationsForMe(
-        @ContextUser() user: ContextUser
+        @ContextUser() user: ContextUser,
+        @Query('type') type?: NotificationType
     ) {
+        let where: any = {
+            userId: user.id
+        }
+        if (type) {
+            where.type = type;
+        }
         return await this.notificationService.findAll({
-            where: {
-                userId: user.id
-            }
+            where
+        });
+    }
+
+    @Get('me/all')
+    @UseGuards(JwtRoleGuard(['patient', 'nutritionist', 'admin']))
+    @UseFilters(ControllerExceptionFilter)
+    async getAllNotificationsForMeNoAck(
+        @ContextUser() user: ContextUser,
+        @Query('type') type?: NotificationType
+    ) {
+        let where: any = {
+            userId: user.id,
+        }
+        if (type) {
+            where.type = type;
+        }
+        return await this.notificationService.findAll({
+            where,
+            withDeleted: true
         });
     }
 
@@ -44,12 +69,17 @@ export class NotificationRestController {
     @UseGuards(JwtRoleGuard(['patient', 'nutritionist', 'admin']))
     @UseFilters(ControllerExceptionFilter)
     async ackAllNotifications(
-        @ContextUser() user: ContextUser
+        @ContextUser() user: ContextUser,
+        @Query('type') type?: NotificationType
     ) {
+        let where: any = {
+            userId: user.id
+        }
+        if( type ) {
+            where.type = type;
+        }
         const notifications = await this.notificationService.findAll({
-            where: {
-                userId: user.id
-            }
+            where
         });
         return await this.notificationService.remove(notifications);
     }
