@@ -65,7 +65,7 @@ export class FoodService  {
     }
 
     async createOne(data: Partial<Food>, reloadOptions?: { relations?: string[] }): Promise<any> {
-        const scheduler = new SchedulerHelper();
+        const scheduler = new SchedulerHelper(data.meal?.diet.timeZone);
         let validStartTargetDate = scheduler.buildDate({ startOfDay: true });
         if (
             (data.meal?.endDate && data.meal?.endDate < validStartTargetDate)
@@ -77,6 +77,7 @@ export class FoodService  {
         if (validStartTargetDate < data.meal!.startDate!) {
             validStartTargetDate = data.meal!.startDate!;
         }
+        console.log(validStartTargetDate);
         const foodData = { ...data, startDate: validStartTargetDate, endDate: null };
 
         const food = this.foodRepository.create(foodData);

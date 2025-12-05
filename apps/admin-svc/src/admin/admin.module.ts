@@ -8,6 +8,7 @@ import { StaffModule } from './staff/staff.module';
 import { PermissionService } from '../permission/permission.service';
 import { DietModule } from './diet/diet.module';
 import { PatientModule } from './patient/admin-patient.module';
+import { NotificationModule } from './notification/notification.module';
 
 @Module({
     imports: [
@@ -15,7 +16,8 @@ import { PatientModule } from './patient/admin-patient.module';
         NutritionistModule,
         StaffModule,
         DietModule,
-        PatientModule
+        PatientModule,
+        NotificationModule
     ],
     controllers: [AdminController],
     providers: [

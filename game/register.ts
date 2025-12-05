@@ -5,7 +5,7 @@ import { loginTracks, dietTracks, waterTracks, weightTracks, mealCompletionTrack
 import { loginTriggers, dietCountTriggers, waterTriggers, weightTriggers, dietTrackTriggers } from './triggers.ts';
 import { loginCount, loginStreak, dietCount, dietStreak, waterCount, waterStreak, weightLogCount } from './achievements.ts';
 
-const jwt = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI3ZDZlOTk2OC1iNGRiLTRiMzUtOGU2Ny03NTEzNDYzMmI5ZjkiLCJyb2xlIjoiYWRtaW4iLCJpYXQiOjE3NjQ4MjYwMzQsImV4cCI6MTc2NDgyNjkzNH0.gMNL_wB6du-FbdehZtYvNd2oQ-aM-4ST9NNbAwitvZryn8yNE7SMl7vD8AAVwaRxc4Ol4P0hUY9sE0fK-ZnowgeqafrSQcVA4pI-HzkY8rUxqlYETvI0ndeEjdKSG_rLH8nk9Q7BTcI-kXJLkoVkBcxmAsujgERunevUVpAev5u-ICtWTgZVjAQZPP8G91eIyKBe7fAssLKfMM2XDfmrAGgMCGfAZFtitWm7yk3pKl5hWfr-DJtz_o1R2wGKgDSajleNSthKso15DsEFgdjnCu2RgLKRRcOBLoHqhstuNQYJrVsBaf3UjyYuPFCZB1BYc31P5xUGdWZJsBCAvHWE4g";
+const jwt = "eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI3ZDZlOTk2OC1iNGRiLTRiMzUtOGU2Ny03NTEzNDYzMmI5ZjkiLCJyb2xlIjoiYWRtaW4iLCJpYXQiOjE3NjQ4OTExNzYsImV4cCI6MTc2NDg5MjA3Nn0.huTQRmldolgftCY26S-KB2dqfYZ2EIkKNlMi62FFgHUxaPjfXOjnAA7GhlWcn5kEEqAAqUU8aLqGxtXJe6KsIDAyETgM6zIDQ8xgFcKc6rwC-xTrZVM_IX1LS18ZzT7MB7YqObfOwRmjwaKLl3Pc4AhfK0CeQ20pO_2r6cGOVw8VXa-KwABGYmR9692xlWDDp47CBfTNRu8547DFcH-Q0dFddUi5FoeD-Uo2joTiFdNSm_XM0wzwnu-G-oYvDyjPo78sWBvdZKAzqNjeC9uQ85V2_hlITifdWyVHMibiFGwbg0R4JChTjJNVu1qmz7mTtw63kHfhuBWd0tCZotIw4A";
 
 function postWithAuth(url: string, data: object): Promise<string> {
     return new Promise((resolve, reject) => {
@@ -48,7 +48,7 @@ function postWithAuth(url: string, data: object): Promise<string> {
     });
 }
 
-const gateway = "localhost:8080";
+const gateway = "192.168.0.203:8181";
 
 const listenersUrl = `http://${gateway}/api/v1/game/listeners`;
 const tracksUrl = `http://${gateway}/api/v1/game/tracks`;
